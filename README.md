@@ -1,6 +1,13 @@
 # PyTorch Quantization Demo
 
+[![CI](https://github.com/MarkellR-RedHat/pytorch-quantization-demo/actions/workflows/ci.yml/badge.svg)](https://github.com/MarkellR-RedHat/pytorch-quantization-demo/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 Interactive demo for PyTorch Conference 2026 showing real-time comparison of model quantization levels (FP32, FP16, INT8, INT4) running on OpenShift AI.
+
+![Demo Preview](https://img.shields.io/badge/Status-In%20Development-orange)
 
 ## Overview
 
@@ -24,18 +31,34 @@ This demo allows audience members to stress test different quantization variants
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.9+
-- OpenShift AI access with deployed models
-- Environment variables configured
-
-### Installation
+### Automated Setup (Recommended)
 
 ```bash
+# Clone the repository
+git clone https://github.com/MarkellR-RedHat/pytorch-quantization-demo.git
+cd pytorch-quantization-demo
+
+# Run setup script
+./scripts/setup.sh
+
+# Start the demo (simulation mode)
+./scripts/run-local.sh
+```
+
+Visit http://localhost:8000 for the audience interface and http://localhost:8000/presenter for the presenter dashboard.
+
+### Manual Setup
+
+```bash
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Create environment file
+cp .env.example .env
 ```
 
 ### Configuration
@@ -172,6 +195,24 @@ pytest --cov=app tests/
 
 Copyright (c) 2026 Red Hat, Inc.
 
+## Documentation
+
+- **[Development Guide](DEVELOPMENT.md)** - Complete setup, testing, and deployment instructions
+- **[Demo Execution Guide](DEMO_GUIDE.md)** - Step-by-step presenter guide with scripts and timing
+- **[Contributing](CONTRIBUTING.md)** - How to contribute to this project
+
+## Related Projects
+
+- [OpenShift AI](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai) - AI/ML platform
+- [vLLM](https://github.com/vllm-project/vllm) - High-throughput LLM serving (PyTorch Foundation project)
+- [PyTorch](https://pytorch.org/) - Open source machine learning framework
+
 ## Contact
 
-Markell Rawls - mrawls@redhat.com
+**Markell Rawls**  
+AI Engineer and Developer Advocate, Red Hat  
+mrawls@redhat.com
+
+## Acknowledgments
+
+Built for PyTorch Conference 2026 demo session. Special thanks to the Red Hat AI team and the PyTorch Foundation.
