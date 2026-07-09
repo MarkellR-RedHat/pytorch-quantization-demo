@@ -1,0 +1,15 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: pytorch-quantization-demo
+  labels:
+    app: pytorch-quantization-demo
+spec:
+  to:
+    kind: Service
+    name: pytorch-quantization-demo
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

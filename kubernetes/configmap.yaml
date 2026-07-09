@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: model-endpoints
+data:
+  fp32_endpoint: "https://fp32-model.apps.your-cluster.com/v1/chat/completions"
+  fp16_endpoint: "https://fp16-model.apps.your-cluster.com/v1/chat/completions"
+  int8_endpoint: "https://int8-model.apps.your-cluster.com/v1/chat/completions"
+  int4_endpoint: "https://int4-model.apps.your-cluster.com/v1/chat/completions"

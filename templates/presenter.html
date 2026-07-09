@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presenter Dashboard - PyTorch Quantization Demo</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="presenter-view">
+    <div class="presenter-container">
+        <header class="presenter-header">
+            <h1>PyTorch Quantization Demo - Presenter Dashboard</h1>
+            <div class="header-controls">
+                <span class="mode-indicator" id="modeIndicator">
+                    LIVE MODE
+                </span>
+                <button id="toggleSimBtn" class="control-btn">Toggle Simulation</button>
+                <button id="resetBtn" class="control-btn">Reset Demo</button>
+            </div>
+        </header>
+
+        <div class="metrics-grid">
+            <!-- FP32 Metrics -->
+            <div class="metric-card" data-model="FP32">
+                <div class="metric-header">
+                    <h3>FP32 - Full Precision</h3>
+                    <span class="metric-badge">Baseline</span>
+                </div>
+                <div class="metric-stats">
+                    <div class="metric-row">
+                        <span class="metric-label">Requests/sec:</span>
+                        <span class="metric-value" data-metric="rps">0.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Avg Latency:</span>
+                        <span class="metric-value" data-metric="latency">0 ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">P95 Latency:</span>
+                        <span class="metric-value" data-metric="p95">0 ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">GPU Memory:</span>
+                        <span class="metric-value" data-metric="memory">0.0 GB</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Tokens/sec:</span>
+                        <span class="metric-value" data-metric="tps">0.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Cost/request:</span>
+                        <span class="metric-value" data-metric="cost">$0.0000</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Requests:</span>
+                        <span class="metric-value" data-metric="total">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FP16 Metrics -->
+            <div class="metric-card" data-model="FP16">
+                <div class="metric-header">
+                    <h3>FP16 - Half Precision</h3>
+                    <span class="metric-badge sweet-spot">Sweet Spot</span>
+                </div>
+                <div class="metric-stats">
+                    <div class="metric-row">
+                        <span class="metric-label">Requests/sec:</span>
+                        <span class="metric-value" data-metric="rps">0.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Avg Latency:</span>
+                        <span class="metric-value" data-metric="latency">0 ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">P95 Latency:</span>
+                        <span class="metric-value" data-metric="p95">0 ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">GPU Memory:</span>
+                        <span class="metric-value" data-metric="memory">0.0 GB</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Tokens/sec:</span>
+                        <span class="metric-value" data-metric="tps">0.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Cost/request:</span>
+                        <span class="metric-value" data-metric="cost">$0.0000</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Requests:</span>
+                        <span class="metric-value" data-metric="total">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INT8 Metrics -->
+            <div class="metric-card" data-model="INT8">
+                <div class="metric-header">
+                    <h3>INT8 - 8-bit Quantized</h3>
+                    <span class="metric-badge">Efficient</span>
+                </div>
+                <div class="metric-stats">
+                    <div class="metric-row">
+                        <span class="metric-label">Requests/sec:</span>
+                        <span class="metric-value" data-metric="rps">0.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Avg Latency:</span>
+                        <span class="metric-value" data-metric="latency">0 ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">P95 Latency:</span>
+                        <span class="metric-value" data-metric="p95">0 ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">GPU Memory:</span>
+                        <span class="metric-value" data-metric="memory">0.0 GB</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Tokens/sec:</span>
+                        <span class="metric-value" data-metric="tps">0.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Cost/request:</span>
+                        <span class="metric-value" data-metric="cost">$0.0000</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Requests:</span>
+                        <span class="metric-value" data-metric="total">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INT4 Metrics -->
+            <div class="metric-card" data-model="INT4">
+                <div class="metric-header">
+                    <h3>INT4 - Extreme Quantization</h3>
+                    <span class="metric-badge">Fastest</span>
+                </div>
+                <div class="metric-stats">
+                    <div class="metric-row">
+                        <span class="metric-label">Requests/sec:</span>
+                        <span class="metric-value" data-metric="rps">0.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Avg Latency:</span>
+                        <span class="metric-value" data-metric="latency">0 ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">P95 Latency:</span>
+                        <span class="metric-value" data-metric="p95">0 ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">GPU Memory:</span>
+                        <span class="metric-value" data-metric="memory">0.0 GB</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Tokens/sec:</span>
+                        <span class="metric-value" data-metric="tps">0.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Cost/request:</span>
+                        <span class="metric-value" data-metric="cost">$0.0000</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Requests:</span>
+                        <span class="metric-value" data-metric="total">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-stats">
+            <div class="summary-card">
+                <div class="summary-value" id="totalParticipants">0</div>
+                <div class="summary-label">Active Participants</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="totalDemoRequests">0</div>
+                <div class="summary-label">Total Requests</div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Press Ctrl+Shift+S to toggle simulation mode | PyTorch Conference 2026</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/presenter.js"></script>
+</body>
+</html>
