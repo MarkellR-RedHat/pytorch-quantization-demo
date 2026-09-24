@@ -3,43 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyTorch Quantization Demo</title>
+    <title>Quantization Showdown</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="audience-view">
     <div class="container">
         <header>
-            <h1>PyTorch Quantization Showdown</h1>
-            <p class="subtitle">Interactive Stress Test on OpenShift AI</p>
+            <h1>Quantization Showdown</h1>
+            <p class="subtitle">Stress test PyTorch inference optimization</p>
         </header>
 
         <main>
             <div class="model-selector">
-                <h2>Choose Your Model</h2>
-                <div class="model-buttons">
-                    <button class="model-btn" data-model="FP32">
-                        <span class="model-name">FP32</span>
-                        <span class="model-desc">Full Precision</span>
-                    </button>
-                    <button class="model-btn" data-model="FP16">
+                <h2>Pick a Variant</h2>
+                <div class="model-buttons three-buttons">
+                    <button class="model-btn selected" data-model="FP16">
                         <span class="model-name">FP16</span>
-                        <span class="model-desc">Half Precision</span>
-                    </button>
-                    <button class="model-btn" data-model="INT8">
-                        <span class="model-name">INT8</span>
-                        <span class="model-desc">8-bit Quantized</span>
+                        <span class="model-desc">Half Precision — Quality baseline</span>
                     </button>
                     <button class="model-btn" data-model="INT4">
                         <span class="model-name">INT4</span>
-                        <span class="model-desc">Extreme Quantization</span>
+                        <span class="model-desc">4-bit — Fast but lossy</span>
+                    </button>
+                    <button class="model-btn" data-model="SPEC_DECODE">
+                        <span class="model-name">Spec Decode</span>
+                        <span class="model-desc">Draft + verify — Best of both</span>
                     </button>
                 </div>
             </div>
 
             <div class="action-area">
-                <button id="sendRequestBtn" class="send-btn" disabled>
-                    <span class="btn-text">SEND REQUEST</span>
-                    <span class="btn-subtext">Select a model first</span>
+                <button id="sendRequestBtn" class="send-btn">
+                    <span class="btn-text">TAP TO SEND</span>
+                    <span class="btn-subtext" id="btnSubtext">FP16 selected — Tap away!</span>
                 </button>
             </div>
 
@@ -62,7 +58,7 @@
         </main>
 
         <footer>
-            <p>Powered by OpenShift AI | Red Hat</p>
+            <p>Powered by vLLM + LLM Compressor | Red Hat</p>
         </footer>
     </div>
 

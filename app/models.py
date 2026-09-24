@@ -6,14 +6,12 @@ from datetime import datetime
 
 
 class InferenceRequest(BaseModel):
-    """Request to send inference to a model variant"""
-    model_type: Literal["FP32", "FP16", "INT8", "INT4"]
+    model_type: Literal["FP16", "INT4", "SPEC_DECODE"]
     prompt: Optional[str] = "Hello, how are you?"
     user_id: Optional[str] = None
 
 
 class InferenceResponse(BaseModel):
-    """Response from model inference"""
     model_type: str
     response_text: str
     latency_ms: float
@@ -23,7 +21,6 @@ class InferenceResponse(BaseModel):
 
 
 class MetricsSnapshot(BaseModel):
-    """Real-time metrics for a model variant"""
     model_type: str
     requests_per_second: float
     avg_latency_ms: float
@@ -36,8 +33,13 @@ class MetricsSnapshot(BaseModel):
     total_requests: int
 
 
+class QualitySnapshot(BaseModel):
+    """Side-by-side quality comparison for the same prompt"""
+    prompt: str
+    responses: dict[str, str]
+
+
 class DemoState(BaseModel):
-    """Overall demo state"""
     is_running: bool
     simulation_mode: bool
     participant_count: int
@@ -47,8 +49,7 @@ class DemoState(BaseModel):
 
 
 class SimulationConfig(BaseModel):
-    """Configuration for simulation mode"""
     enabled: bool
-    request_rate: float = 10.0  # requests per second
-    latency_variation: float = 0.2  # 20% variation
+    request_rate: float = 10.0
+    latency_variation: float = 0.2
     synthetic_users: int = 75

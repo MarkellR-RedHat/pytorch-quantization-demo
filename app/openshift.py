@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class OpenShiftAIClient:
-    """Client for interacting with OpenShift AI model endpoints"""
 
     def __init__(self):
         self.endpoints = settings.model_endpoints
@@ -26,16 +25,6 @@ class OpenShiftAIClient:
         model_type: str,
         prompt: str = "Hello, how are you?"
     ) -> Tuple[str, float, float, float]:
-        """
-        Send inference request to specified model variant
-
-        Args:
-            model_type: One of FP32, FP16, INT8, INT4
-            prompt: Text prompt to send
-
-        Returns:
-            Tuple of (response_text, latency_ms, tokens_per_second, cost)
-        """
         endpoint = self.endpoints.get(model_type)
         if not endpoint:
             raise ValueError(f"Unknown model type: {model_type}")
@@ -63,10 +52,8 @@ class OpenShiftAIClient:
             latency_ms = (time.time() - start_time) * 1000
             data = response.json()
 
-            # Extract response text
             response_text = data["choices"][0]["message"]["content"]
 
-            # Calculate tokens and cost
             usage = data.get("usage", {})
             total_tokens = usage.get("total_tokens", 256)
             tokens_per_second = total_tokens / (latency_ms / 1000)
@@ -82,5 +69,4 @@ class OpenShiftAIClient:
             raise
 
 
-# Global client instance
 openshift_client = OpenShiftAIClient()

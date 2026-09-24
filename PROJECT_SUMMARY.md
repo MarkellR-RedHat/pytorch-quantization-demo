@@ -2,320 +2,106 @@
 
 ## What Was Built
 
-A complete, production-ready interactive demo application for PyTorch Conference 2026 that allows audience members to stress test different quantization levels of PyTorch models in real-time.
+An interactive demo for PyTorch Conference 2026 (Demo Theater, Oct 20) that compares three PyTorch inference optimization strategies in real-time: FP16 (quality baseline), INT4 (speed play), and Speculative Decoding (best of both).
 
 ## Repository
 
 **GitHub**: https://github.com/MarkellR-RedHat/pytorch-quantization-demo
 
+## The Three Variants
+
+| Variant | Role | Latency | GPU Memory | Cost | Quality |
+|---------|------|---------|------------|------|---------|
+| **FP16** | Quality baseline | ~95ms | ~40GB | $0.0015/1k tokens | Full quality |
+| **INT4** | Speed champion | ~45ms | ~10GB | $0.0005/1k tokens | Degrades on complex reasoning |
+| **Spec Decode** | Best of both | ~55ms | ~25GB | $0.0007/1k tokens | Matches FP16 |
+
+Speculative decoding pairs a small draft model (Llama 8B) with the target model (Llama 70B INT8). The draft model speculates tokens, the target model verifies. Result: near-INT4 speed with FP16-level quality.
+
 ## Key Components
 
-### 1. Backend (FastAPI)
+### Backend (FastAPI)
 
 **Files**: `app/main.py`, `app/config.py`, `app/models.py`, `app/openshift.py`, `app/simulation.py`, `app/metrics.py`, `app/websocket.py`
 
-Features:
-- RESTful API endpoints for inference requests
-- WebSocket support for real-time metric updates
-- OpenShift AI integration for model serving
+- RESTful API for inference requests across 3 variants
+- WebSocket for real-time metric updates (2x/sec)
+- Quality comparison endpoint with pre-scripted scenarios (reasoning, code gen, summarization)
 - Simulation mode for failsafe demo execution
-- Comprehensive metrics collection and aggregation
-- Support for 4 quantization variants (FP32, FP16, INT8, INT4)
+- OpenShift AI integration for vLLM model serving
 
-### 2. Frontend (HTML/CSS/JavaScript)
+### Frontend
 
 **Audience Interface** (`templates/index.html`, `static/js/audience.js`):
-- Mobile-optimized model selection interface
-- Large "Send Request" button for easy tapping
-- Real-time stats display (your requests, total requests, participants)
+- Mobile-optimized, 3 model buttons, rapid-fire tap to send
 - QR code access for easy mobile connection
 
 **Presenter Dashboard** (`templates/presenter.html`, `static/js/presenter.js`):
-- 4-way metrics comparison grid
-- Real-time updates via WebSocket
-- Simulation mode toggle (Ctrl+Shift+S)
-- Demo reset functionality
-- Professional dark theme optimized for presentation
+- 3-column metrics grid with hero stats (latency + GPU memory)
+- Quality comparison panel (Ctrl+Shift+Q) showing side-by-side outputs
+- Simulation toggle (Ctrl+Shift+S)
+- Dark theme optimized for projection
 
-**Styling** (`static/css/style.css`):
-- Red Hat brand colors
-- Mobile-responsive design
-- Clean, modern UI
-- Separate themes for audience and presenter views
+### Infrastructure
 
-### 3. Infrastructure
+- Docker (Red Hat UBI, non-root, health checks)
+- Kubernetes/OpenShift manifests (deployment, service, route, configmap, secrets)
+- CI/CD via GitHub Actions
 
-**Docker** (`Dockerfile`):
-- Multi-stage build
-- Red Hat UBI base image
-- Non-root user for security
-- Health checks included
+## Demo Flow (10 minutes)
 
-**Kubernetes/OpenShift** (`kubernetes/`):
-- Deployment manifest with proper resource limits
-- Service definition
-- Route configuration for external access
-- ConfigMap for model endpoints
-- Secret template for credentials
+1. **The Story** (0:00-1:30): "The 3 AM GPU bill" — team ships FP16, costs spike, they quantize to INT4, quality drops
+2. **The Trade-off** (1:30-4:30): Live FP16 vs INT4 metrics + quality comparison
+3. **The Solve** (4:30-7:30): Speculative decode — INT4 speed, FP16 quality
+4. **The Stack** (7:30-8:30): vLLM + LLM Compressor
+5. **Audience Pile-On** (8:30-9:30): QR code, optional stress test
+6. **Close** (9:30-10:00): Booth plug, vLLM meetup
 
-### 4. Testing
+## GPU Requirements
 
-**Test Suite** (`tests/`):
-- Simulation mode tests
-- Metrics collection tests
-- Async/await support
-- Code coverage reporting
+| Dates | GPUs | Purpose |
+|-------|------|---------|
+| Sep 29-30 | 5x H200 Full | Test run + backup video recording |
+| Oct 18-21 | 5x H200 Full | Setup + live conference |
 
-### 5. Documentation
-
-- **README.md**: Project overview, quick start, API docs
-- **DEVELOPMENT.md**: Complete development guide, local setup, troubleshooting
-- **DEMO_GUIDE.md**: Step-by-step presenter guide with full script and timing
-- **CONTRIBUTING.md**: Contribution guidelines
-- **LICENSE**: MIT License
-
-### 6. Automation
-
-**Helper Scripts** (`scripts/`):
-- `setup.sh`: Automated environment setup
-- `run-local.sh`: Quick start for local development
-- `test.sh`: Run tests with coverage
-
-**CI/CD** (`.github/workflows/`):
-- Continuous integration (test, lint, build)
-- Container image publishing to Quay.io
-- Multi-version Python testing (3.9, 3.10, 3.11)
-
-## Features
-
-### Core Functionality
-
-1. **Multi-Model Serving**: Simultaneously serve 4 quantization variants
-2. **Real-Time Metrics**: Live updates of latency, throughput, cost, GPU memory
-3. **Interactive Audience Participation**: QR code access, mobile-optimized
-4. **Simulation Mode**: Failsafe backup with synthetic data
-5. **WebSocket Communication**: Real-time bidirectional updates
-6. **Presenter Controls**: Hidden shortcuts for demo management
-
-### Production-Ready Features
-
-1. **Health Checks**: `/health` endpoint for monitoring
-2. **Structured Logging**: Configurable log levels
-3. **Error Handling**: Comprehensive exception handling
-4. **Resource Limits**: Kubernetes resource requests/limits
-5. **Security**: Non-root container, secret management
-6. **Scalability**: Horizontal scaling support with replicas
-
-### Demo-Specific Features
-
-1. **QR Code Generation**: Automatic QR code for audience access
-2. **Metrics Aggregation**: Rolling windows, P95 latency, cost tracking
-3. **Visual Comparison**: Side-by-side metrics for all 4 variants
-4. **Simulation Toggle**: Seamless failover with Ctrl+Shift+S
-5. **Reset Functionality**: Clear all metrics and start fresh
-
-## Technology Stack
-
-- **Backend**: Python 3.9+, FastAPI, Uvicorn
-- **Frontend**: Vanilla JavaScript, WebSocket API
-- **Deployment**: Docker/Podman, Kubernetes/OpenShift
-- **Testing**: pytest, pytest-asyncio, pytest-cov
-- **CI/CD**: GitHub Actions
-- **Model Serving**: OpenShift AI with vLLM
-
-## File Structure
-
-```
-pytorch-quantization-demo/
-├── .github/
-│   └── workflows/           # CI/CD pipelines
-├── app/                     # Backend application
-│   ├── __init__.py
-│   ├── main.py             # FastAPI app
-│   ├── config.py           # Configuration
-│   ├── models.py           # Data models
-│   ├── openshift.py        # OpenShift AI client
-│   ├── simulation.py       # Simulation mode
-│   ├── metrics.py          # Metrics collection
-│   └── websocket.py        # WebSocket manager
-├── static/
-│   ├── css/
-│   │   └── style.css       # Styling
-│   └── js/
-│       ├── audience.js     # Audience interface
-│       └── presenter.js    # Presenter dashboard
-├── templates/
-│   ├── index.html          # Audience view
-│   └── presenter.html      # Presenter view
-├── kubernetes/              # K8s manifests
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   ├── route.yaml
-│   ├── configmap.yaml
-│   └── secret-template.yaml
-├── scripts/                 # Helper scripts
-│   ├── setup.sh
-│   ├── run-local.sh
-│   └── test.sh
-├── tests/                   # Test suite
-│   ├── __init__.py
-│   ├── test_simulation.py
-│   └── test_metrics.py
-├── .env.example            # Environment template
-├── .gitignore
-├── CONTRIBUTING.md
-├── DEMO_GUIDE.md           # Presenter guide
-├── DEVELOPMENT.md          # Developer guide
-├── Dockerfile
-├── LICENSE
-├── README.md
-└── requirements.txt
-```
-
-## How It Works
-
-### Audience Flow
-
-1. Scan QR code on mobile device
-2. Opens audience interface
-3. Select model variant (FP32, FP16, INT8, INT4)
-4. Tap "Send Request" button repeatedly
-5. See personal request count and total stats
-6. WebSocket provides real-time updates
-
-### Presenter Flow
-
-1. Open presenter dashboard
-2. Display on main screen with 4-way metrics grid
-3. Show QR code for audience to scan
-4. Monitor participant count
-5. Narrate metrics changes as requests flood in
-6. Compare performance, cost, and quality across variants
-7. Toggle simulation mode if needed (Ctrl+Shift+S)
-
-### Technical Flow
-
-1. User taps button → POST /request
-2. Backend routes to OpenShift AI model endpoint (or simulation)
-3. Metrics recorded (latency, throughput, cost)
-4. Aggregated metrics broadcast via WebSocket
-5. All connected clients update in real-time
-6. Presenter dashboard shows 4-way comparison
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `OPENSHIFT_AI_ENDPOINT` | OpenShift AI API endpoint | Yes |
-| `OPENSHIFT_AI_TOKEN` | Authentication token | Yes |
-| `MODEL_FP32_ENDPOINT` | FP32 model endpoint | Yes |
-| `MODEL_FP16_ENDPOINT` | FP16 model endpoint | Yes |
-| `MODEL_INT8_ENDPOINT` | INT8 model endpoint | Yes |
-| `MODEL_INT4_ENDPOINT` | INT4 model endpoint | Yes |
-| `SIMULATION_MODE` | Enable simulation (true/false) | No |
-| `PORT` | Server port (default: 8000) | No |
-
-## Deployment Options
-
-### Local Development
-
-```bash
-./scripts/setup.sh      # One-time setup
-./scripts/run-local.sh  # Run with simulation mode
-```
-
-### OpenShift Deployment
-
-```bash
-oc apply -f kubernetes/configmap.yaml
-oc apply -f kubernetes/secret-template.yaml
-oc apply -f kubernetes/deployment.yaml
-oc apply -f kubernetes/service.yaml
-oc apply -f kubernetes/route.yaml
-```
-
-### Container Image
-
-```bash
-podman build -t pytorch-quantization-demo:latest .
-podman run -p 8000:8000 --env-file .env pytorch-quantization-demo:latest
-```
-
-## Testing
-
-```bash
-./scripts/test.sh           # Run all tests with coverage
-pytest tests/               # Run tests directly
-pytest tests/ --cov=app     # With coverage
-```
+- FP16 Llama 70B: 2x H200 (tensor parallel)
+- INT4 Llama 70B: 1x H200
+- Spec Decode (Llama 70B INT8 + Llama 8B draft): 2x H200
 
 ## Current Status
 
-✅ **Complete and Ready**:
-- Full backend implementation
-- Interactive frontend (audience + presenter)
-- Simulation mode working
-- Metrics collection and aggregation
+**Complete**:
+- Backend with 3-variant architecture
+- Presenter dashboard with quality comparison
+- Audience interface
+- Simulation mode with realistic baselines
 - WebSocket real-time updates
-- Docker/Kubernetes deployment
-- Comprehensive documentation
+- Docker/Kubernetes deployment configs
 - Test suite
 - CI/CD pipelines
-- Helper scripts
+- Story-driven demo guide
 
-⏳ **Pending Configuration**:
-- Real OpenShift AI model endpoints (will be configured closer to event)
-- H200 GPU reservations (October 19-21, 2026)
+**Pending**:
+- Deploy real models to OpenShift AI (test run Sep 29-30)
 - Production deployment URL
 - QR code with final public URL
+- Record backup demo video (Sep 29-30)
+- Upload slides to Sessionize (due Oct 19)
 
-📋 **Before Demo**:
-- Deploy 4 quantization variants to OpenShift AI
-- Reserve H200 GPUs
-- Deploy demo app to OpenShift
-- Test end-to-end with real models
-- Generate QR code with public URL
-- Record backup demo video
+## Timeline
 
-## Next Steps
+1. **Sep 29-30**: Test run on H200s, deploy models, record backup video
+2. **Oct 18**: Pre-deploy to OpenShift
+3. **Oct 19**: Final testing, slide upload deadline
+4. **Oct 20**: Demo day — 4:10 PM PDT, Demo Theater
+5. **Oct 21**: Conference day 2
 
-1. **Test with Real Models** (August 2026):
-   - Deploy Llama 3.3 in 4 quantization levels to OpenShift AI
-   - Get model endpoint URLs
-   - Update ConfigMap with real endpoints
-   - Test with actual inference
+## Contacts
 
-2. **Production Deployment** (September 2026):
-   - Deploy to OpenShift cluster
-   - Configure DNS/route
-   - Generate production QR code
-   - Load test with target audience size
-
-3. **Pre-Demo Preparation** (October 2026):
-   - Reserve H200 GPUs
-   - Final testing on October 19
-   - Record backup video
-   - Prepare simulation mode data
-
-4. **Demo Day** (October 20, 2026):
-   - Health checks 30 min before
-   - Display QR code
-   - Execute demo following DEMO_GUIDE.md
-   - Monitor metrics live
-
-## Support
-
-- **Issues**: https://github.com/MarkellR-RedHat/pytorch-quantization-demo/issues
-- **Email**: mrawls@redhat.com
-- **Conference Contact**: Juliana Furlow (jsweek@redhat.com)
+- **Event**: Juliana Furlow (jsweek@redhat.com)
+- **vLLM/llm-d**: Sasa
+- **GitHub**: https://github.com/MarkellR-RedHat/pytorch-quantization-demo
 
 ## License
 
-MIT License - See LICENSE file
-
----
-
-**Built by**: Markell Rawls  
-**For**: PyTorch Conference 2026  
-**Date Created**: July 9, 2026  
-**GitHub**: https://github.com/MarkellR-RedHat/pytorch-quantization-demo
+MIT License

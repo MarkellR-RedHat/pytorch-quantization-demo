@@ -1,284 +1,115 @@
 # Demo Execution Guide
 
-Step-by-step guide for presenting the PyTorch Quantization Demo at PyTorch Conference 2026.
+Step-by-step guide for presenting "Quantization Showdown: PyTorch Inference Optimization" at PyTorch Conference 2026.
 
-## Pre-Demo Checklist (Day Before)
+**Session:** Demo Theater, Tuesday Oct 20 at 4:10 PM PDT (10 minutes)
 
-### Technical Setup
+## Pre-Demo Checklist
 
-- [ ] Reserve H200 GPUs (October 19-21, 2026)
-- [ ] Deploy all 4 model variants to OpenShift AI
-- [ ] Test model endpoints responding correctly
-- [ ] Deploy demo application to OpenShift
-- [ ] Get public URL for QR code generation
-- [ ] Test audience interface on mobile devices
-- [ ] Test presenter dashboard on demo laptop
-- [ ] Record backup demo video
-- [ ] Prepare simulation mode with realistic data
-- [ ] Test failover to simulation mode
+### Day Before (Oct 19)
 
-### Content Preparation
-
-- [ ] Prepare opening remarks
-- [ ] Prepare closing remarks with vLLM meetup details
-- [ ] Prepare example prompts for quality comparison
-- [ ] Create QR code with public URL
-- [ ] Print QR code backup (poster size)
-
-### Equipment
-
-- [ ] Laptop fully charged
-- [ ] HDMI adapter/cable
-- [ ] Backup laptop with full setup
-- [ ] Phone hotspot configured
-- [ ] Wireless presenter/clicker
-- [ ] Backup USB drive with all files
-
-## Day of Demo Checklist (Morning)
-
-### 2 Hours Before
-
-- [ ] Arrive at venue
-- [ ] Test venue WiFi connection
-- [ ] Verify screen/projector working
-- [ ] Test audio/microphone
-- [ ] Load presenter dashboard
-- [ ] Verify all 4 model endpoints responding
-- [ ] Test QR code on venue network
-- [ ] Confirm simulation mode toggle working
-- [ ] Test WebSocket connections
-- [ ] Reset demo metrics to zero
+- [ ] All 3 model variants deployed and responding on OpenShift AI
+- [ ] Demo app deployed with production URL
+- [ ] QR code generated with public URL
+- [ ] Presenter dashboard tested on demo laptop
+- [ ] Audience interface tested on mobile device
+- [ ] Simulation mode tested and ready as fallback
+- [ ] Backup video recorded
+- [ ] Quality comparison scenarios all loading correctly
 
 ### 30 Minutes Before
 
-- [ ] Final endpoint health checks
-- [ ] Open presenter dashboard in full screen
-- [ ] Display QR code on separate device
-- [ ] Test send request from your phone
-- [ ] Verify metrics updating in real-time
-- [ ] Have backup materials ready
-- [ ] Silence phone notifications
-- [ ] Close unnecessary applications
+- [ ] Open presenter dashboard in full screen: `{your-url}/presenter`
+- [ ] Verify all 3 model endpoints responding (`/health`)
+- [ ] Test WebSocket connections (metrics updating)
+- [ ] Reset demo metrics to zero
+- [ ] Test simulation toggle (Ctrl+Shift+S)
+- [ ] Have QR code ready on separate device
+- [ ] Silence notifications, close other apps
 
-## Demo Execution (10 Minutes)
+## Demo Flow (10 Minutes)
 
-### [0:00-1:30] Opening & Setup
+### [0:00-1:30] The Story
 
-**Script:**
-> "Good morning! Who here has tried to run Llama-70B in production and seen the GPU bill?"
+> "So your team just shipped Llama 70B to production. Full precision, FP16, everyone's proud. First week goes great. Then traffic doubles. Then triples. Your P95 latency goes through the roof. Your GPU bill hits $47K in one month. Your manager walks over with a screenshot of the invoice and asks 'what happened?'"
 >
-> *[Wait for reactions/hands]*
+> "So you do what everyone does. You quantize. INT4, ship it, latency drops, costs drop, everyone's happy again. Until a customer opens a support ticket: 'Your model used to give me detailed analysis, now it just gives me bullet points.' You check the logs. The INT4 model is struggling on complex reasoning. You didn't lose speed. You lost trust."
 >
-> "Today we're going to stress test the same PyTorch model in four different quantization levels—live, right now, with your help. FP32 full precision, FP16 half precision, INT8 quantized, and INT4 extreme quantization."
+> "That's the trade-off everyone tells you is unavoidable. Speed or quality. Pick one."
 
-**Actions:**
-- Show OpenShift AI console with all 4 models deployed
-- Point out current metrics: all idle, low GPU usage
-- Briefly explain what quantization is
+*Point to the dashboard, already live with background traffic.*
 
-**Key Point:** "We'll see which is fastest, which uses least memory, and where quality starts to break down."
+> "Let's see if that's actually true."
 
-### [1:30-2:00] Call to Action
+### [1:30-4:30] The Trade-off is Real
 
-**Script:**
-> "Here's how this works. Scan this QR code on your phone. Pick a model variant—try multiple if you want—and when I say go, start tapping that big red button as fast as you can."
+Walk through FP16 vs INT4 under load. Point to specific numbers:
 
-**Actions:**
-- Display QR code prominently
-- Show audience interface on screen briefly
-- Wait for ~50+ people to connect
-- Show participant count climbing
+**Latency:**
+> "FP16 is sitting at around 95ms per request. INT4? 45ms. More than 2x faster."
 
-**Monitoring:**
-- Watch participant count in presenter dashboard
-- Aim for 50+ before starting
-- Show current baseline metrics
+**GPU Memory:**
+> "FP16 is using 40GB of GPU memory. INT4 only needs 10GB. That's your $47K bill right there."
 
-### [2:00-5:30] The Stress Test (Main Event)
+**Cost:**
+> "Cost per request on FP16 is 3x higher than INT4."
 
-**Script:**
-> "Alright, I'm seeing [X] people connected. Let's do this. Ready... everyone START TAPPING!"
+Then toggle quality comparison (Ctrl+Shift+Q):
 
-**Narration Points (as metrics change):**
+> "But look at this. Same reasoning prompt sent to both. FP16 gets it right. INT4 misses the trick question entirely. That's the support ticket."
 
-1. **GPU Memory:**
-   > "Look at GPU memory usage—FP32 is using 80GB, INT4 only using 10GB. That's 8x difference!"
+### [4:30-7:30] The Solve
 
-2. **Throughput:**
-   > "INT4 is handling way more requests per second. Look at that—it's processing 3x more than FP32!"
+> "After the support ticket incident, your team tries something different. Instead of just compressing the model, you pair it with a small draft model that speculates tokens ahead of time. The full model just has to verify, not generate from scratch."
 
-3. **Latency:**
-   > "FP16 is the sweet spot here. Half the latency of FP32, but maintaining quality."
+Point to the Speculative Decode column:
 
-4. **Cost:**
-   > "Cost per request on FP32 is 4x higher than INT4. In production, that adds up fast."
+> "Look at the latency. 55ms. That's approaching INT4 speed."
 
-5. **Breaking Point:**
-   > "FP32 is hitting memory limits first... queue depth building up... it's struggling."
+Toggle quality comparison again:
 
-**Actions:**
-- Point to specific metrics as they change
-- Call out interesting patterns
-- Let it run for 2-3 minutes of chaos
-- Keep energy high
+> "And the output? Matches FP16. Same reasoning, same depth, same accuracy. You didn't pick speed or quality. You got both."
 
-### [5:30-7:00] Quality Check & Analysis
+> "The draft model costs almost nothing to run. Your target model does less work per token. GPU bill drops. Customers stop complaining."
 
-**Script:**
-> "Okay everyone, STOP! Let's see what happened."
+### [7:30-8:30] The Stack
 
-**Actions:**
-- Show pre-prepared response comparison
-- Same complex prompt sent to all 4 models
-- Display responses side-by-side
+> "All three variants running simultaneously on vLLM. Quantization done with LLM Compressor. Speculative decoding is native to vLLM, just a flag. No custom inference code."
 
-**Script:**
-> "Here's the same reasoning task sent to each model. FP16 and INT8 responses are nearly identical to FP32. But look at INT4—you can see quality degradation on this complex reasoning task."
->
-> "For simple prompts, INT4 is fine. For complex reasoning, you need FP16 or INT8."
+### [8:30-9:30] Audience Pile-On
 
-**Key Messages:**
-- FP16 and INT8 are production sweet spots
-- INT4 good for simple tasks, struggles with complex reasoning
-- FP32 is baseline but expensive and slow
+> "Want to stress test it yourself? Scan this QR code and start sending requests. Let's see which one breaks first."
 
-### [7:00-9:00] Platform Story
+Show QR code. If people join, point at metrics spiking. If not, you already delivered the demo.
 
-**Script:**
-> "Let's look at how OpenShift AI makes this possible."
+### [9:30-10:00] Close
 
-**Actions:**
-- Navigate through OpenShift AI console
-- Show multi-model serving configuration
-- Point out vLLM as serving backend
-- Show GPU resource allocation
-- Display cost attribution dashboard
+> "The quantization trade-off is real. But it's not the only option anymore. Come to the booth if you want to try this on your own models."
 
-**Key Points:**
-1. "All 4 variants running simultaneously on OpenShift AI"
-2. "vLLM—a PyTorch Foundation project—powers this efficient serving"
-3. "Platform handles GPU scheduling and routing automatically"
-4. "Cost attribution tells you exactly what each team is spending"
+> "And if you want to go deeper on vLLM and llm-d, Sasa is running a meetup at [TIME] in [LOCATION]."
 
-**Script:**
-> "This is how you optimize PyTorch inference in production. Platform handles the infrastructure complexity, you focus on choosing the right quantization for your use case."
+## Presenter Shortcuts
 
-### [9:00-10:00] Closing & Call to Action
-
-**Script:**
-> "So what's the winner? For most production use cases: FP16 or INT8. Fast enough, cheap enough, maintains quality."
-
-**Display final metrics summary**
-
-**Saša Connection:**
-> "Want to go deeper on vLLM optimization and inference techniques? Saša is running a vLLM and llm-d meetup at [TIME] in [LOCATION]. Come with your questions!"
-
-**Booth Invitation:**
-> "Visit our booth to try deploying your own quantized models on OpenShift AI. We've got trial accounts ready to go."
-
-**Final Message:**
-> "Thank you! Questions? Catch me at the booth or the vLLM meetup."
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+Shift+S | Toggle simulation mode |
+| Ctrl+Shift+Q | Toggle quality comparison panel |
 
 ## Backup Plans
 
-### If Audience is Small (<30 people)
+### If models don't respond
+Switch to simulation mode (Ctrl+Shift+S). Continue narration. Simulation uses realistic baseline metrics.
 
-- Activate simulation mode (Ctrl+Shift+S)
-- Add synthetic background traffic
-- Focus more on quality comparison than pure stress test
+### If audience is small
+Skip the pile-on section. Focus on the story and quality comparison.
 
-### If Network Fails
+### If complete failure
+Play backup video. Narrate over it. Turn into Q&A.
 
-- Switch to simulation mode immediately
-- Continue narration as if live
-- Use pre-recorded metrics if needed
+## Equipment
 
-### If Models Don't Respond
-
-- Switch to simulation mode
-- Show pre-recorded successful run
-- Pivot to platform configuration walkthrough
-
-### If Complete Technical Failure
-
-- Show backup video
-- Narrate over it
-- Turn into Q&A about quantization strategies
-
-## Presenter Tips
-
-### Energy & Pacing
-
-- Maintain high energy during stress test
-- Speak clearly (expo floor is noisy)
-- Use presenter clicker to point at metrics
-- Keep moving to maintain audience engagement
-
-### Audience Engagement
-
-- Make eye contact
-- React to metrics changes enthusiastically
-- Acknowledge audience participation
-- Thank them for helping stress test
-
-### Time Management
-
-- Glance at watch/timer occasionally
-- Have a "short version" ready if running long
-- Can extend stress test if ahead of schedule
-- Always leave 1 minute for closing
-
-### Troubleshooting on the Fly
-
-- Stay calm if something breaks
-- Have simulation mode ready to activate
-- Acknowledge issues honestly
-- Pivot to educational content if needed
-
-## Post-Demo
-
-### Immediate (0-10 minutes)
-
-- Thank attendees
-- Answer quick questions
-- Direct people to booth
-- Share vLLM meetup location again
-
-### Follow-up (Day of)
-
-- Note any technical issues encountered
-- Collect feedback from attendees
-- Debrief with Saša and booth team
-- Share photos/videos with team
-
-### Metrics to Capture
-
-- Peak participant count
-- Total requests processed
-- Most popular model variant
-- Technical issues encountered
-- Audience questions/feedback
-- Booth traffic after demo
-
-## Emergency Contacts
-
-**Technical Issues:**
-- OpenShift AI Support: [contact]
-- Red Hat IT Support: [contact]
-
-**Event Coordination:**
-- Juliana Furlow: jsweek@redhat.com, 678.447.9390
-- Saša: sasa@redhat.com
-
-## Resources
-
-- Presenter dashboard: https://your-app-url.com/presenter
-- Audience interface: https://your-app-url.com
-- GitHub repo: https://github.com/MarkellR-RedHat/pytorch-quantization-demo
-- OpenShift AI docs: https://docs.redhat.com/openshift-ai
-
----
-
-**Remember:** The goal is to show quantization trade-offs visually and demonstrate OpenShift AI's multi-model serving capabilities. Keep it fun, educational, and engaging!
-
-Good luck! 🚀
+- Laptop with presenter dashboard open
+- HDMI adapter
+- Phone/tablet with QR code displayed
+- Backup laptop with full setup
+- USB drive with backup video

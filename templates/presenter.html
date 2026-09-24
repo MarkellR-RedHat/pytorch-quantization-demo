@@ -3,172 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Presenter Dashboard - PyTorch Quantization Demo</title>
+    <title>Quantization Showdown - Presenter</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="presenter-view">
     <div class="presenter-container">
         <header class="presenter-header">
-            <h1>PyTorch Quantization Demo - Presenter Dashboard</h1>
+            <div class="header-left">
+                <h1>Quantization Showdown</h1>
+                <p class="header-subtitle">PyTorch Inference Optimization</p>
+            </div>
             <div class="header-controls">
-                <span class="mode-indicator" id="modeIndicator">
-                    LIVE MODE
-                </span>
-                <button id="toggleSimBtn" class="control-btn">Toggle Simulation</button>
-                <button id="resetBtn" class="control-btn">Reset Demo</button>
+                <span class="mode-indicator" id="modeIndicator">LIVE MODE</span>
+                <button id="toggleSimBtn" class="control-btn">Toggle Sim</button>
+                <button id="resetBtn" class="control-btn">Reset</button>
+                <button id="qualityBtn" class="control-btn quality-btn">Show Quality</button>
             </div>
         </header>
 
-        <div class="metrics-grid">
-            <!-- FP32 Metrics -->
-            <div class="metric-card" data-model="FP32">
-                <div class="metric-header">
-                    <h3>FP32 - Full Precision</h3>
-                    <span class="metric-badge">Baseline</span>
-                </div>
-                <div class="metric-stats">
-                    <div class="metric-row">
-                        <span class="metric-label">Requests/sec:</span>
-                        <span class="metric-value" data-metric="rps">0.0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Avg Latency:</span>
-                        <span class="metric-value" data-metric="latency">0 ms</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">P95 Latency:</span>
-                        <span class="metric-value" data-metric="p95">0 ms</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">GPU Memory:</span>
-                        <span class="metric-value" data-metric="memory">0.0 GB</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Tokens/sec:</span>
-                        <span class="metric-value" data-metric="tps">0.0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Cost/request:</span>
-                        <span class="metric-value" data-metric="cost">$0.0000</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Total Requests:</span>
-                        <span class="metric-value" data-metric="total">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FP16 Metrics -->
+        <div class="metrics-grid three-col">
+            <!-- FP16 -->
             <div class="metric-card" data-model="FP16">
                 <div class="metric-header">
-                    <h3>FP16 - Half Precision</h3>
-                    <span class="metric-badge sweet-spot">Sweet Spot</span>
+                    <h3>FP16 — Half Precision</h3>
+                    <span class="metric-badge baseline">Quality Baseline</span>
+                </div>
+                <div class="metric-hero">
+                    <div class="hero-stat">
+                        <span class="hero-value" data-metric="latency">0</span>
+                        <span class="hero-unit">ms latency</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="hero-value" data-metric="memory">0</span>
+                        <span class="hero-unit">GB GPU</span>
+                    </div>
                 </div>
                 <div class="metric-stats">
                     <div class="metric-row">
-                        <span class="metric-label">Requests/sec:</span>
-                        <span class="metric-value" data-metric="rps">0.0</span>
+                        <span class="metric-label">Throughput</span>
+                        <span class="metric-value" data-metric="rps">0.0 req/s</span>
                     </div>
                     <div class="metric-row">
-                        <span class="metric-label">Avg Latency:</span>
-                        <span class="metric-value" data-metric="latency">0 ms</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">P95 Latency:</span>
+                        <span class="metric-label">P95 Latency</span>
                         <span class="metric-value" data-metric="p95">0 ms</span>
                     </div>
                     <div class="metric-row">
-                        <span class="metric-label">GPU Memory:</span>
-                        <span class="metric-value" data-metric="memory">0.0 GB</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Tokens/sec:</span>
+                        <span class="metric-label">Tokens/sec</span>
                         <span class="metric-value" data-metric="tps">0.0</span>
                     </div>
                     <div class="metric-row">
-                        <span class="metric-label">Cost/request:</span>
+                        <span class="metric-label">Cost/req</span>
                         <span class="metric-value" data-metric="cost">$0.0000</span>
                     </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Total Requests:</span>
+                    <div class="metric-row highlight">
+                        <span class="metric-label">Total Requests</span>
                         <span class="metric-value" data-metric="total">0</span>
                     </div>
                 </div>
             </div>
 
-            <!-- INT8 Metrics -->
-            <div class="metric-card" data-model="INT8">
-                <div class="metric-header">
-                    <h3>INT8 - 8-bit Quantized</h3>
-                    <span class="metric-badge">Efficient</span>
-                </div>
-                <div class="metric-stats">
-                    <div class="metric-row">
-                        <span class="metric-label">Requests/sec:</span>
-                        <span class="metric-value" data-metric="rps">0.0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Avg Latency:</span>
-                        <span class="metric-value" data-metric="latency">0 ms</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">P95 Latency:</span>
-                        <span class="metric-value" data-metric="p95">0 ms</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">GPU Memory:</span>
-                        <span class="metric-value" data-metric="memory">0.0 GB</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Tokens/sec:</span>
-                        <span class="metric-value" data-metric="tps">0.0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Cost/request:</span>
-                        <span class="metric-value" data-metric="cost">$0.0000</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Total Requests:</span>
-                        <span class="metric-value" data-metric="total">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- INT4 Metrics -->
+            <!-- INT4 -->
             <div class="metric-card" data-model="INT4">
                 <div class="metric-header">
-                    <h3>INT4 - Extreme Quantization</h3>
-                    <span class="metric-badge">Fastest</span>
+                    <h3>INT4 — 4-bit Quantized</h3>
+                    <span class="metric-badge speed">Speed Champion</span>
+                </div>
+                <div class="metric-hero">
+                    <div class="hero-stat">
+                        <span class="hero-value" data-metric="latency">0</span>
+                        <span class="hero-unit">ms latency</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="hero-value" data-metric="memory">0</span>
+                        <span class="hero-unit">GB GPU</span>
+                    </div>
                 </div>
                 <div class="metric-stats">
                     <div class="metric-row">
-                        <span class="metric-label">Requests/sec:</span>
-                        <span class="metric-value" data-metric="rps">0.0</span>
+                        <span class="metric-label">Throughput</span>
+                        <span class="metric-value" data-metric="rps">0.0 req/s</span>
                     </div>
                     <div class="metric-row">
-                        <span class="metric-label">Avg Latency:</span>
-                        <span class="metric-value" data-metric="latency">0 ms</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">P95 Latency:</span>
+                        <span class="metric-label">P95 Latency</span>
                         <span class="metric-value" data-metric="p95">0 ms</span>
                     </div>
                     <div class="metric-row">
-                        <span class="metric-label">GPU Memory:</span>
-                        <span class="metric-value" data-metric="memory">0.0 GB</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Tokens/sec:</span>
+                        <span class="metric-label">Tokens/sec</span>
                         <span class="metric-value" data-metric="tps">0.0</span>
                     </div>
                     <div class="metric-row">
-                        <span class="metric-label">Cost/request:</span>
+                        <span class="metric-label">Cost/req</span>
                         <span class="metric-value" data-metric="cost">$0.0000</span>
                     </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Total Requests:</span>
+                    <div class="metric-row highlight">
+                        <span class="metric-label">Total Requests</span>
                         <span class="metric-value" data-metric="total">0</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- SPEC_DECODE -->
+            <div class="metric-card spec-decode-card" data-model="SPEC_DECODE">
+                <div class="metric-header">
+                    <h3>Speculative Decode</h3>
+                    <span class="metric-badge best">Best of Both</span>
+                </div>
+                <div class="metric-hero">
+                    <div class="hero-stat">
+                        <span class="hero-value" data-metric="latency">0</span>
+                        <span class="hero-unit">ms latency</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="hero-value" data-metric="memory">0</span>
+                        <span class="hero-unit">GB GPU</span>
+                    </div>
+                </div>
+                <div class="metric-stats">
+                    <div class="metric-row">
+                        <span class="metric-label">Throughput</span>
+                        <span class="metric-value" data-metric="rps">0.0 req/s</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">P95 Latency</span>
+                        <span class="metric-value" data-metric="p95">0 ms</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Tokens/sec</span>
+                        <span class="metric-value" data-metric="tps">0.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Cost/req</span>
+                        <span class="metric-value" data-metric="cost">$0.0000</span>
+                    </div>
+                    <div class="metric-row highlight">
+                        <span class="metric-label">Total Requests</span>
+                        <span class="metric-value" data-metric="total">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quality Comparison Panel (hidden by default, toggled by presenter) -->
+        <div class="quality-panel" id="qualityPanel" style="display: none;">
+            <div class="quality-header">
+                <h2>Quality Comparison — Same Prompt, Three Outputs</h2>
+                <div class="quality-controls">
+                    <button class="scenario-btn active" data-scenario="complex_reasoning">Reasoning</button>
+                    <button class="scenario-btn" data-scenario="code_generation">Code Gen</button>
+                    <button class="scenario-btn" data-scenario="summarization">Summarization</button>
+                </div>
+            </div>
+            <div class="quality-prompt" id="qualityPrompt"></div>
+            <div class="quality-grid">
+                <div class="quality-card" data-quality-model="FP16">
+                    <h4>FP16</h4>
+                    <pre class="quality-response" id="qualityFP16"></pre>
+                </div>
+                <div class="quality-card" data-quality-model="INT4">
+                    <h4>INT4</h4>
+                    <pre class="quality-response" id="qualityINT4"></pre>
+                </div>
+                <div class="quality-card" data-quality-model="SPEC_DECODE">
+                    <h4>Speculative Decode</h4>
+                    <pre class="quality-response" id="qualitySPEC"></pre>
                 </div>
             </div>
         </div>
@@ -185,7 +182,7 @@
         </div>
 
         <footer>
-            <p>Press Ctrl+Shift+S to toggle simulation mode | PyTorch Conference 2026</p>
+            <p>Ctrl+Shift+S toggle simulation | Ctrl+Shift+Q toggle quality | PyTorch Conference 2026</p>
         </footer>
     </div>
 

@@ -1,9 +1,7 @@
-// Presenter dashboard JavaScript
-
 let ws = null;
 let simulationMode = false;
+let qualityVisible = false;
 
-// Initialize WebSocket connection
 function initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/presenter`;
@@ -30,7 +28,6 @@ function initWebSocket() {
     };
 }
 
-// Handle WebSocket messages
 function handleWebSocketMessage(message) {
     switch (message.type) {
         case 'metrics_update':
@@ -46,7 +43,6 @@ function handleWebSocketMessage(message) {
     }
 }
 
-// Fetch initial state
 async function fetchInitialState() {
     try {
         const [metricsRes, stateRes] = await Promise.all([
@@ -61,36 +57,40 @@ async function fetchInitialState() {
         updateStateDisplay(state);
         simulationMode = state.simulation_mode;
         updateModeIndicator();
-
     } catch (error) {
         console.error('Error fetching initial state:', error);
     }
 }
 
-// Update metrics display
 function updateMetricsDisplay(metrics) {
-    for (const [modelType, modelMetrics] of Object.entries(metrics)) {
+    for (const [modelType, m] of Object.entries(metrics)) {
         const card = document.querySelector(`.metric-card[data-model="${modelType}"]`);
         if (!card) continue;
 
-        // Update each metric value
-        card.querySelector('[data-metric="rps"]').textContent = modelMetrics.requests_per_second.toFixed(1);
-        card.querySelector('[data-metric="latency"]').textContent = `${Math.round(modelMetrics.avg_latency_ms)} ms`;
-        card.querySelector('[data-metric="p95"]').textContent = `${Math.round(modelMetrics.p95_latency_ms)} ms`;
-        card.querySelector('[data-metric="memory"]').textContent = `${modelMetrics.gpu_memory_gb.toFixed(1)} GB`;
-        card.querySelector('[data-metric="tps"]').textContent = modelMetrics.tokens_per_second.toFixed(1);
-        card.querySelector('[data-metric="cost"]').textContent = `$${modelMetrics.cost_per_request.toFixed(4)}`;
-        card.querySelector('[data-metric="total"]').textContent = modelMetrics.total_requests;
+        const heroLatency = card.querySelector('.hero-stat [data-metric="latency"]');
+        const heroMemory = card.querySelector('.hero-stat [data-metric="memory"]');
+        if (heroLatency) heroLatency.textContent = Math.round(m.avg_latency_ms);
+        if (heroMemory) heroMemory.textContent = m.gpu_memory_gb.toFixed(1);
+
+        const rps = card.querySelector('[data-metric="rps"]');
+        const p95 = card.querySelector('[data-metric="p95"]');
+        const tps = card.querySelector('[data-metric="tps"]');
+        const cost = card.querySelector('[data-metric="cost"]');
+        const total = card.querySelector('[data-metric="total"]');
+
+        if (rps) rps.textContent = `${m.requests_per_second.toFixed(1)} req/s`;
+        if (p95) p95.textContent = `${Math.round(m.p95_latency_ms)} ms`;
+        if (tps) tps.textContent = m.tokens_per_second.toFixed(1);
+        if (cost) cost.textContent = `$${m.cost_per_request.toFixed(4)}`;
+        if (total) total.textContent = m.total_requests;
     }
 }
 
-// Update state display
 function updateStateDisplay(state) {
     document.getElementById('totalParticipants').textContent = state.participant_count;
     document.getElementById('totalDemoRequests').textContent = state.total_requests;
 }
 
-// Update mode indicator
 function updateModeIndicator() {
     const indicator = document.getElementById('modeIndicator');
     if (simulationMode) {
@@ -102,58 +102,71 @@ function updateModeIndicator() {
     }
 }
 
-// Toggle simulation mode
 async function toggleSimulation() {
     try {
-        const response = await fetch('/simulation/toggle', {
-            method: 'POST'
-        });
-
-        const data = await response.json();
-        console.log(data.message);
-
+        await fetch('/simulation/toggle', { method: 'POST' });
     } catch (error) {
         console.error('Error toggling simulation:', error);
     }
 }
 
-// Reset demo
 async function resetDemo() {
-    if (!confirm('Are you sure you want to reset the demo? This will clear all metrics.')) {
-        return;
-    }
-
+    if (!confirm('Reset all metrics?')) return;
     try {
-        const response = await fetch('/demo/reset', {
-            method: 'POST'
-        });
-
-        const data = await response.json();
-        console.log(data.message);
-
+        await fetch('/demo/reset', { method: 'POST' });
     } catch (error) {
         console.error('Error resetting demo:', error);
     }
 }
 
-// Event listeners
+async function loadQualityComparison(scenario) {
+    try {
+        const res = await fetch(`/quality/${scenario}`);
+        const data = await res.json();
+
+        document.getElementById('qualityPrompt').textContent = data.prompt;
+        document.getElementById('qualityFP16').textContent = data.responses.FP16;
+        document.getElementById('qualityINT4').textContent = data.responses.INT4;
+        document.getElementById('qualitySPEC').textContent = data.responses.SPEC_DECODE;
+    } catch (error) {
+        console.error('Error loading quality comparison:', error);
+    }
+}
+
+function toggleQualityPanel() {
+    const panel = document.getElementById('qualityPanel');
+    qualityVisible = !qualityVisible;
+    panel.style.display = qualityVisible ? 'block' : 'none';
+    if (qualityVisible) {
+        loadQualityComparison('complex_reasoning');
+    }
+}
+
 document.getElementById('toggleSimBtn').addEventListener('click', toggleSimulation);
 document.getElementById('resetBtn').addEventListener('click', resetDemo);
+document.getElementById('qualityBtn').addEventListener('click', toggleQualityPanel);
 
-// Keyboard shortcut for simulation mode toggle
+document.querySelectorAll('.scenario-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadQualityComparison(btn.dataset.scenario);
+    });
+});
+
 document.addEventListener('keydown', (event) => {
-    // Ctrl+Shift+S
     if (event.ctrlKey && event.shiftKey && event.key === 'S') {
         event.preventDefault();
         toggleSimulation();
     }
+    if (event.ctrlKey && event.shiftKey && event.key === 'Q') {
+        event.preventDefault();
+        toggleQualityPanel();
+    }
 });
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initWebSocket();
-
-    // Start demo automatically
     fetch('/demo/start', { method: 'POST' })
         .then(res => res.json())
         .then(data => console.log('Demo started:', data.message))
