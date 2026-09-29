@@ -219,7 +219,7 @@ h2 .soft { color: var(--ink-3); }
 /* ════════ Slide 6: find out ════════ */
 .center { align-items: center; text-align: center; }
 .findout h1 { font-size: 150px; letter-spacing: -3px; }
-.findout .lead { margin: 30px auto 0; text-align: center; }
+.findout .lead { margin: 30px auto 0; text-align: center; max-width: 1640px; }
 .live-pill { margin-top: 56px; display: inline-flex; align-items: center; gap: 14px; font: 700 22px var(--mono); color: var(--ink-2); border: 1.5px solid var(--line); padding: 14px 24px; border-radius: 999px; letter-spacing: 1px; }
 .live-pill i { width: 14px; height: 14px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 0 rgba(238,0,0,.5); animation: pulse 1.6s infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(238,0,0,.5); } 70% { box-shadow: 0 0 0 16px rgba(238,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(238,0,0,0); } }
@@ -248,9 +248,9 @@ h2 .soft { color: var(--ink-3); }
 .prompt-box .p .lab { display: block; font: 700 16px var(--mono); letter-spacing: 1.5px; color: var(--ink-3); margin-bottom: 6px; }
 .flock-wrap { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
 .flock { display: grid; grid-template-columns: repeat(9, 44px); grid-auto-rows: 38px; gap: 4px 6px; width: 460px; height: 80px; transition: height .6s var(--ease) 0s; }
-.slide.active .flock { height: 38px; transition-delay: 3.3s; }
+.slide.revealed .flock { height: 38px; transition-delay: 2.1s; }
 .flock svg { width: 44px; height: 38px; transition: transform 1.2s var(--ease), opacity 1.2s var(--ease); }
-.slide.active .flock svg.runs { transform: translateX(380px); opacity: 0; transition-delay: calc(1.4s + var(--i) * 80ms); }
+.slide.revealed .flock svg.runs { transform: translateX(380px); opacity: 0; transition-delay: calc(.3s + var(--i) * 80ms); }
 .flock-n { font: 900 44px/1 var(--display); color: var(--ok); min-width: 50px; text-align: right; }
 .answers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 30px; }
 .ans { border: 1.5px solid var(--line); border-radius: 18px; padding: 22px 26px 20px; background: #fff; display: flex; flex-direction: column; }
@@ -304,26 +304,80 @@ h2 .soft { color: var(--ink-3); }
 .close-by { margin-top: 56px; font-size: 24px; color: var(--ink-3); line-height: 1.5; }
 .close-by strong { color: var(--ink); font: 700 28px var(--display); display: block; }
 
-/* ════════ Backup slides ════════ */
-.bk-tag { display: inline-block; font: 700 17px var(--mono); letter-spacing: 2px; color: #fff; background: var(--ink); padding: 7px 12px; border-radius: 6px; margin-right: 16px; vertical-align: middle; }
-.qa { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 50px; }
-.qa h3 { font: 700 30px var(--display); margin-bottom: 16px; }
-.qa p { font-size: 24px; line-height: 1.55; color: var(--ink-2); }
-.qa p + p { margin-top: 14px; }
-.meth { width: 100%; border-collapse: collapse; margin-top: 44px; font-size: 23px; }
-.meth th { text-align: left; font: 700 17px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); padding: 0 20px 14px 0; border-bottom: 2px solid var(--ink); }
-.meth td { padding: 17px 20px 17px 0; border-bottom: 1.5px solid var(--line); color: var(--ink-2); vertical-align: top; line-height: 1.4; }
-.meth td:first-child { font-weight: 700; color: var(--ink); width: 250px; }
-.meth td:nth-child(2) { width: 520px; }
-.meth td.mono { font-family: var(--mono); font-size: 21px; }
-.formula { margin-top: 40px; display: grid; grid-template-columns: 820px 1fr; gap: 70px; align-items: start; }
-.eq { background: var(--bg-soft); border: 1.5px solid var(--line); border-radius: 20px; padding: 30px 34px; }
-.eq .line { font: 500 30px/1.6 var(--mono); color: var(--ink); }
-.eq .line .v { color: var(--spec-tx); font-weight: 700; }
-.eq .small { font-size: 21px; color: var(--ink-3); margin-top: 16px; line-height: 1.5; font-family: var(--text); }
-.eq-table { width: 100%; border-collapse: collapse; margin-top: 22px; font: 500 21px var(--mono); }
-.eq-table th { text-align: left; color: var(--ink-3); font-weight: 700; font-size: 17px; letter-spacing: 1px; text-transform: uppercase; padding-bottom: 10px; border-bottom: 1.5px solid var(--line); }
-.eq-table td { padding: 10px 0; border-bottom: 1.5px solid var(--line); color: var(--ink); }
+/* ════════ Story pieces ════════ */
+.emo { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; font-weight: 400; letter-spacing: 0; }
+.chapter { display: inline-flex; align-items: center; gap: 14px; }
+.chapter .n { color: var(--ink-3); margin-right: 0; }
+.cast { margin-top: 40px; display: flex; gap: 16px; flex-wrap: wrap; }
+.cast span { font: 500 22px var(--text); color: var(--ink-2); background: var(--bg-soft); border: 1.5px solid var(--line); border-radius: 999px; padding: 10px 20px; }
+.cast b { color: var(--ink); font-family: var(--display); }
+.phones { margin-top: 26px; font: 700 24px var(--display); color: var(--red-dk); }
+
+/* chat message mockup (slide 2) */
+.dm { background: #fff; border: 1.5px solid var(--line); border-radius: 22px; box-shadow: 0 30px 60px -32px rgba(0,0,0,.28); overflow: hidden; }
+.dm-bar { display: flex; align-items: center; gap: 12px; padding: 16px 24px; background: var(--bg-soft); border-bottom: 1.5px solid var(--line); font: 700 19px var(--mono); color: var(--ink-3); }
+.dm-bar i { width: 11px; height: 11px; border-radius: 50%; background: #3e8635; }
+.dm-msg { display: grid; grid-template-columns: 56px 1fr; gap: 16px; padding: 24px 26px 8px; }
+.dm-av { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 30px; background: #fdf4dc; }
+.dm-name { font: 700 22px var(--display); color: var(--ink); }
+.dm-name small { font: 500 17px var(--text); color: var(--ink-3); margin-left: 10px; }
+.dm-text { font-size: 26px; line-height: 1.45; color: var(--ink); margin-top: 4px; }
+.dm-text b { font-family: var(--display); }
+.dm-typing { padding: 4px 26px 22px 98px; font-size: 19px; color: var(--ink-3); font-style: italic; }
+.aside { margin-top: 18px; font-size: 22px; color: var(--ink-3); font-style: italic; }
+
+/* vote row (slide 5) */
+.vote { margin-top: 30px; display: flex; align-items: center; justify-content: space-between; gap: 30px; background: var(--ink); color: #fff; border-radius: 20px; padding: 22px 32px; }
+.vote .q { font: 700 30px var(--display); color: #fff; white-space: nowrap; }
+.vote .opts { display: flex; gap: 14px; }
+.vote .opt { font: 700 22px var(--display); padding: 10px 18px; border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; }
+.vote .foot { color: #b8bcc2; }
+
+/* results reactions (slide 7) */
+.reacts { margin-top: 30px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+.react { border-radius: 16px; padding: 16px 22px; font-size: 22px; line-height: 1.45; color: var(--ink-2); background: var(--tint); }
+.react b { font-family: var(--display); color: var(--ct); }
+
+/* step reveal (slide 8): press next to reveal before moving on */
+.step { opacity: 0; transform: translateY(18px) scale(.98); transition: opacity .5s var(--ease), transform .5s var(--ease); }
+.step.shown { opacity: 1; transform: none; }
+.shout { margin-top: 26px; font: 700 30px var(--display); color: var(--ink); text-align: center; }
+.shout .emo { font-size: 34px; }
+
+/* what Priya shipped (slide 9) */
+.ship-flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 46px; }
+.ship { border: 1.5px solid var(--line); border-radius: 22px; background: #fff; overflow: hidden; display: flex; flex-direction: column; }
+.ship-top { padding: 22px 28px; background: var(--tint); display: flex; align-items: center; gap: 16px; }
+.ship-top .emo { font-size: 40px; }
+.ship-top .w { font: 700 25px var(--display); color: var(--ink); line-height: 1.25; }
+.ship-arrow { padding: 12px 28px 0; font: 700 18px var(--mono); color: var(--ink-3); letter-spacing: 1px; }
+.ship-body { padding: 6px 28px 24px; flex: 1; display: flex; flex-direction: column; }
+.ship-body h3 { font: 700 34px var(--display); color: var(--ct); }
+.ship-body p { font-size: 22px; line-height: 1.45; color: var(--ink-2); margin-top: 10px; flex: 1; }
+.ship-body .spec { margin-top: 16px; padding-top: 14px; border-top: 1.5px solid var(--line); font: 500 19px/1.55 var(--mono); color: var(--ink-2); }
+.ending { margin-top: 30px; display: flex; justify-content: space-between; align-items: center; gap: 30px; }
+.ending .body { font-size: 26px; }
+.stackline { font: 500 19px var(--mono); color: var(--ink-3); text-align: right; }
+
+/* lightning round (slide 10) */
+.lightning { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 36px; }
+.lq { border: 1.5px solid var(--line); border-radius: 18px; padding: 22px 24px; background: #fff; display: flex; flex-direction: column; }
+.lq h3 { font: 700 25px/1.25 var(--display); color: var(--ink); margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start; }
+.lq h3 .emo { font-size: 26px; }
+.lq p { font-size: 20.5px; line-height: 1.5; color: var(--ink-2); }
+.lq p:not(.num) { margin-bottom: 22px; }
+.lq .num { margin-top: auto; padding-top: 4px; font: 500 17px var(--mono); color: var(--ink-3); }
+
+/* close (slide 11) */
+.close-grid { display: grid; grid-template-columns: 1fr 460px; gap: 100px; align-items: center; }
+.close-grid h1 { font-size: 68px; line-height: 1.04; letter-spacing: -1.5px; }
+.close-list { margin-top: 38px; display: grid; gap: 16px; }
+.close-list div { display: grid; grid-template-columns: 44px 1fr; align-items: baseline; font-size: 26px; line-height: 1.45; color: var(--ink-2); }
+.close-list .emo { font-size: 28px; }
+.close-list b { color: var(--ink); font-family: var(--display); }
+.close-list .mono { font-size: 23px; color: var(--ink); }
+.thanks { margin-top: 40px; font: 700 30px var(--display); }
+.thanks small { display: block; font: 500 22px var(--text); color: var(--ink-3); margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -338,10 +392,11 @@ h2 .soft { color: var(--ink-3); }
   <div class="hero">
     <div>
       <div class="kicker rise">PyTorch Conference NA 2026 &middot; Demo Theater</div>
-      <h1 class="rise" style="--d:1">Quantization<br><span class="accent">Showdown</span></h1>
-      <p class="lead rise" style="--d:2">I served Llama 3.1 70B three different ways on NVIDIA H200s and measured every one of them, and a couple of the results aren't what most people guess.</p>
-      <button class="begin rise" style="--d:3" onclick="go(1)">Begin <span aria-hidden="true">&rarr;</span></button>
-      <div class="byline rise" style="--d:4"><strong>Markell Rawls</strong>AI Developer Advocate, Red Hat</div>
+      <h1 class="rise" style="--d:1">Quantization<br><span class="accent">Showdown</span> <span class="emo" style="font-size:88px">🥊</span></h1>
+      <p class="lead rise" style="--d:2">One 70B model, three ways to serve it on H200s, and a platform engineer who has to pick one before finance picks for her.</p>
+      <div class="cast rise" style="--d:3"><span><b>Priya</b> &middot; platform team</span><span><b>Marcus</b> &middot; data science</span><span><b>Dana</b> &middot; finance</span></div>
+      <p class="phones rise" style="--d:4"><span class="emo">📱</span> Keep your phone handy, you'll need it in about four minutes.</p>
+      <div class="byline rise" style="--d:5"><strong>Markell Rawls</strong>AI Developer Advocate, Red Hat</div>
     </div>
     <div class="quant-panel rise" style="--d:2">
       <div class="quant-head">
@@ -349,41 +404,48 @@ h2 .soft { color: var(--ink-3); }
         <span class="foot" id="qbits">16 bits per weight</span>
       </div>
       <canvas id="quantgrid" width="1440" height="1040"></canvas>
-      <p class="quant-cap">A weight matrix being rounded to 4 bits. Every cell snaps to one of 16 values.</p>
+      <p class="quant-cap">A weight matrix getting rounded to 4 bits, so every cell snaps to one of 16 values.</p>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ 2 · THE PROBLEM ═══════════ -->
+<!-- ═══════════ 2 · MEET PRIYA ═══════════ -->
 <section class="slide" data-color="blue" data-dot="main">
-  <div class="kicker rise"><span class="n">01</span>Where it starts</div>
-  <h2 class="rise" style="--d:1">You shipped Llama 3.1 70B at BF16, and the weights alone are the size of an entire H200.</h2>
-  <div class="two-col">
+  <div class="kicker rise"><span class="n">Chapter 1</span>Meet Priya <span class="emo">👩🏽‍💻</span></div>
+  <h2 class="rise" style="--d:1">Priya on the platform team shipped Llama 3.1 70B at BF16, and the weights alone fill an entire H200.</h2>
+  <div class="two-col" style="grid-template-columns: 1fr 640px; align-items:center; margin-top:56px">
     <div class="gpus rise" style="--d:2">
       <div class="gpu">
-        <div class="gpu-top"><span class="gpu-name">H200 #1</span><span class="gpu-cap">141 GB HBM3e</span></div>
+        <div class="gpu-top"><span class="gpu-name">H200 #1</span><span class="gpu-cap">141 GB</span></div>
         <div class="mem"><div class="w" data-w="50"></div><div class="kv" data-l="50" data-w="40"></div></div>
-        <div class="mem-legend"><span><b>70.5 GB</b> weights (half the model)</span><span>KV cache</span></div>
+        <div class="mem-legend"><span><b>70.5 GB</b> weights</span><span>KV cache</span></div>
       </div>
       <div class="gpu">
-        <div class="gpu-top"><span class="gpu-name">H200 #2</span><span class="gpu-cap">141 GB HBM3e</span></div>
+        <div class="gpu-top"><span class="gpu-name">H200 #2</span><span class="gpu-cap">141 GB</span></div>
         <div class="mem"><div class="w" data-w="50"></div><div class="kv" data-l="50" data-w="40"></div></div>
-        <div class="mem-legend"><span><b>70.5 GB</b> weights (other half)</span><span>KV cache</span></div>
+        <div class="mem-legend"><span><b>70.5 GB</b> weights</span><span>KV cache</span></div>
       </div>
       <div class="tp-link">tensor parallel = 2, so every replica needs two GPUs</div>
     </div>
-    <div class="bigstat rise" style="--d:3">
-      <div class="v" data-count="1460">1,460</div>
-      <div class="u">GPU-hours a month</div>
-      <div class="l">for one replica running around the clock, before traffic grows and you need a second one, and finance has started asking questions.</div>
+    <div class="rise" style="--d:3">
+      <div class="dm">
+        <div class="dm-bar"><i></i>Direct message</div>
+        <div class="dm-msg">
+          <div class="dm-av emo">💼</div>
+          <div><div class="dm-name">Dana <small>Finance &middot; 9:02 AM</small></div>
+          <p class="dm-text">hey Priya, quick question <span class="emo">🙂</span> why is one chatbot using <b data-count="1460">1,460</b> GPU-hours a month?</p></div>
+        </div>
+        <div class="dm-typing">Dana is typing a follow-up&hellip;</div>
+      </div>
+      <p class="aside">It is never a quick question.</p>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ 3 · THE OBVIOUS FIX ═══════════ -->
+<!-- ═══════════ 3 · SHE QUANTIZES ═══════════ -->
 <section class="slide" data-color="gold" data-dot="main">
-  <div class="kicker rise"><span class="n">02</span>The obvious fix</div>
-  <h2 class="rise" style="--d:1">So you do what everyone does, and <span class="hl">you quantize it.</span></h2>
+  <div class="kicker rise"><span class="n">Chapter 2</span>The obvious fix <span class="emo">🗜️</span></div>
+  <h2 class="rise" style="--d:1">So Priya does what everyone does, and <span class="hl">she quantizes it.</span></h2>
   <div class="size-chart rise" style="--d:2" id="sizeChart">
     <div class="size-row">
       <div class="size-lab"><div class="nm t-bf16">BF16</div><div class="bp">2 bytes / weight</div></div>
@@ -400,36 +462,38 @@ h2 .soft { color: var(--ink-3); }
     <div class="h200-line" id="h200line"><span>one H200 = 141 GB</span></div>
   </div>
   <div class="size-note">
-    <p class="body rise" style="--d:3">INT4 shrinks the weights to about a quarter, so the whole model fits on one GPU with room left for KV cache, and the GPU line on your bill drops by half.</p>
+    <p class="body rise" style="--d:3">INT4 puts the whole model on one GPU, the GPU line drops by half, Dana replies with <span class="emo">🎉</span>, and Priya is a hero for about two weeks.</p>
     <p class="foot rise" style="--d:4">Weights only, from 70.6B parameters</p>
   </div>
 </section>
 
-<!-- ═══════════ 4 · THE TICKET + HANDS UP ═══════════ -->
+<!-- ═══════════ 4 · THE TICKET ═══════════ -->
 <section class="slide" data-color="red" data-dot="main">
   <div class="ticket-wrap">
     <div class="ticket rise">
       <div class="ticket-bar"><span class="ticket-id">SUP-4471 &middot; two weeks later</span><span class="prio">PRIORITY: HIGH</span></div>
       <div class="ticket-body">
-        <p class="ticket-from">From <b>Marcus on the data science team</b></p>
+        <p class="ticket-from">From <b>Marcus on the data science team</b> <span class="emo">😤</span></p>
         <p class="ticket-q">&ldquo;The model used to give me detailed analysis. Now it just gives me bullet points.&rdquo;</p>
-        <p class="ticket-sub">Assigned to you &middot; 3 more like it this week</p>
+        <p class="ticket-sub">Assigned to Priya &middot; 3 more like it this week</p>
       </div>
     </div>
     <div class="hands">
-      <h2 class="rise" style="--d:2">Hands up if you've ever quantized a model and then just <span class="hl">hoped the quality was fine.</span></h2>
-      <p class="lead rise" style="--d:3">Me too, so this time I measured it.</p>
+      <div class="kicker rise" style="--d:1"><span class="n">Chapter 3</span>Quick show of hands</div>
+      <h2 class="rise" style="--d:2"><span class="emo">✋</span> Who has quantized a model and then just <span class="hl">hoped the quality was fine?</span></h2>
+      <p class="lead rise" style="--d:3">Keep it up if it came back to bite you <span class="emo">😬</span></p>
+      <p class="lead rise" style="--d:4; margin-top:14px">Priya was in that club too, so this time she stopped hoping and set up a showdown.</p>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ 5 · CONTESTANTS ═══════════ -->
+<!-- ═══════════ 5 · THE SHOWDOWN ═══════════ -->
 <section class="slide" data-color="purple" data-dot="main">
-  <div class="kicker rise"><span class="n">03</span>The contestants</div>
-  <h2 class="rise" style="--d:1">Llama 3.1 70B three ways, all on H200s through vLLM</h2>
-  <div class="cards3">
+  <div class="kicker rise"><span class="n">Chapter 4</span>The showdown <span class="emo">🥊</span></div>
+  <h2 class="rise" style="--d:1">Three contestants, one 70B model, all on vLLM</h2>
+  <div class="cards3" style="margin-top:40px">
     <div class="vcard rise" style="--d:2; --c:var(--bf16); --ct:var(--bf16-tx); --tint:var(--bf16-tint)">
-      <h3>BF16</h3><div class="sub">THE BASELINE</div>
+      <h3><span class="emo">🔵</span> BF16</h3><div class="sub">THE BASELINE</div>
       <div class="chips-row"><div class="gchip">H200</div><div class="gchip">H200</div></div>
       <div class="kv-rows">
         <div class="kv"><span>GPUs</span><b>2 (TP 2)</b></div>
@@ -438,7 +502,7 @@ h2 .soft { color: var(--ink-3); }
       <p class="what">The model exactly as Meta released it, and the reference for everything else.</p>
     </div>
     <div class="vcard rise" style="--d:3; --c:var(--int4); --ct:var(--int4-tx); --tint:var(--int4-tint)">
-      <h3>INT4 AWQ</h3><div class="sub">W4A16 &middot; MARLIN KERNELS</div>
+      <h3><span class="emo">🟡</span> INT4 AWQ</h3><div class="sub">W4A16 &middot; MARLIN KERNELS</div>
       <div class="chips-row"><div class="gchip">H200</div></div>
       <div class="kv-rows">
         <div class="kv"><span>GPUs</span><b>1</b></div>
@@ -447,7 +511,7 @@ h2 .soft { color: var(--ink-3); }
       <p class="what">Weights stored in 4 bits and expanded to 16 inside the kernel, so the math still runs in 16-bit.</p>
     </div>
     <div class="vcard rise" style="--d:4; --c:var(--spec); --ct:var(--spec-tx); --tint:var(--spec-tint)">
-      <h3>Speculative decode</h3><div class="sub">70B TARGET + 8B DRAFT &middot; K = 5</div>
+      <h3><span class="emo">🟣</span> Speculative decode</h3><div class="sub">70B TARGET + 8B DRAFT &middot; K = 5</div>
       <div class="tokstrip" id="tokstrip">
         <div class="tokrow"><span class="toklab">8B</span><span class="tok">The</span><span class="tok">farmer</span><span class="tok">has</span><span class="tok">8</span><span class="tok">sheep</span></div>
         <div class="tokrow"><span class="toklab">70B</span><span class="tok fix" id="tokfix">9</span></div>
@@ -456,24 +520,25 @@ h2 .soft { color: var(--ink-3); }
       <p class="what" style="margin-top:6px">The 70B checks all five guesses in one pass and replaces the first one it disagrees with, so the output is always the 70B's.</p>
     </div>
   </div>
-  <div class="guess">
-    <p class="q rise" style="--d:5">Take a guess before the numbers show up. Which one is fastest?</p>
-    <p class="foot rise" style="--d:6">NVIDIA H200 141 GB &middot; vLLM 0.18.0+rhaiv.14 &middot; Llama 3.1 70B Instruct &middot; Sep 2026</p>
+  <div class="vote rise" style="--d:5">
+    <span class="q"><span class="emo">🙋</span> Vote with your hands: who's fastest?</span>
+    <span class="opts"><span class="opt"><span class="emo">🔵</span> BF16</span><span class="opt"><span class="emo">🟡</span> INT4</span><span class="opt"><span class="emo">🟣</span> Spec decode</span></span>
   </div>
 </section>
 
 <!-- ═══════════ 6 · LET'S FIND OUT ═══════════ -->
 <section class="slide center findout" data-color="red" data-dot="main">
-  <h1 class="rise">Let's find out.</h1>
-  <p class="lead rise" style="--d:1">Switching to the live dashboard, where all three variants take traffic side by side.</p>
-  <div class="rise" style="--d:2"><span class="live-pill"><i></i>LIVE DEMO</span></div>
+  <h1 class="rise">Let's find out. <span class="emo" style="font-size:120px">🚀</span></h1>
+  <p class="lead rise" style="--d:1"><span class="emo">📱</span> Phones out. Scan the code on the Arena screen, back a bird, and throw hard prompts at it.</p>
+  <p class="rise" style="--d:2; margin-top:18px; font-size:24px; color:var(--ink-3)"><span class="emo">🐦</span> Every bird is flown by the same small PyTorch network, stored at a different precision</p>
+  <div class="rise" style="--d:3"><span class="live-pill"><i></i>LIVE DEMO</span></div>
 </section>
 
-<!-- ═══════════ 7 · RESULTS ═══════════ -->
+<!-- ═══════════ 7 · PLOT TWIST ═══════════ -->
 <section class="slide" data-color="blue" data-dot="main" id="results">
-  <div class="kicker rise"><span class="n">04</span>What the benchmark says</div>
-  <h2 class="rise pending" style="--d:1" data-pending="T5: CONFIRM CUDA GRAPHS ON FOR ALL">INT4 came within 7% of BF16's speed on <span class="hl">half the GPUs</span></h2>
-  <div class="charts">
+  <div class="kicker rise"><span class="n">Chapter 5</span>The plot twist <span class="emo">😅</span></div>
+  <h2 class="rise pending" style="--d:1" data-pending="A3: CONFIRM NO EAGER ON INT4/BF16">One GPU of INT4 kept pace with <span class="hl">two GPUs of BF16</span></h2>
+  <div class="charts" style="margin-top:40px">
     <div class="chart rise" style="--d:2">
       <h4>Decode speed, one request at a time</h4>
       <p class="cap">output tokens per second for a single stream</p>
@@ -485,197 +550,107 @@ h2 .soft { color: var(--ink-3); }
       <div id="chartPerGpu"></div>
     </div>
   </div>
-  <div class="lat-row rise" style="--d:4" id="latRow"></div>
-  <p class="foot results-foot rise" style="--d:5">End-to-end latency for ~225 output tokens &middot; 20 sequential requests per variant, 256 max tokens, temp 0.7 &middot; spec decode ran with enforce_eager (no torch.compile, no CUDA graphs)</p>
+  <div class="reacts rise" style="--d:4">
+    <div class="react" style="--tint:var(--bf16-tint); --ct:var(--bf16-tx)"><b><span class="emo">🔵</span> BF16 voters</b> win the stopwatch, by 3 tokens a second.</div>
+    <div class="react" style="--tint:var(--int4-tint); --ct:var(--int4-tx)"><b><span class="emo">🟡</span> INT4 voters</b> win the part Dana cares about, with 1.9&times; the tokens per GPU.</div>
+    <div class="react" style="--tint:var(--spec-tint); --ct:var(--spec-tx)"><b><span class="emo">🟣</span> Spec decode voters</b>, it's complicated, and the lightning round explains why.</div>
+  </div>
+  <p class="foot results-foot rise" style="--d:5">20 sequential requests per variant, 256 max tokens, temp 0.7, end-to-end for ~225 output tokens &middot; spec decode ran with enforce_eager</p>
 </section>
 
-<!-- ═══════════ 8 · QUALITY ═══════════ -->
+<!-- ═══════════ 8 · THE SHEEP TEST ═══════════ -->
 <section class="slide" data-color="green" data-dot="main">
-  <div class="kicker rise"><span class="n">05</span>Speed isn't the whole story</div>
-  <h2 class="rise" style="--d:1">Same prompt, three answers</h2>
+  <div class="kicker rise"><span class="n">Chapter 6</span>The sheep test <span class="emo">🐑</span></div>
+  <h2 class="rise" style="--d:1">Speed looked fine, so Priya checked what Marcus actually complained about</h2>
   <div class="prompt-box rise" style="--d:2">
-    <p class="p"><span class="lab">THE PROMPT</span>A farmer has 17 sheep. All but 9 run away.<br>How many sheep does the farmer have left?</p>
+    <p class="p"><span class="lab">SAME PROMPT TO ALL THREE</span>A farmer has 17 sheep. All but 9 run away.<br>How many sheep does the farmer have left?</p>
     <div class="flock-wrap" aria-hidden="true"><div class="flock" id="flock"></div><span class="flock-n" id="flockN">17</span></div>
   </div>
-  <div class="answers pending" data-pending="T1: REPLACE WITH CAPTURED OUTPUTS (TEMP 0)">
-    <div class="ans rise" style="--d:3">
-      <div class="ans-h"><span class="nm t-bf16">BF16</span><span class="verdict ok">&#10003; CORRECT</span></div>
+  <p class="shout rise" style="--d:3" id="shout"><span class="emo">📣</span> Shout out your answer before I reveal what the models said</p>
+  <div class="answers pending step" data-pending="T1: REPLACE WITH CAPTURED OUTPUTS (TEMP 0)" style="margin-top:22px">
+    <div class="ans">
+      <div class="ans-h"><span class="nm t-bf16"><span class="emo">🔵</span> BF16</span><span class="verdict ok">&#10003; CORRECT</span></div>
 <pre><b>The farmer has 9 sheep left.</b>
 
 "All but 9" means every sheep
-except 9 ran away, so 8 left
-and 9 stayed.</pre>
+except 9 ran away.</pre>
       <p class="rate">Correct in <b>__/20</b> sampled runs</p>
     </div>
-    <div class="ans rise" style="--d:4">
-      <div class="ans-h"><span class="nm t-int4">INT4</span><span class="verdict bad">&#10007; WRONG</span></div>
+    <div class="ans">
+      <div class="ans-h"><span class="nm t-int4"><span class="emo">🟡</span> INT4</span><span class="verdict bad">&#10007; WRONG</span></div>
 <pre><b>The farmer has 8 sheep left.</b>
 
-Step 1: Start with 17 sheep.
-Step 2: 9 sheep run away.
-Step 3: 17 - 9 = 8 remain.</pre>
+17 - 9 = 8 sheep remain.</pre>
       <p class="rate">Correct in <b>__/20</b> sampled runs</p>
     </div>
-    <div class="ans rise" style="--d:5">
-      <div class="ans-h"><span class="nm t-spec">Spec decode</span><span class="verdict ok">&#10003; CORRECT</span></div>
+    <div class="ans">
+      <div class="ans-h"><span class="nm t-spec"><span class="emo">🟣</span> Spec decode</span><span class="verdict ok">&#10003; CORRECT</span></div>
 <pre><b>The farmer has 9 sheep left.</b>
 
 "All but 9" means every sheep
-except 9 ran away, so 8 left
-and 9 stayed.</pre>
+except 9 ran away.</pre>
       <p class="why">Matches BF16 at temperature 0, because the 70B approves every token.</p>
     </div>
   </div>
-  <p class="q-foot rise" style="--d:6">A throughput chart can't show you this, and a confident wrong answer is the kind that turns into a support ticket.</p>
 </section>
 
-<!-- ═══════════ 9 · CHEAT SHEET ═══════════ -->
+<!-- ═══════════ 9 · WHAT PRIYA SHIPPED ═══════════ -->
 <section class="slide" data-color="purple" data-dot="main">
-  <div class="kicker rise"><span class="n">06</span>The cheat sheet</div>
-  <h2 class="rise" style="--d:1">Pick the variant from your workload, then check it against your own prompts</h2>
-  <div class="cards3">
-    <div class="dcard rise" style="--d:2; --c:var(--int4); --ct:var(--int4-tx)">
-      <h3>INT4 (W4A16)</h3>
-      <p class="when">Reach for it when</p>
-      <p class="use">cost per replica matters most and your traffic is interactive, as long as it holds up on an eval set built from your own prompts.</p>
-      <p class="spec">1 GPU &middot; 44 tok/s per stream<br>about 1.9&times; the tokens per GPU</p>
+  <div class="kicker rise"><span class="n">Chapter 7</span>What Priya shipped <span class="emo">🚢</span></div>
+  <h2 class="rise" style="--d:1">She stopped picking one winner and <span class="hl">routed each workload to the right variant</span></h2>
+  <div class="ship-flow">
+    <div class="ship rise" style="--d:2; --tint:var(--int4-tint); --ct:var(--int4-tx)">
+      <div class="ship-top"><span class="emo">💬</span><span class="w">Everyday chat and summaries</span></div>
+      <div class="ship-arrow">ROUTED TO &darr;</div>
+      <div class="ship-body"><h3>INT4</h3><p>Most of the traffic, on half the GPUs, after it passed an eval built from real user prompts.</p><p class="spec">1 GPU &middot; 44 tok/s per stream<br>1.9&times; the tokens per GPU</p></div>
     </div>
-    <div class="dcard rise" style="--d:3; --c:var(--bf16); --ct:var(--bf16-tx)">
-      <h3>BF16</h3>
-      <p class="when">Reach for it when</p>
-      <p class="use">you need the reference output, or your eval shows quantization costing you answers you can't afford to get wrong.</p>
-      <p class="spec">2 GPUs &middot; 47 tok/s per stream<br>the quality baseline</p>
+    <div class="ship rise" style="--d:3; --tint:var(--bf16-tint); --ct:var(--bf16-tx)">
+      <div class="ship-top"><span class="emo">🧠</span><span class="w">Marcus's deep analysis</span></div>
+      <div class="ship-arrow">ROUTED TO &darr;</div>
+      <div class="ship-body"><h3>BF16</h3><p>The workload where a wrong answer costs the most keeps the full-precision model.</p><p class="spec">2 GPUs &middot; 47 tok/s per stream<br>the quality baseline</p></div>
     </div>
-    <div class="dcard rise" style="--d:4; --c:var(--spec); --ct:var(--spec-tx)">
-      <h3>Speculative decode</h3>
-      <p class="when">Reach for it when</p>
-      <p class="use">you want the 70B's exact output with lower latency on low-concurrency traffic, and the draft model's guesses get accepted often.</p>
-      <p class="spec pending" data-pending="T3: RERUN WITHOUT EAGER">2 GPUs &middot; 40 tok/s in this run<br>CUDA graphs were off</p>
+    <div class="ship rise" style="--d:4; --tint:var(--spec-tint); --ct:var(--spec-tx)">
+      <div class="ship-top"><span class="emo">⚡</span><span class="w">Latency-sensitive, low traffic</span></div>
+      <div class="ship-arrow">ROUTED TO &darr;</div>
+      <div class="ship-body"><h3>Spec decode</h3><p>The 70B's exact output with lower latency, once it runs with CUDA graphs on and the draft's guesses land often.</p><p class="spec pending" data-pending="T3: RERUN WITHOUT EAGER">2 GPUs &middot; 40 tok/s in this run<br>enforce_eager was on</p></div>
     </div>
   </div>
-  <p class="cheat-foot rise" style="--d:5">Serving at high concurrency on Hopper? FP8 on a single H200 belongs on this list too, and the backup slides cover it.</p>
+  <div class="ending rise" style="--d:5">
+    <p class="body">Marcus closes the ticket <span class="emo">✅</span> and Dana sends another <span class="emo">🎉</span></p>
+    <p class="stackline">no custom inference code: LLM Compressor &rarr; vLLM on OpenShift AI, PyTorch underneath</p>
+  </div>
 </section>
 
-<!-- ═══════════ 10 · THE STACK ═══════════ -->
-<section class="slide" data-color="red" data-dot="main">
-  <div class="kicker rise"><span class="n">07</span>The stack</div>
-  <h2 class="rise" style="--d:1">Everything you just saw is open source, with no custom inference code</h2>
-  <div class="flow">
-    <div class="node rise" style="--d:2"><span class="tag">Start</span><h3>Llama 3.1 70B</h3><p>The BF16 checkpoint from Hugging Face, plus the 8B as the draft model.</p></div>
-    <div class="arrow" style="--d:3"><svg viewBox="0 0 52 24"><path d="M2 12h44m-10-9 10 9-10 9"/></svg></div>
-    <div class="node rise pending" style="--d:3" data-pending="T6: CONFIRM CHECKPOINT SOURCE"><span class="tag">Compress</span><h3>LLM Compressor</h3><p>Runs AWQ calibration in PyTorch and writes the INT4 checkpoint vLLM loads.</p></div>
-    <div class="arrow" style="--d:4"><svg viewBox="0 0 52 24"><path d="M2 12h44m-10-9 10 9-10 9"/></svg></div>
-    <div class="node key rise" style="--d:4"><span class="tag">Serve</span><h3>vLLM on OpenShift AI</h3><p>Three deployments behind the same OpenAI-compatible API. Speculative decoding is one <span class="mono" style="white-space:nowrap">--speculative-config</span> flag.</p></div>
-    <div class="arrow" style="--d:5"><svg viewBox="0 0 52 24"><path d="M2 12h44m-10-9 10 9-10 9"/></svg></div>
-    <div class="node rise" style="--d:5"><span class="tag">Show</span><h3>This demo</h3><p>FastAPI and WebSockets pushing live metrics to the dashboard twice a second.</p></div>
-  </div>
-  <div class="base rise" style="--d:6">
-    <div class="nm">Py<span>Torch</span></div>
-    <p>underneath all of it: vLLM runs the model through <code>torch.compile</code> and CUDA graphs, the Marlin INT4 kernels plug in as PyTorch custom ops, and LLM Compressor's calibration is plain PyTorch.</p>
+<!-- ═══════════ 10 · LIGHTNING ROUND ═══════════ -->
+<section class="slide" data-color="gold" data-dot="main">
+  <div class="kicker rise"><span class="n">Chapter 8</span>Lightning round <span class="emo">⚡</span></div>
+  <h2 class="rise" style="--d:1">Six fair questions, answered fast</h2>
+  <div class="lightning">
+    <div class="lq rise" style="--d:1"><h3><span class="emo">🤔</span>Why not FP8?</h3><p>At 71 GB it fits on one H200 too, Hopper has FP8 tensor cores, and Red Hat's FP8 build of this model keeps 99.9% of the BF16 score. It's the first variant I'd add.</p><p class="num pending" data-pending="T2">FP8 on 1 GPU: __ tok/s</p></div>
+    <div class="lq rise" style="--d:2"><h3><span class="emo">🐢</span>Why did spec decode lose?</h3><p>That run had enforce_eager on, which in vLLM 0.18 turns off torch.compile and CUDA graphs, and the draft makes five small passes for every 70B pass.</p><p class="num pending" data-pending="T3">tokens per 70B pass: __ &middot; no-eager: __ tok/s</p></div>
+    <div class="lq rise" style="--d:3"><h3><span class="emo">📏</span>Are 20 requests enough?</h3><p>For one-at-a-time speed it's a sanity check, and it lines up with Red Hat's own H100 numbers. Cost per token comes from the load test at concurrency 1 to 64.</p><p class="num pending" data-pending="T4">tok/s per GPU at c=32: __</p></div>
+    <div class="lq rise" style="--d:4"><h3><span class="emo">🐣</span>Does it hold for an 8B?</h3><p>Smaller models lose more. In Red Hat's study INT4 kept 97.4% of the 70B's score on OpenLLM v2 and 96.1% of the 8B's, so check an 8B carefully.</p><p class="num">Kurtic et al., ACL 2025</p></div>
+    <div class="lq rise" style="--d:5"><h3><span class="emo">🧰</span>Why AWQ, not GPTQ or torchao?</h3><p>All three end up as checkpoints vLLM serves. Red Hat's paper found GPTQ slightly ahead on harder benchmarks, so it's the next INT4 variant to try.</p><p class="num">vLLM 0.18 serves all three</p></div>
+    <div class="lq rise" style="--d:6"><h3><span class="emo">🔀</span>Can I route per request?</h3><p>Yes. Put the variants behind one Gateway and route on model name, and llm-d's scheduler picks the replica already holding your prefix in KV cache.</p><p class="num">llm-d on OpenShift AI</p></div>
   </div>
 </section>
 
 <!-- ═══════════ 11 · CLOSE ═══════════ -->
 <section class="slide" data-color="green" data-dot="main">
-  <div class="close">
+  <div class="close-grid">
     <div>
-      <h1 class="rise">Measure it on your own prompts <span class="hl">before you pick&nbsp;one.</span></h1>
-      <p class="cta rise" style="--d:1">Clone the repo and run the whole demo on your laptop in simulation mode, no GPUs needed, then point it at your own vLLM endpoints when you're ready.</p>
-      <div class="repo rise" style="--d:2">github.com/MarkellR-RedHat/pytorch-quantization-demo</div>
-      <div class="close-by rise" style="--d:3"><strong>Markell Rawls</strong>AI Developer Advocate, Red Hat &middot; mrawls@redhat.com</div>
+      <h1 class="rise">Measure it on your own prompts<br><span class="hl">before you pick one.</span></h1>
+      <div class="close-list">
+        <div class="rise" style="--d:1"><span class="emo">💻</span><span>Run this whole demo on your laptop in simulation mode, <b>no GPUs needed</b>, then point it at your own vLLM endpoints</span></div>
+        <div class="rise" style="--d:2"><span class="emo">📦</span><span class="mono">github.com/MarkellR-RedHat/pytorch-quantization-demo</span></div>
+        <div class="rise" style="--d:3"><span class="emo">🛠️</span><span>Built with vLLM, LLM Compressor, Red Hat OpenShift AI, and PyTorch</span></div>
+        <div class="rise" style="--d:4"><span class="emo">🎩</span><span>Bring your own model to the <b>Red Hat booth</b> and we'll run it with you</span></div>
+      </div>
+      <p class="thanks rise" style="--d:5">Thank you <span class="emo">🙏</span><small>Markell Rawls &middot; AI Developer Advocate, Red Hat &middot; mrawls@redhat.com</small></p>
     </div>
     <div class="qr rise" style="--d:2">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33" shape-rendering="crispEdges" id="qr"></svg>
-      <p>SCAN FOR THE REPO</p>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ B1 · FP8 ═══════════ -->
-<section class="slide" data-color="gold" data-dot="backup">
-  <div class="kicker rise"><span class="bk-tag">BACKUP</span>Why not FP8?</div>
-  <h2 class="rise" style="--d:1">On an H200, FP8 is the first variant I'd add</h2>
-  <div class="qa">
-    <div class="rise" style="--d:2">
-      <h3>It fits on one GPU too</h3>
-      <p>At one byte per weight the 70B is about 71 GB, so it runs on a single H200 with roughly half the card left for KV cache, and Hopper has native FP8 tensor cores, so the matmuls themselves get faster (not only the weight reads).</p>
-    </div>
-    <div class="rise" style="--d:3">
-      <h3>Red Hat's own numbers point the same way</h3>
-      <p>Red Hat's quantization study (Kurtic et al., ACL 2025, over 500,000 evaluations) found FP8 effectively lossless at every model size, with W8A8 winning continuous-batching serving and W4A16 the most cost-efficient for one-request-at-a-time serving, which is the setup this benchmark measured.</p>
-      <p>RedHatAI's FP8 build of this exact model keeps 99.9% of the BF16 score on OpenLLM v1.</p>
-      <p class="pending" data-pending="T2: FP8 ON 1x H200">FP8 on one H200: __ tok/s per stream, __ tok/s per GPU at concurrency 32.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ B2 · METHODOLOGY ═══════════ -->
-<section class="slide" data-color="blue" data-dot="backup">
-  <div class="kicker rise"><span class="bk-tag">BACKUP</span>How it was measured</div>
-  <h2 class="rise" style="--d:1">What these numbers are, and what they aren't</h2>
-  <table class="meth rise" style="--d:2">
-    <tr><th>Setting</th><th>This run</th><th>What it means</th></tr>
-    <tr><td>Load</td><td class="mono">20 requests, concurrency 1</td><td>Single-stream decode speed. It says nothing yet about throughput under heavy batching, which is where cost per token gets decided.</td></tr>
-    <tr><td>Throughput</td><td class="mono">completion tokens &divide; total latency</td><td>Includes prefill and HTTP time, so it's a little under pure decode speed, the same way for every variant.</td></tr>
-    <tr><td>Tail latency</td><td class="mono">"worst of 20"</td><td>With 20 samples, a p95 is really the slowest request, so the slides label it that way.</td></tr>
-    <tr><td>Sanity check</td><td class="mono">Kurtic et al., Table 5 (H100)</td><td>Same shape on H100: INT4 on 1 GPU about 36 tok/s, BF16 on 2 GPUs about 33. Scaled to H200 bandwidth that's roughly 51 and 47, and BF16 here matches.</td></tr>
-    <tr><td>Quality</td><td class="mono">one prompt, temp 0 + 20 samples</td><td>An example, and not a benchmark score. GSM8K per variant is the next run.</td></tr>
-    <tr class="pending" data-pending="T4: CONCURRENCY SWEEP"><td>Next run</td><td class="mono">vllm bench serve, c = 1, 8, 32, 64</td><td>TTFT, time per output token, and tokens per second per GPU at each load level.</td></tr>
-  </table>
-</section>
-
-<!-- ═══════════ B3 · SPEC DECODE MATH ═══════════ -->
-<section class="slide" data-color="purple" data-dot="backup">
-  <div class="kicker rise"><span class="bk-tag">BACKUP</span>Why spec decode came in last</div>
-  <h2 class="rise" style="--d:1">Speculative decoding wins or loses on two numbers</h2>
-  <div class="formula">
-    <div class="eq rise" style="--d:2">
-      <p class="line">tokens per 70B pass = (1 &minus; <span class="v">&alpha;</span><sup>k+1</sup>) / (1 &minus; <span class="v">&alpha;</span>)</p>
-      <p class="small">&alpha; is the chance the 70B accepts a drafted token and k = 5 is how many the 8B drafts. From Leviathan et al., 2023.</p>
-      <table class="eq-table">
-        <tr><th>Acceptance <span style="text-transform:none">&alpha;</span></th><th>Tokens per pass</th></tr>
-        <tr><td>0.5</td><td>1.97</td></tr>
-        <tr><td>0.7</td><td>2.94</td></tr>
-        <tr><td>0.9</td><td>4.69</td></tr>
-      </table>
-    </div>
-    <div class="rise" style="--d:3">
-      <p class="body"><b>The acceptance rate</b> decides how many tokens each 70B pass is worth. vLLM 0.18's draft model proposes its single most likely token, so at temperature 0.7 the target accepts fewer of them than at temperature 0.</p>
-      <p class="body" style="margin-top:22px"><b>The draft's overhead</b> is five small forward passes in a row for every 70B pass, and in vLLM 0.18 the draft runs at the same TP 2 as the target. With enforce_eager, torch.compile and CUDA graphs are both off, so each of those small passes pays full launch cost across the 8B's 32 layers.</p>
-      <p class="body pending" style="margin-top:22px" data-pending="T3: ACCEPTANCE + NO-EAGER RERUN">This run: mean acceptance length __ tokens per 70B pass, and __ tok/s without eager.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ B4 · MODEL SIZE + ROUTING ═══════════ -->
-<section class="slide" data-color="green" data-dot="backup">
-  <div class="kicker rise"><span class="bk-tag">BACKUP</span>Two more fair questions</div>
-  <div class="qa" style="margin-top:20px">
-    <div class="rise" style="--d:1">
-      <h3>"Does this hold for smaller models?"</h3>
-      <p>The shape of the trade-off holds, and the risk goes up as the model gets smaller. In Red Hat's study, INT4 kept 97.4% of the 70B's score on the harder OpenLLM v2 suite and 96.1% of the 8B's.</p>
-      <p>If you're quantizing an 8B, run your eval before you trust it.</p>
-    </div>
-    <div class="rise" style="--d:2">
-      <h3>"Can you route each request to the right variant?"</h3>
-      <p>Yes. Put every variant behind one Gateway and route on the model name, so chat traffic goes to INT4 and the long reasoning jobs go to BF16, all on one cluster.</p>
-      <p>On OpenShift AI, llm-d's inference scheduler (Gateway API Inference Extension) then picks the replica within each pool, preferring the one that already holds the request's prefix in KV cache.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ B5 · PYTORCH ═══════════ -->
-<section class="slide" data-color="red" data-dot="backup">
-  <div class="kicker rise"><span class="bk-tag">BACKUP</span>Where PyTorch fits</div>
-  <h2 class="rise" style="--d:1">"Why AWQ and not torchao?"</h2>
-  <div class="qa">
-    <div class="rise" style="--d:2">
-      <h3>Both land in the same place</h3>
-      <p>torchao quantizes models natively in PyTorch, and vLLM 0.18 serves torchao checkpoints directly. LLM Compressor writes AWQ, GPTQ, and FP8 checkpoints that vLLM runs on its mixed-precision kernels (Marlin, or Machete on Hopper), and Red Hat publishes validated models built that way.</p>
-    </div>
-    <div class="rise" style="--d:3">
-      <h3>What enforce_eager actually turns off</h3>
-      <p>vLLM normally compiles the model with <span class="mono">torch.compile</span> and captures CUDA graphs, so a whole decode step replays with almost no CPU launch overhead. In 0.18, <span class="mono">enforce_eager</span> turns off both, which hurts most when the model runs many small passes, and speculative decoding does exactly that.</p>
+      <p><span class="emo">📱</span> SCAN FOR EVERYTHING</p>
     </div>
   </div>
 </section>
@@ -717,8 +692,7 @@ barChart(document.getElementById('chartPerGpu'), v => v.tps / v.gpus, v => {
   const x = (v.tps / v.gpus) / (BENCH.BF16.tps / BENCH.BF16.gpus);
   return `${(v.tps / v.gpus).toFixed(1)}` + (x > 1.2 ? `<span class="badge-x">${x.toFixed(1)}&times; BF16</span>` : '');
 }, 72);
-document.getElementById('latRow').innerHTML = Object.values(BENCH).map(v =>
-  `<div class="lat"><span class="nm" style="color:${v.tx}">${v.label}</span><span class="v">avg <b>${(v.avg / 1000).toFixed(2)} s</b> &middot; slowest of 20 <b>${(v.worst / 1000).toFixed(2)} s</b></span></div>`).join('');
+
 
 function playCharts(slide) {
   slide.querySelectorAll('.bfill').forEach(b => { b.style.width = '0'; });
@@ -781,7 +755,7 @@ let flockTimers = [];
 function playFlock() {
   flockTimers.forEach(clearTimeout); flockTimers = [];
   const n = document.getElementById('flockN'); n.textContent = '17';
-  for (let k = 1; k <= 8; k++) flockTimers.push(setTimeout(() => { n.textContent = String(17 - k); }, 1700 + k * 80 + 400));
+  for (let k = 1; k <= 8; k++) flockTimers.push(setTimeout(() => { n.textContent = String(17 - k); }, 600 + k * 80 + 400));
 }
 
 // ═══ QR (repo link) ═══
@@ -863,6 +837,9 @@ function go(n) {
   n = Math.max(0, Math.min(slides.length - 1, n));
   slides.forEach((s, i) => { s.classList.toggle('active', i === n); s.classList.toggle('past', i < n); });
   cur = n;
+  slides.forEach(x => x.classList.remove('revealed'));
+  slides[n].querySelectorAll('.step').forEach(x => x.classList.remove('shown'));
+  const sh = slides[n].querySelector('#shout'); if (sh) sh.style.opacity = '';
   const s = slides[n];
   [...dotsEl.children].forEach((d, i) => d.classList.toggle('on', i === n));
   const isBk = s.dataset.dot === 'backup';
@@ -873,24 +850,29 @@ function go(n) {
   if (s.querySelector('.size-bar')) playSizes(s);
   if (s.querySelector('.mem')) playMem(s);
   if (s.querySelector('[data-count]')) playCount(s);
-  if (s.querySelector('#flock')) playFlock();
+  if (s.querySelector('#flock')) { flockTimers.forEach(clearTimeout); document.getElementById('flockN').textContent = '17'; }
   if (s.querySelector('#tokstrip')) playTokens(); else { tokTimers.forEach(clearTimeout); }
   const key = isBk ? 'B' + (n - mainCount + 1) : String(n + 1);
   document.getElementById('notes').innerHTML = SCRIPT[key] ? `<b>SLIDE ${key}</b>` + SCRIPT[key].replace(/^\[[^\]]*\]\s*/, '').replace(/\n/g, '<br>') : '';
 }
+function next() {
+  const hidden = slides[cur].querySelector('.step:not(.shown)');
+  if (hidden) { hidden.classList.add('shown'); slides[cur].classList.add('revealed'); if (slides[cur].querySelector('#flock')) playFlock(); const sh = slides[cur].querySelector('#shout'); if (sh) sh.style.opacity = '.35'; return; }
+  go(cur + 1);
+}
 function toggleAuto() {
   const btn = document.getElementById('auto');
   if (autoTimer) { clearInterval(autoTimer); autoTimer = null; btn.classList.remove('on'); }
-  else { autoTimer = setInterval(() => cur < slides.length - 1 ? go(cur + 1) : toggleAuto(), 7000); btn.classList.add('on'); }
+  else { autoTimer = setInterval(() => cur < slides.length - 1 || slides[cur].querySelector('.step:not(.shown)') ? next() : toggleAuto(), 7000); btn.classList.add('on'); }
 }
 document.getElementById('prev').onclick = () => go(cur - 1);
-document.getElementById('next').onclick = () => go(cur + 1);
+document.getElementById('next').onclick = () => next();
 document.getElementById('auto').onclick = toggleAuto;
 document.getElementById('notesBtn').onclick = () => { document.getElementById('notes').classList.toggle('show'); document.getElementById('notesBtn').classList.toggle('on'); };
 
 addEventListener('keydown', e => {
   const k = e.key;
-  if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) { e.preventDefault(); go(cur + 1); }
+  if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) { e.preventDefault(); next(); }
   else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(k)) { e.preventDefault(); go(cur - 1); }
   else if (k === 'Home') go(0);
   else if (k === 'End') go(mainCount - 1);
@@ -902,7 +884,7 @@ addEventListener('keydown', e => {
 });
 let touchX = 0;
 addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
-addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 50) go(cur + (dx < 0 ? 1 : -1)); });
+addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 50) dx < 0 ? next() : go(cur - 1); });
 
 go(0);
 // the script comment sits after </html>, so it only exists once parsing finishes
@@ -911,53 +893,38 @@ window.addEventListener('load', () => { loadScript(); go(cur); });
 </body>
 </html>
 <!--
-SPEAKER SCRIPT (10-minute Demo Theater slot). Keys: arrows or clicker to move, N notes, A auto, B blackout, H hide nav, F fullscreen.
+SPEAKER SCRIPT (10-minute Demo Theater slot, about 55 seconds a slide). Keys: arrows or clicker to move, N notes, A auto, B blackout, H hide nav, F fullscreen. On slide 8 the first click reveals the answers.
 
-[1 Title | 0:00 to 0:30]
-Hey everyone, I'm Markell, I'm an AI Developer Advocate at Red Hat. For the next ten minutes we're going to take Llama 3.1 70B, serve it three different ways on H200s, and look at what actually happens to speed, GPU count, and answer quality. The grid on the right is what quantization does to a weight matrix, every value gets snapped to one of sixteen levels, and the question is what that costs you.
+[1 Title | 0:00 to 0:35]
+Hey everyone, I'm Markell, AI Developer Advocate at Red Hat. This is a story about one 70B model, three ways to serve it, and Priya on the platform team, who has to pick one before finance picks for her. The grid on the right is what quantization does to a weight matrix, every value snaps to one of sixteen levels. Keep your phone handy, you'll use it in about four minutes.
 
-[2 Where it starts | 0:30 to 1:15]
-You shipped Llama 70B at BF16. That's 70.6 billion parameters at two bytes each, which is 141 GB, and an H200 has 141 GB of memory, so the weights alone fill an entire card. You run it tensor parallel across two GPUs and vLLM fills the rest of each card with KV cache. One replica running all month is 1,460 GPU-hours, and the moment traffic grows you're adding a second replica.
+[2 Meet Priya | 0:35 to 1:20]
+Priya shipped Llama 3.1 70B at BF16. That's 70.6 billion parameters at two bytes each, 141 GB, and an H200 has 141 GB, so the weights alone fill a card. She runs it tensor parallel across two GPUs and vLLM fills the rest with KV cache. Then Dana from finance sends the message everyone in this room has gotten. Quick question, why is one chatbot using 1,460 GPU-hours a month? And it is never a quick question.
 
-[3 The obvious fix | 1:15 to 1:50]
-So you quantize. FP8 halves it and INT4 takes it to about a quarter, roughly 38 GB once you count the scales, and now the whole model sits on one GPU with plenty of room for KV cache. Your GPU line drops by half, and you're a hero for about two weeks.
+[3 She quantizes | 1:20 to 1:55]
+So Priya does what everyone does and quantizes it. FP8 halves it, INT4 takes it to about a quarter, roughly 38 GB with the scales, and now the whole model fits on one GPU. The GPU line drops by half, Dana sends a party emoji, and Priya is a hero for about two weeks.
 
-[4 The ticket | 1:50 to 2:25]
-Then Marcus on the data science team files this. The model used to give him detailed analysis and now it gives him bullet points. Quick show of hands, who has quantized a model and then just hoped the quality was fine? Yeah, me too, so this time I measured it.
+[4 The ticket | 1:55 to 2:35]
+Then Marcus on the data science team files this ticket. His detailed analysis turned into bullet points. Quick show of hands, who has quantized a model and then just hoped the quality was fine? Keep it up if it came back to bite you. Yeah. Priya was in that club too, so this time she stopped hoping and set up a showdown.
 
-[5 The contestants | 2:25 to 3:25]
-Three contestants. BF16 on two GPUs is the baseline. INT4 with AWQ runs on one GPU. The weights are 4-bit, but the Marlin kernel expands them back to 16-bit inside the matmul, which is why it's called W4A16. The third one is speculative decoding, and it doesn't compress anything. The 8B model guesses five tokens ahead, and the 70B checks all five in a single forward pass. It keeps the ones it agrees with and writes the first one it disagrees with itself. Because the 70B signs off on every token, the output is the 70B's output, which means speculative decoding changes speed and leaves quality alone, apart from floating-point noise. Take a guess, which one is fastest?
+[5 The showdown | 2:35 to 3:35]
+Three contestants. BF16 on two GPUs is the baseline. INT4 with AWQ runs on one GPU, the weights are 4-bit and the Marlin kernel expands them back to 16-bit inside the matmul, which is why it's called W4A16. Speculative decoding doesn't compress anything. The 8B guesses five tokens ahead, the 70B checks all five in one pass and writes the first one it disagrees with itself, so the output is always the 70B's. Watch the strip, the 8B guessed 8 sheep and the 70B fixed it to 9. Now vote with your hands. Who thinks BF16 is fastest? INT4? Spec decode? Remember what you picked.
 
-[6 Let's find out | 3:25 to 6:00]
-Switch to the dashboard. Walk the three columns, then open the quality panel. In the bird arena, every bird is flown by the same 4,673-parameter network trained in PyTorch, and the only thing that changes between them is how its weights are stored. Plain round-to-nearest INT4 clears 61% of the hard gaps, AWQ-style INT4 clears all of them, and the spec-decode bird flies BF16's exact path. If the room is up for it, put up the QR code and let them send traffic. Point out that the pile-on is many requests at once, which is a different regime from the one-at-a-time benchmark on the next slide.
+[6 Let's find out | 3:35 to 6:05]
+Switch to the dashboard on the Arena scene (key 1). Phones out, scan the code in the sidebar, back a bird, and throw hard prompts at it. Every bird is flown by the same 4,673-parameter network I trained in PyTorch, and the only thing that changes between them is how its weights are stored. The red gaps are hard prompts, narrower than the normal ones, so a tiny rounding error in the weights decides whether a bird makes it through. Plain round-to-nearest INT4 clears about 61% of the hard gaps, AWQ-style INT4 clears all of them, and the spec-decode bird flies BF16's exact path. If the room is quiet, press H to throw a hard prompt yourself. Then press 2 for Numbers (press Start traffic first so Right now fills in), and 3 for Quality. The phone page also has a load-test card that sends real requests to the 70B variants, capped at 32 in flight per variant, and the dashboard labels those numbers separately from the one-at-a-time benchmark on the next slide.
 
-[7 Results | 6:00 to 7:00]
-Here's the benchmark, one request at a time. BF16 on two GPUs got 47 tokens a second, INT4 on one GPU got 44, and speculative decoding got 40. The left chart is what a single user feels, and the right chart is what you pay for. Divide by GPU count and INT4 produces about 1.9 times the tokens per GPU. Speculative decoding was last, and that run had enforce_eager on, which in vLLM 0.18 turns off both torch.compile and CUDA graphs. The backup slide has the math. For a sanity check, Red Hat's own quantization paper measured the same shape on H100, INT4 on one GPU slightly ahead of BF16 on two.
+[7 Plot twist | 6:05 to 6:55]
+Here's the benchmark, one request at a time. BF16 on two GPUs got 47 tokens a second, INT4 on one GPU got 44, and spec decode got 40. So if you voted BF16, you win the stopwatch, by three tokens a second. If you voted INT4, you win the part Dana cares about, because divided by GPU count it's 1.9 times the tokens per GPU. Spec decode voters, it's complicated, and I'll get to it in the lightning round. Red Hat's own quantization paper found the same shape on H100, so this isn't a fluke of one cluster.
 
-[8 Quality | 7:00 to 8:00]
-Now the part a throughput chart can't show you. Same prompt to all three. [Read the result from the captured outputs, including the N out of 20 sampled runs.] Notice the speculative decoding answer matches BF16, and that's by design, because the 70B approved every token.
+[8 The sheep test | 6:55 to 7:50]
+Speed looked fine, so Priya checked what Marcus actually complained about. Same prompt to all three. A farmer has 17 sheep, all but 9 run away, how many are left? Shout it out. [Wait for the room, then click once: the eight sheep run off, the counter drops to 9, and the three answers appear.] [Read the captured result, including the N out of 20 sampled runs.] And notice spec decode matches BF16, because the 70B approved every token.
 
-[9 Cheat sheet | 8:00 to 8:45]
-So here's how I'd pick. INT4 when cost per replica matters and your traffic is interactive, as long as it passes an eval built from your own prompts. BF16 when you need the reference answer. Speculative decoding when you want the 70B's exact output with lower latency on low-concurrency traffic. And if you're serving at high concurrency on Hopper, look at FP8 on one GPU too.
+[9 What Priya shipped | 7:50 to 8:35]
+So Priya stopped picking one winner. Everyday chat and summaries go to INT4, after it passed an eval built from real user prompts. Marcus's deep analysis stays on BF16. Latency-sensitive, low-traffic work can use spec decode once it runs with CUDA graphs on. Marcus closes the ticket, Dana sends another party emoji, and none of it needed custom inference code, it's LLM Compressor and vLLM on OpenShift AI with PyTorch underneath.
 
-[10 The stack | 8:45 to 9:20]
-None of this needed custom inference code. LLM Compressor makes the quantized checkpoint, vLLM serves all three on OpenShift AI behind the same OpenAI-compatible API, and speculative decoding is one config flag. PyTorch runs underneath all of it, from torch.compile and CUDA graphs in vLLM to the calibration in LLM Compressor.
+[10 Lightning round | 8:35 to 9:25]
+Pick two or three based on the room's faces. FP8: fits on one H200 at 71 GB, and Red Hat's FP8 build keeps 99.9% of the score, it's the first variant I'd add. Spec decode: enforce_eager in vLLM 0.18 turns off torch.compile and CUDA graphs, and the draft runs five small passes per step, so eager hits it hardest. Twenty requests: it's a single-stream sanity check, and the load test is what settles cost per token. If asked why vLLM 0.18 when upstream is newer: it's the Red Hat AI build the cluster runs. If asked about the spec-decode math: tokens per 70B pass is (1 minus alpha to the k plus 1) over (1 minus alpha), and vLLM logs mean acceptance length directly, which is that number. If asked about EAGLE: there's no EAGLE-3 head for Llama 3.1 70B, only for 3.3 70B.
 
-[11 Close | 9:20 to 10:00]
-Measure it on your own prompts before you pick one. The repo runs this whole demo on your laptop in simulation mode with no GPUs, and you can point it at your own vLLM endpoints when you're ready. Scan the code, and come find me at the Red Hat booth if you want to try it on your model.
-
-[B1 Why not FP8]
-Use if someone asks about FP8. It fits on one H200, Hopper has native FP8 tensor cores, and Red Hat's study found it essentially lossless. Quote the T2 numbers once they exist.
-
-[B2 Methodology]
-Use if someone asks whether 20 requests is enough. It's a single-stream sanity check, and the concurrency sweep is what settles cost per token. If someone asks why vLLM 0.18 when upstream is on 0.30: it's the Red Hat AI build (0.18.0+rhaiv.14) the cluster runs, and the point of the talk is the trade-off shape, which Red Hat's paper also found on H100. If someone asks whether INT4 is really faster: at one request at a time it matched BF16's latency on half the GPUs, and that's the claim, not that it's faster.
-
-[B3 Spec decode math]
-Use if someone asks why speculative decoding was slowest. Two numbers decide it, the acceptance rate and the draft overhead, and running eager makes the draft's five small sequential passes expensive. If asked about the metric: vLLM's mean acceptance length is already tokens per 70B pass, so read it straight off the log. The draft-acceptance percentage in the same log line is not the alpha in the formula. If asked about EAGLE: there's no EAGLE-3 head for Llama 3.1 70B, only for 3.3 70B.
-
-[B4 Model size and routing]
-Larger models tolerate quantization better, so be more careful with an 8B. Routing by model name through llm-d's inference gateway lets you run several variants on one cluster.
-
-[B5 PyTorch]
-If someone asks why AWQ and not GPTQ: Red Hat's paper found GPTQ slightly ahead on harder benchmarks (about 3 points on Arena-Hard), and RedHatAI's published INT4 build of this model is GPTQ, so that's a fair next variant to try. torchao and LLM Compressor both end up as checkpoints vLLM serves. In vLLM 0.18, enforce_eager turns off torch.compile and CUDA graphs together, and that hurts speculative decoding most because it runs many small passes.
+[11 Close | 9:25 to 10:00]
+Measure it on your own prompts before you pick one. Scan the code for everything, the repo runs this whole demo on your laptop with no GPUs, and you can point it at your own vLLM endpoints when you're ready. Come find me at the Red Hat booth and bring your model. Thank you.
 -->
