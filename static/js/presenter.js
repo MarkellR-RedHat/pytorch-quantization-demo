@@ -3,30 +3,52 @@
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
 
-    const VARIANT_STYLE = {
-        FP16: { color: '--v-bf16' },
-        FP8: { color: '--v-fp8' },
-        INT4: { color: '--v-int4' },
-        SPEC_DECODE: { color: '--v-spec' },
+    // What each setup buys you. Wording matches the slides.
+    const SETUPS = {
+        FP16: {
+            color: '--v-bf16', role: 'The baseline',
+            gets: 'Full quality, the answer every other setup is measured against',
+            best: 'Questions where a wrong answer is expensive',
+            trade: 'Two GPUs for every replica, so every new replica doubles the bill',
+            route: 'A wrong answer is expensive',
+            acc: '100%', accNote: 'the baseline',
+        },
+        INT4: {
+            color: '--v-int4', role: 'Half the GPUs',
+            gets: 'Half the GPUs, at about the same speed per request',
+            best: 'High-volume chat and summaries',
+            trade: 'Small accuracy loss that shows up on hard reasoning, so test it on your own prompts',
+            route: 'High volume',
+            acc: '≈99%', accNote: 'of BF16 accuracy*',
+        },
+        SPEC_DECODE: {
+            color: '--v-spec', role: 'Same GPUs, faster answers',
+            gets: 'Faster answers on the same GPUs, with the same output as BF16',
+            best: 'Latency-sensitive, low-traffic work',
+            trade: 'A draft model to host next to the big one, and the gain shrinks as traffic grows',
+            note: 'This run had CUDA graphs turned off (enforce_eager), which slows speculative decoding the most. The rerun without it is next.',
+            route: 'Latency-sensitive, low traffic',
+            acc: '100%', accNote: 'same output as BF16',
+        },
+        FP8: {
+            color: '--v-fp8', role: 'One GPU, near-lossless',
+            gets: '8-bit weights and activations on a single GPU',
+            best: 'High-throughput serving on Hopper GPUs',
+            trade: 'Needs GPUs with FP8 support',
+        },
     };
-    const BIRD_INFO = {
-        SPEC: { name: 'Spec Decode', color: '--v-spec', sub: 'BF16 target + 4-unit draft' },
-        BF16: { name: 'BF16', color: '--v-bf16', sub: '16-bit weights' },
-        FP8: { name: 'FP8', color: '--v-fp8', sub: '8-bit float, one scale per row' },
-        INT4_AWQ: { name: 'INT4 AWQ', color: '--v-int4', sub: '4-bit, activation-aware scaling' },
-        INT4_RTN: { name: 'INT4 RTN', color: '--v-int4', sub: '4-bit, plain rounding', hollow: true },
+    const ORDER = ['FP16', 'INT4', 'SPEC_DECODE', 'FP8'];
+    const PRESET_TEXT = {
+        reasoning: 'A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left? Explain your reasoning step by step.',
+        code: 'Write a Python function that returns the second largest number in a list. Handle edge cases.',
+        summary: 'Summarize the key trade-offs of model quantization for production LLM deployments in 3 bullet points.',
     };
 
     let config = null;
-    let arena = null;
-    let ws = null;
-    let running = false;
-    let votes = {};
-    let lastMetrics = null;
-    let lastSnapshot = null;
-    let scene = 'arena';
+    let running = [];
+    let finished = 0;
 
-    // ------------------------------------------------------------ stage scaling
+    // ------------------------------------------------------------ stage, theme, scenes
 
     function fit() {
         const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
@@ -34,439 +56,379 @@
         stage.style.transform = `scale(${s})`;
         stage.style.left = `${(window.innerWidth - 1920 * s) / 2}px`;
         stage.style.top = `${(window.innerHeight - 1080 * s) / 2}px`;
-        if (arena) {
-            const r = $('#arenaCanvas').getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            arena.resize(Math.round(r.width * dpr), Math.round(r.height * dpr));
-        }
     }
     window.addEventListener('resize', fit);
-
-    // ------------------------------------------------------------ theme
 
     function setTheme(t) {
         document.documentElement.dataset.theme = t;
         try { localStorage.setItem('qs-theme', t); } catch (e) { /* private mode */ }
-        if (arena) arena.readColors();
     }
     try { const t = localStorage.getItem('qs-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) { /* ignore */ }
 
-    // ------------------------------------------------------------ scenes
-
     function show(name) {
-        scene = name;
         $$('.scene').forEach(s => s.classList.toggle('is-active', s.dataset.scene === name));
         $$('.tab').forEach(t => t.classList.toggle('is-active', t.dataset.scene === name));
-        if (arena) arena.paused = name !== 'arena' ? true : arena.userPaused || false;
-        if (name === 'numbers') renderNumbers();
-        fit();
     }
     $$('.tab').forEach(t => t.addEventListener('click', () => { t.blur(); show(t.dataset.scene); }));
 
-    // ------------------------------------------------------------ arena
-
-    async function startArena() {
-        const res = await fetch('/static/arena/policy.json');
-        const policy = await res.json();
-        $('#paramCount').textContent = policy.params.target.toLocaleString('en-US');
-        arena = new window.QuantArena.Arena($('#arenaCanvas'), policy, {
-            onChange: snap => { lastSnapshot = snap; renderFlock(snap); renderSpec(snap); },
-            onEvent: ev => { if (ev.type === 'crash') flashRow(ev.bird); },
-        });
-        buildFlock();
-        $('#arenaLoading').hidden = true;
-        fit();
-        setInterval(sendArenaState, 500);
-    }
-
-    function buildFlock() {
-        const ol = $('#flockRows');
-        ol.innerHTML = '';
-        for (const key of ['SPEC', 'BF16', 'FP8', 'INT4_AWQ', 'INT4_RTN']) {
-            const info = BIRD_INFO[key];
-            const li = document.createElement('li');
-            li.className = 'row';
-            li.dataset.key = key;
-            li.style.setProperty('--c', `var(${info.color})`);
-            li.innerHTML = `
-                <span class="glyph${info.hollow ? ' hollow' : ''}" style="--c: var(${info.color})"></span>
-                <span class="who"><b>${info.name}</b><span class="sub">${info.sub}</span></span>
-                <span class="score"><b class="num">–</b><span class="num">0/0 · 0 crashes</span></span>
-                <span class="meter"><i style="width:0%"></i></span>`;
-            li.addEventListener('click', () => { arena.toggle(key); li.classList.toggle('is-hidden'); });
-            ol.appendChild(li);
-        }
-    }
-
-    function renderFlock(snap) {
-        for (const li of $$('#flockRows .row')) {
-            const b = snap.birds[li.dataset.key];
-            if (!b) continue;
-            const [c, a] = b.hard;
-            const pct = a ? Math.round(100 * c / a) : null;
-            $('.score b', li).textContent = pct === null ? '–' : `${pct}%`;
-            const backers = votes[li.dataset.key] || 0;
-            $('.score span', li).textContent = `${c}/${a} · ${b.crashes} crash${b.crashes === 1 ? '' : 'es'}`;
-            $('.meter i', li).style.width = `${pct === null ? 0 : pct}%`;
-            const info = BIRD_INFO[li.dataset.key];
-            $('.who .sub', li).textContent = backers ? `${info.sub} · ${backers} backing` : info.sub;
-        }
-    }
-
-    function flashRow(key) {
-        const li = $(`#flockRows .row[data-key="${key}"]`);
-        if (!li) return;
-        li.classList.remove('flash');
-        void li.offsetWidth;
-        li.classList.add('flash');
-    }
-
-    function renderSpec(snap) {
-        const s = snap.spec;
-        if (!s) return;
-        $('#specAccept').textContent = `${Math.round(100 * s.acceptance)}%`;
-        $('#specFpp').textContent = s.frames_per_pass.toFixed(1);
-        $('#specDiff').textContent = `${s.max_diff_px.toFixed(0)} px`;
-        $('#specK').textContent = `draft guesses ${s.k} moves`;
-        const box = $('#specStrips');
-        box.innerHTML = '';
-        for (const st of s.strips) {
-            const col = document.createElement('div');
-            col.className = 'strip';
-            for (let i = 0; i <= st.k; i++) {
-                const cell = document.createElement('i');
-                if (i < st.accepted) cell.className = 'ok';
-                else if (i === st.accepted) cell.className = 'fix';
-                col.appendChild(cell);
-            }
-            box.appendChild(col);
-        }
-    }
-
-    function sendArenaState() {
-        if (!ws || ws.readyState !== 1 || !lastSnapshot) return;
-        const s = lastSnapshot;
-        const data = { gaps: s.gaps, birds: s.birds, spec: s.spec ? { acceptance: s.spec.acceptance, frames_per_pass: s.spec.frames_per_pass, max_diff_px: s.spec.max_diff_px } : null };
-        ws.send(JSON.stringify({ type: 'arena_state', data }));
-    }
-
-    function feed(html, cls) {
-        const ol = $('#feed');
-        const li = document.createElement('li');
-        if (cls) li.className = cls;
-        li.innerHTML = `<span class="dot"></span><span>${html}</span>`;
-        ol.prepend(li);
-        while (ol.children.length > 3) ol.lastChild.remove();
-        setTimeout(() => li.classList.add('fade'), 7000);
-        setTimeout(() => li.remove(), 7700);
-    }
+    // ------------------------------------------------------------ helpers
 
     function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-
-    function hardPrompt(label, from) {
-        if (!arena) return;
-        arena.throwHard(label, from);
-        feed(`<b>${esc(from || 'Presenter')}</b> threw <b>${esc(label)}</b>`);
+    function variants() {
+        const have = new Set(config ? config.variants.map(v => v.key) : ['FP16', 'INT4', 'SPEC_DECODE']);
+        return ORDER.filter(k => have.has(k));
     }
-
-    // ------------------------------------------------------------ numbers
-
-    function variantKeys() {
-        const keys = ['FP16', 'FP8', 'INT4', 'SPEC_DECODE'];
-        const have = new Set([...(config ? config.variants.map(v => v.key) : []), ...Object.keys(lastMetrics || {})]);
-        return keys.filter(k => have.has(k));
-    }
-
-    function bench(key) {
-        return (config && config.benchmark && config.benchmark.variants && config.benchmark.variants[key]) || null;
-    }
-
     function label(key) {
         const v = config && config.variants.find(x => x.key === key);
-        if (v) return v.label;
-        return { FP16: 'BF16', FP8: 'FP8', INT4: 'INT4 AWQ', SPEC_DECODE: 'Spec Decode' }[key] || key;
+        return v ? v.label : ({ FP16: 'BF16', FP8: 'FP8', INT4: 'INT4 AWQ', SPEC_DECODE: 'Spec Decode' }[key] || key);
+    }
+    function bench(key) { return (config && config.benchmark && config.benchmark.variants && config.benchmark.variants[key]) || null; }
+    function gpus(key) {
+        const b = bench(key), v = config && config.variants.find(x => x.key === key);
+        return (b && b.gpus) || (v && v.gpus) || (key === 'INT4' || key === 'FP8' ? 1 : 2);
+    }
+    function color(key) { return (SETUPS[key] || {}).color || '--ink-3'; }
+    function chips(key) { const n = gpus(key); return `<span class="gpu-chips">${'<i></i>'.repeat(n)}${n} × H200</span>`; }
+    function glyph(key) { return `<span class="glyph" style="--c: var(${color(key)})"></span>`; }
+    function markdownToText(t) { return t.replace(/^```[a-z]*\n?/gim, '').replace(/\*\*(.+?)\*\*/g, '$1'); }
+    const secs = ms => `${(ms / 1000).toFixed(ms < 10000 ? 2 : 1)} s`;
+
+    // ------------------------------------------------------------ example router
+
+    // A deliberately simple, visible rule that shows where a router fits. It isn't a trained classifier.
+    function route(q) {
+        const t = q.toLowerCase();
+        if (/\b(why|prove|step by step|how many|calculate|debug|code|function|python|sql|legal|contract|diagnos\w*|analy[sz]e|compare)\b/.test(t)) {
+            return { key: 'FP16', why: 'a wrong answer here is expensive' };
+        }
+        if (/\b(write|draft|explain|describe|story|essay|report)\b/.test(t) && t.length > 60) {
+            return { key: 'SPEC_DECODE', why: 'it\'s a long answer and someone is waiting on it' };
+        }
+        return { key: 'INT4', why: 'it\'s an everyday question, so the cheapest tokens win' };
     }
 
-    function fmtSec(ms) { return ms ? `${(ms / 1000).toFixed(2)} s` : '–'; }
-    function fmt1(x) { return (x || x === 0) ? x.toFixed(1) : '–'; }
+    // ------------------------------------------------------------ ask
 
-    function renderNumbers() {
-        const keys = variantKeys();
-        const grid = $('#variantGrid');
-        grid.style.setProperty('--cols', keys.length || 3);
-        $('#qualityGrid').style.setProperty('--cols', keys.length || 3);
+    function buildAsk() {
+        const keys = variants();
+        const grid = $('#askGrid');
+        grid.style.setProperty('--cols', keys.length);
         grid.innerHTML = '';
-        const perGpu = [];
         for (const key of keys) {
-            const m = lastMetrics && lastMetrics[key];
-            const b = bench(key);
-            const traffic = m && m.total_requests > 0;
-            const live = m && m.source === 'live';
-            const gpus = (b && b.gpus) || (m && m.gpus) || 1;
+            const col = document.createElement('div');
+            col.className = 'card acol';
+            col.dataset.key = key;
+            col.style.setProperty('--c', `var(${color(key)})`);
+            col.innerHTML = `
+                <div class="acol-head">
+                    <div class="row1"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
+                    <p class="role">${esc((SETUPS[key] || {}).role || '')}</p>
+                </div>
+                <pre class="answer idle">Waiting for a question.</pre>
+                <div class="astats">
+                    <div><b class="num s-ttft">–</b><span>first token</span></div>
+                    <div><b class="num s-tps">–</b><span>tokens/s</span></div>
+                    <div><b class="num s-len">–</b><span>tokens in answer</span></div>
+                    <div><b class="num s-total">–</b><span>total</span></div>
+                    <span class="place"></span>
+                </div>`;
+            grid.appendChild(col);
+        }
+    }
+
+    function ask(prompt, preset) {
+        running.forEach(c => c.abort());
+        running = [];
+        finished = 0;
+        const r = route(prompt);
+        const router = $('#router');
+        router.hidden = false;
+        router.innerHTML = `A router would send this to ${glyph(r.key)}<b>${esc(label(r.key))}</b>, because ${esc(r.why)}`;
+        for (const col of $$('#askGrid .acol')) {
+            col.classList.toggle('is-routed', col.dataset.key === r.key);
+            streamInto(col, prompt, preset);
+        }
+    }
+
+    async function streamInto(col, prompt, preset) {
+        const key = col.dataset.key, out = $('.answer', col), place = $('.place', col);
+        out.className = 'answer';
+        out.textContent = '';
+        place.textContent = '';
+        place.className = 'place';
+        $('.s-ttft', col).textContent = '…';
+        $('.s-tps', col).textContent = '…';
+        $('.s-len', col).textContent = '…';
+        const ctrl = new AbortController();
+        running.push(ctrl);
+        const t0 = performance.now();
+        const tick = setInterval(() => { $('.s-total', col).textContent = secs(performance.now() - t0); }, 100);
+        let raw = '';
+        try {
+            const res = await fetch(`/ask/${key}`, {
+                method: 'POST', credentials: 'same-origin', signal: ctrl.signal,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, preset: preset || null }),
+            });
+            if (res.status === 401 || res.status === 403) throw new Error('Open /presenter?key=… on this laptop first.');
+            if (!res.ok || !res.body) throw new Error('This model didn\'t answer.');
+            const reader = res.body.getReader(), dec = new TextDecoder();
+            let buf = '';
+            for (;;) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buf += dec.decode(value, { stream: true });
+                let nl;
+                while ((nl = buf.indexOf('\n')) >= 0) {
+                    const line = buf.slice(0, nl);
+                    buf = buf.slice(nl + 1);
+                    if (!line.trim()) continue;
+                    const ev = JSON.parse(line);
+                    if (ev.t === 'delta') {
+                        raw += ev.text;
+                        out.textContent = markdownToText(raw);
+                        out.scrollTop = out.scrollHeight;
+                    } else if (ev.t === 'done') {
+                        clearInterval(tick);
+                        $('.s-ttft', col).textContent = ev.ttft_ms != null ? secs(ev.ttft_ms) : '–';
+                        $('.s-tps', col).textContent = ev.tokens_per_second != null ? ev.tokens_per_second.toFixed(0) : '–';
+                        $('.s-total', col).textContent = secs(ev.total_ms);
+                        $('.s-len', col).textContent = ev.completion_tokens != null ? ev.completion_tokens : '–';
+                        finished += 1;
+                        place.textContent = ['1st', '2nd', '3rd', '4th'][finished - 1] || '';
+                        if (finished === 1) place.classList.add('first');
+                    } else if (ev.t === 'error') {
+                        throw new Error('This model didn\'t answer.');
+                    }
+                }
+            }
+        } catch (e) {
+            clearInterval(tick);
+            if (e.name === 'AbortError') return;
+            out.className = 'answer err';
+            out.textContent = e.message;
+            $('.s-ttft', col).textContent = '–';
+            $('.s-tps', col).textContent = '–';
+            $('.s-len', col).textContent = '–';
+            $('.s-total', col).textContent = '–';
+        }
+    }
+
+    $('#askForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const q = $('#askInput').value.trim();
+        if (q) ask(q, null);
+    });
+    $$('#presets button').forEach(b => b.addEventListener('click', () => {
+        b.blur();
+        $('#askInput').value = PRESET_TEXT[b.dataset.preset];
+        ask(PRESET_TEXT[b.dataset.preset], b.dataset.preset);
+    }));
+
+    // ------------------------------------------------------------ numbers (the money slide)
+
+    function buildNumbers() {
+        const keys = variants();
+        const grid = $('#moneyGrid');
+        grid.style.setProperty('--cols', keys.length);
+        grid.innerHTML = '';
+        for (const key of keys) {
+            const s = SETUPS[key] || {}, b = bench(key), n = gpus(key);
             const tps = b ? b.throughput_tps : null;
-            const tpg = b ? (b.tokens_per_second_per_gpu || tps / gpus) : null;
-            const c = (VARIANT_STYLE[key] || {}).color || '--ink-3';
-            perGpu.push({ key, tpg, gpus, c });
+            const tpg = b ? (b.tokens_per_second_per_gpu || tps / n) : null;
             const card = document.createElement('div');
-            card.className = 'card vcard';
-            card.style.setProperty('--c', `var(${c})`);
-            const cost = traffic && m.cost_per_request != null && config
-                ? `<li><span>Cost per request at $${config.gpu_hourly_usd}/GPU-hr</span><b class="num">$${m.cost_per_request.toFixed(4)}</b></li>` : '';
-            const row = (label, value) => `<li class="${traffic ? '' : 'muted'}"><span>${label}</span><b class="num">${traffic ? value : '–'}</b></li>`;
+            card.className = 'card mcard';
+            card.style.setProperty('--c', `var(${color(key)})`);
             card.innerHTML = `
-                <div class="vcard-head">
-                    <h3><span class="glyph" style="--c: var(${c})"></span>${esc(label(key))}</h3>
-                    <span class="basis basis-bench">Benchmark · 1 stream</span>
+                <div class="mhead"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
+                <p class="gets">${esc(s.gets || '')}</p>
+                <div class="nums three">
+                    <div><b class="num">${tps != null ? tps.toFixed(1) : '–'}</b><span>tokens/s, one request</span></div>
+                    <div><b class="num">${tpg != null ? tpg.toFixed(1) : '–'}</b><span>tokens/s per GPU</span></div>
+                    <div><b class="num">${esc(s.acc || '–')}</b><span>${esc(s.accNote || 'accuracy')}</span></div>
                 </div>
-                <div class="gpus">${'<i></i>'.repeat(gpus)}<span>${gpus} × H200</span></div>
-                <div class="hero">
-                    <div><b class="num">${fmt1(tps)}</b><span>tokens/s per stream</span></div>
-                    <div><b class="num">${fmt1(tpg)}</b><span>tokens/s per GPU</span></div>
-                </div>
-                <ul class="stats">
-                    <li><span>Mean · p95 time per request</span><b class="num">${b ? `${fmtSec(b.avg_latency_ms)} · ${fmtSec(b.p95_latency_ms)}` : '–'}</b></li>
-                </ul>
-                <div class="now-head">
-                    <h4>Right now</h4>
-                    <span class="basis ${live ? 'basis-live' : 'basis-sim'}">${live ? 'Live' : 'Simulated'}</span>
-                </div>
-                <ul class="stats">
-                    ${row('Requests in flight', m ? m.in_flight : 0)}
-                    ${row('Requests served', m ? `${m.total_requests.toLocaleString('en-US')}${m.errors ? ` · ${m.errors} errors` : ''}` : 0)}
-                    ${row('Median · p95 time per request', m ? `${fmtSec(m.p50_latency_ms)} · ${fmtSec(m.p95_latency_ms)}` : '')}
-                    ${cost}
-                </ul>`;
+                <dl><div><dt>Best for</dt><dd>${esc(s.best || '')}</dd></div></dl>`;
             grid.appendChild(card);
         }
-        const max = Math.max(...perGpu.map(p => p.tpg || 0), 1);
-        const bars = $('#perGpuBars');
-        bars.innerHTML = '';
-        for (const p of perGpu) {
-            const el = document.createElement('div');
-            el.className = 'bar';
-            el.style.setProperty('--c', `var(${p.c})`);
-            el.innerHTML = `
-                <span class="lab"><span class="glyph" style="--c: var(${p.c})"></span>${esc(label(p.key))}</span>
-                <span class="track"><span class="fill" style="width:${(100 * (p.tpg || 0) / max).toFixed(1)}%"></span></span>
-                <span class="val num">${fmt1(p.tpg)}<small>on ${p.gpus} GPU${p.gpus > 1 ? 's' : ''}</small></span>`;
-            bars.appendChild(el);
+        const bf = bench('FP16'), q = bench('INT4');
+        if (bf && q && bf.throughput_tps && q.throughput_tps) {
+            const perGpu = (q.throughput_tps / gpus('INT4')) / (bf.throughput_tps / gpus('FP16'));
+            const speed = q.throughput_tps / bf.throughput_tps;
+            $('#takeaway').innerHTML = `${esc(label('INT4'))} gets <b>${perGpu.toFixed(1)}× the tokens per GPU</b> of ${esc(label('FP16'))}, because it runs at ${Math.round(100 * speed)}% of the speed on half the GPUs.`;
         }
-        const bf = perGpu.find(p => p.key === 'FP16'), q = perGpu.find(p => p.key === 'INT4');
-        if (bf && q && bf.tpg && q.tpg) {
-            const ratio = q.tpg / bf.tpg, speed = bench('INT4').throughput_tps / bench('FP16').throughput_tps;
-            const t = document.createElement('p');
-            t.className = 'takeaway';
-            t.innerHTML = `${esc(label('INT4'))} gets <b>${ratio.toFixed(2)}×</b> the tokens per GPU of ${esc(label('FP16'))}, because it runs at ${Math.round(100 * speed)}% of the speed on half the GPUs.`;
-            bars.appendChild(t);
-        }
-        renderLoad();
+        const strip = $('#routerStrip');
+        strip.className = 'card router-strip';
+        strip.innerHTML = `<h3>Big, mixed traffic? Route it</h3>` + ['FP16', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k)).map(k =>
+            `<div class="route">${esc(SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k))}</b></div>`).join('');
+        const bm = (config && config.benchmark) || {};
+        const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        $('#numbersFoot').textContent = '* Red Hat\'s published INT4 build of Llama 3.1 70B keeps about 99% of BF16 on the OpenLLM v1 benchmarks; the AWQ build measured here still needs its own eval. Spec decode ran with CUDA graphs off (enforce_eager), which slows it the most, so it gets rerun.';
+        $('#routerNote').textContent = 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions.';
+        $('#benchNote').textContent = `Llama 3.1 70B Instruct, measured ${when} on NVIDIA H200 with vLLM ${bm.vllm_version || ''}, one request at a time.`
+            + (keys.includes('FP8') ? '' : ' FP8 fits on one H200 and is near-lossless in Red Hat\'s own tests, so it\'s the next setup worth measuring.');
     }
 
-    // Line chart of output tokens/s per GPU across the vllm bench serve concurrency sweep.
-    function renderLoad() {
-        const body = $('#loadBody');
+    // ------------------------------------------------------------ under load (replay of the load test)
+
+    let loadTimer = null;
+
+    function loadData() {
         const load = (config && config.benchmark && config.benchmark.load) || {};
-        const series = Object.entries(load).filter(([, pts]) => pts.length > 1);
-        if (!series.length) {
-            body.innerHTML = `<div class="pending"><span>Not measured yet. This fills in from the <b>vllm bench serve</b> sweep at 1, 8, 32 and 64 concurrent requests, which is where cost per token is actually decided.</span></div>`;
+        const keys = variants().filter(k => (load[k] || []).length > 1);
+        const levels = [...new Set(keys.flatMap(k => load[k].map(p => p.concurrency)))].sort((a, b) => a - b);
+        return { load, keys, levels };
+    }
+
+    function pointAt(pts, c) { return pts.find(p => p.concurrency === c) || null; }
+
+    function buildLoad() {
+        const { load, keys, levels } = loadData();
+        const stage = $('#loadStage');
+        stage.innerHTML = '';
+        $('#loadResult').innerHTML = '';
+        const play = $('#loadPlay');
+        if (!keys.length) {
+            play.hidden = true;
+            $('#loadSetup').textContent = 'A replay of the load test, one setup at a time, as more and more questions arrive at once.';
+            stage.innerHTML = '<div class="load-empty"><p>The load run hasn\'t been recorded yet.<br>Run the <b>vllm bench serve</b> sweep and save it to <b>bench/&lt;setup&gt;/c&lt;N&gt;.json</b>, and this scene plays it back.</p></div>';
             return;
         }
-        const W = 820, H = 196, L = 56, R = 150, T = 12, B = 30;
-        const xs = [...new Set(series.flatMap(([, pts]) => pts.map(p => p.concurrency)))].sort((a, b) => a - b);
-        const ymax = Math.max(...series.flatMap(([, pts]) => pts.map(p => p.output_tokens_per_second_per_gpu))) * 1.1;
-        const lx = v => L + (Math.log2(v) - Math.log2(xs[0])) / Math.max(1e-9, Math.log2(xs[xs.length - 1]) - Math.log2(xs[0])) * (W - L - R);
-        const ly = v => T + (1 - v / ymax) * (H - T - B);
-        let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Output tokens per second per GPU by concurrency">`;
-        for (let i = 0; i <= 4; i++) {
-            const v = ymax * i / 4, y = ly(v);
-            svg += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="axis" x="${L - 10}" y="${y + 4}" text-anchor="end">${Math.round(v)}</text>`;
+        play.hidden = false;
+        $('#loadSetup').textContent = `A replay of the load test we ran on the H200s: ${levels.join(', ').replace(/, (\d+)$/, ' and $1')} questions in flight at once, sent to each setup, with every answer measured.`;
+        stage.style.setProperty('--cols', keys.length);
+        const maxPerGpu = Math.max(...keys.flatMap(k => load[k].map(p => p.output_tokens_per_second_per_gpu)));
+        for (const key of keys) {
+            const card = document.createElement('div');
+            card.className = 'card lcard';
+            card.dataset.key = key;
+            card.style.setProperty('--c', `var(${color(key)})`);
+            card.innerHTML = `
+                <div class="mhead"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
+                <div class="big"><b class="num l-pergpu">–</b><span>tokens/s per GPU</span></div>
+                <svg class="spark"></svg>
+                <div class="lstats">
+                    <div><b class="num l-total">–</b><span>tokens/s, whole setup</span></div>
+                    <div><b class="num l-lat">–</b><span>median time per answer</span></div>
+                </div>`;
+            card.dataset.max = maxPerGpu;
+            stage.appendChild(card);
         }
-        for (const x of xs) svg += `<text class="axis" x="${lx(x)}" y="${H - 10}" text-anchor="middle">${x}</text>`;
-        const ends = [];
-        for (const [key, pts] of series) {
-            const col = `var(${(VARIANT_STYLE[key] || {}).color || '--ink-3'})`;
-            svg += `<polyline class="series" style="stroke:${col}" points="${pts.map(p => `${lx(p.concurrency)},${ly(p.output_tokens_per_second_per_gpu)}`).join(' ')}"/>`;
-            for (const p of pts) svg += `<circle class="dot" style="fill:${col}" cx="${lx(p.concurrency)}" cy="${ly(p.output_tokens_per_second_per_gpu)}" r="5"><title>${esc(label(key))}: ${p.output_tokens_per_second_per_gpu} tok/s per GPU at ${p.concurrency} concurrent</title></circle>`;
-            const last = pts[pts.length - 1];
-            ends.push({ y: ly(last.output_tokens_per_second_per_gpu), key });
-        }
-        ends.sort((a, b) => a.y - b.y);
-        for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 20) ends[i].y = ends[i - 1].y + 20;
-        for (const e of ends) svg += `<text class="end" x="${W - R + 12}" y="${e.y + 5}">${esc(label(e.key))}</text>`;
-        svg += '</svg>';
-        body.innerHTML = svg;
-        $('#loadHint').textContent = 'output tokens/s per GPU · concurrent requests →';
+        showLevel(0, false);
     }
 
-    // ------------------------------------------------------------ quality
-
-    const CHECK = '<svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>';
-    const CROSS = '<svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>';
-    let typing = [];
-
-    async function fireQuality(scenario) {
-        typing.forEach(cancelAnimationFrame);
-        typing = [];
-        $$('#qualityPick button').forEach(b => b.classList.toggle('is-active', b.dataset.scenario === scenario));
-        const res = await fetch(`/quality/${scenario}`);
-        const data = await res.json();
-        const captured = data.source === 'captured';
-        $('#qualitySource').innerHTML = captured
-            ? `Captured from the real deployments at temperature ${data.temperature ?? 0}. Nothing on this screen is edited.`
-            : 'Illustrative outputs written to show the failure mode. Real captures from the H200 deployments replace these automatically once they are recorded.';
-        $('#qualityPrompt').textContent = data.prompt;
-        const grid = $('#qualityGrid');
-        grid.innerHTML = '';
-        const keys = Object.keys(data.responses);
-        grid.style.setProperty('--cols', keys.length);
-        for (const key of ['FP16', 'FP8', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k))) {
-            const r = typeof data.responses[key] === 'string' ? { text: data.responses[key] } : data.responses[key];
-            const c = (VARIANT_STYLE[key] || {}).color || '--ink-3';
-            const col = document.createElement('div');
-            col.className = 'card qcol';
-            col.innerHTML = `
-                <div class="card-head"><h2><span class="glyph" style="--c: var(${c})"></span>${esc(label(key))}</h2>
-                <span class="src-badge ${captured ? 'captured' : 'illustrative'}">${captured ? 'captured' : 'illustrative'}</span></div>
-                <pre class="qout"></pre>
-                <div class="verdict"></div>`;
-            grid.appendChild(col);
-            typeOut(col, r, key);
-        }
-    }
-
-    function typeOut(col, r, key) {
-        const out = $('.qout', col), verdict = $('.verdict', col);
-        const b = bench(key);
-        // Relative typing speed follows the measured single-stream tokens/s, about 4 chars per token.
-        const tps = (b && b.throughput_tps) || 40;
-        const cps = tps * 4 * 1.6;
-        // Model output is markdown; show it as plain text without fences or bold markers.
-        const text = (r.text || '').replace(/^```[a-z]*\n?/gim, '').replace(/\*\*(.+?)\*\*/g, '$1').trim();
+    function tween(el, to, fmt, ms) {
+        const from = parseFloat(el.dataset.v || '0');
         const t0 = performance.now();
+        el.dataset.v = to;
         function step(t) {
-            const n = Math.min(text.length, Math.floor((t - t0) / 1000 * cps));
-            out.textContent = text.slice(0, n);
-            if (n < text.length) {
-                const cur = document.createElement('span');
-                cur.className = 'cursor';
-                out.appendChild(cur);
-                typing.push(requestAnimationFrame(step));
-            } else if (r.verdict) {
-                verdict.className = `verdict ${r.verdict}`;
-                verdict.innerHTML = r.verdict === 'pass' ? `${CHECK}Correct answer` : `${CROSS}Wrong answer`;
-            }
+            const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+            el.textContent = fmt(from + (to - from) * e);
+            if (k < 1) requestAnimationFrame(step);
         }
-        typing.push(requestAnimationFrame(step));
-    }
-    $$('#qualityPick button').forEach(b => b.addEventListener('click', () => fireQuality(b.dataset.scenario)));
-
-    // ------------------------------------------------------------ server
-
-    async function control(path) {
-        const res = await fetch(path, { method: 'POST', credentials: 'same-origin' });
-        if (res.status === 401 || res.status === 403) {
-            feed('Presenter key needed. Open <b>/presenter?key=…</b> on this laptop.', 'warn');
-            return null;
-        }
-        return res.ok ? res.json().catch(() => ({})) : null;
+        requestAnimationFrame(step);
     }
 
-    function setRunning(r) {
-        running = r;
-        const btn = $('#startStopBtn');
-        btn.textContent = r ? 'Stop traffic' : 'Start traffic';
-        btn.classList.toggle('is-running', r);
-    }
-
-    async function toggleTraffic() {
-        $('#startStopBtn').blur();
-        const r = await control(running ? '/demo/stop' : '/demo/start');
-        if (r) setRunning(!running);
-    }
-    $('#startStopBtn').addEventListener('click', toggleTraffic);
-    $('#resetBtn').addEventListener('click', async () => {
-        $('#resetBtn').blur();
-        if (!window.confirm('Reset traffic metrics and votes?')) return;
-        if (await control('/demo/reset')) { setRunning(false); if (arena) arena.reset(Date.now() & 0xffff); }
-    });
-
-    function connect() {
-        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        ws = new WebSocket(`${proto}//${location.host}/ws/presenter`);
-        ws.onmessage = ev => {
-            let msg;
-            try { msg = JSON.parse(ev.data); } catch (e) { return; }
-            const d = msg.data;
-            switch (msg.type) {
-                case 'metrics_update': lastMetrics = d; if (scene === 'numbers') renderNumbers(); break;
-                case 'state_update':
-                    $('#participants').textContent = d.participant_count ?? 0;
-                    if (typeof d.is_running === 'boolean') setRunning(d.is_running);
-                    break;
-                case 'arena_hard_prompt': hardPrompt(d.label, d.from); break;
-                case 'arena_votes': votes = d.counts || d || {}; if (lastSnapshot) renderFlock(lastSnapshot); break;
-                default: break;
+    function showLevel(i, animate) {
+        const { load, keys, levels } = loadData();
+        const ms = animate ? 900 : 1;
+        for (const card of $$('#loadStage .lcard')) {
+            const pts = load[card.dataset.key];
+            const p = pointAt(pts, levels[i]);
+            if (p) {
+                tween($('.l-pergpu', card), p.output_tokens_per_second_per_gpu, v => v.toFixed(0), ms);
+                tween($('.l-total', card), p.output_tokens_per_second, v => v.toFixed(0), ms);
+                if (p.latency_ms) tween($('.l-lat', card), p.latency_ms / 1000, v => `${v.toFixed(1)} s`, ms);
             }
+            // spark: tokens/s per GPU against concurrency, revealed up to this level
+            const el = $('.spark', card);
+            const W = Math.max(200, el.clientWidth), H = Math.max(100, el.clientHeight);
+            el.setAttribute('viewBox', `0 0 ${W} ${H}`);
+            const max = parseFloat(card.dataset.max) * 1.1, L = 12, B = 28;
+            const x = j => L + j * (W - 2 * L) / Math.max(1, levels.length - 1);
+            const y = v => 6 + (1 - v / max) * (H - B - 6);
+            const shown = levels.slice(0, i + 1).map((c, j) => ({ j, p: pointAt(pts, c) })).filter(o => o.p);
+            let svg = `<line x1="${L}" x2="${W - L}" y1="${H - B}" y2="${H - B}"/>`;
+            svg += levels.map((c, j) => `<text x="${x(j)}" y="${H - 5}" text-anchor="${j === 0 ? 'start' : j === levels.length - 1 ? 'end' : 'middle'}">${c}</text>`).join('');
+            if (shown.length > 1) svg += `<polyline points="${shown.map(o => `${x(o.j)},${y(o.p.output_tokens_per_second_per_gpu)}`).join(' ')}"/>`;
+            svg += shown.map(o => `<circle cx="${x(o.j)}" cy="${y(o.p.output_tokens_per_second_per_gpu)}" r="7"/>`).join('');
+            el.innerHTML = svg;
+        }
+        const play = $('#loadPlay');
+        play.textContent = animate && i < levels.length - 1 ? `${levels[i]} at a time…` : 'Play the load run';
+        if (i === levels.length - 1 && animate) loadResult(levels[i]);
+    }
+
+    function loadResult(c) {
+        const { load } = loadData();
+        const bf = pointAt(load.FP16 || [], c), q = pointAt(load.INT4 || [], c), sp = pointAt(load.SPEC_DECODE || [], c);
+        const parts = [];
+        if (bf && q) parts.push(`With ${c} questions at once, ${esc(label('INT4'))} serves <b>${(q.output_tokens_per_second_per_gpu / bf.output_tokens_per_second_per_gpu).toFixed(1)}× the tokens per GPU</b> of ${esc(label('FP16'))}`);
+        if (bf && sp && bf.latency_ms && sp.latency_ms) {
+            const r = sp.latency_ms / bf.latency_ms;
+            const verdict = Math.abs(r - 1) < 0.03 ? '<b>at about the same speed</b> as'
+                : r < 1 ? `<b>${Math.round(100 * (1 - r))}% faster</b> than` : `<b>${Math.round(100 * (r - 1))}% slower</b> than`;
+            parts.push(`${esc(label('SPEC_DECODE'))} answers ${verdict} ${esc(label('FP16'))} on the same GPUs`);
+        }
+        $('#loadResult').innerHTML = parts.length ? parts.join(', and ') + '.' : '';
+    }
+
+    function playLoad() {
+        const { levels } = loadData();
+        if (!levels.length) return;
+        clearTimeout(loadTimer);
+        $('#loadResult').innerHTML = '';
+        for (const el of $$('#loadStage .num')) el.dataset.v = '0';
+        let i = 0;
+        const next = () => {
+            showLevel(i, true);
+            i += 1;
+            if (i < levels.length) loadTimer = setTimeout(next, 2200);
         };
-        ws.onclose = () => setTimeout(connect, 1500);
+        next();
     }
+    $('#loadPlay').addEventListener('click', () => { $('#loadPlay').blur(); playLoad(); });
+
+    // ------------------------------------------------------------ boot
 
     async function loadConfig() {
         try {
             const res = await fetch('/api/config');
             if (!res.ok) throw new Error(res.status);
             config = await res.json();
-        } catch (e) {
-            config = null;
-        }
+        } catch (e) { config = null; }
         const badge = $('#modeBadge');
         if (config) {
             const live = config.mode === 'live';
             badge.className = `mode ${live ? 'live' : 'sim'}`;
-            $('span', badge).textContent = live ? 'Live models' : 'Simulated · benchmark data';
-            const url = config.public_url || location.origin + '/';
-            $('#joinUrl').textContent = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
-            const bm = config.benchmark || {};
-            if (bm.model) $('#subtitle').textContent = `${bm.model.split('/').pop().replace(/-/g, ' ')} on vLLM · ${bm.gpu || 'NVIDIA H200'}`;
-            const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-            $('#benchNote').textContent = `Measured ${when} on ${bm.gpu || 'NVIDIA H200'} with vLLM ${bm.vllm_version || ''}, one request at a time (20 per variant, up to 256 output tokens), so these are single-stream speeds and not server capacity under load.`;
+            $('span', badge).textContent = live ? 'Live models' : 'Replay';
+            badge.title = live ? 'Answers come from the vLLM deployments' : 'Models not connected, so each column replays the speed measured on the H200s';
         } else {
             badge.className = 'mode';
             $('span', badge).textContent = 'Offline';
-            $('#joinUrl').textContent = location.host;
         }
-        if (scene === 'numbers') renderNumbers();
+        buildAsk();
+        buildLoad();
+        buildNumbers();
     }
 
-    // ------------------------------------------------------------ keyboard
-
     document.addEventListener('keydown', e => {
-        if (e.target.closest('input, textarea')) return;
-        if (e.ctrlKey && e.shiftKey && e.code === 'KeyS') { e.preventDefault(); toggleTraffic(); return; }
-        if (e.ctrlKey && e.shiftKey && e.code === 'KeyQ') { e.preventDefault(); show('quality'); return; }
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        const typing = e.target.closest('input, textarea');
+        if (e.key === 'Escape' && typing) { e.target.blur(); return; }
+        if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
         switch (e.code) {
-            case 'Digit1': show('arena'); break;
-            case 'Digit2': show('numbers'); break;
-            case 'Digit3': show('quality'); break;
+            case 'Digit1': show('ask'); break;
+            case 'Digit2': show('load'); break;
+            case 'Digit3': show('numbers'); break;
+            case 'Space': if ($('#scene-load').classList.contains('is-active')) { e.preventDefault(); playLoad(); } break;
+            case 'Slash': e.preventDefault(); show('ask'); $('#askInput').focus(); break;
             case 'KeyT': setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); break;
             case 'KeyF':
                 if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
                 break;
-            default:
-                if (scene !== 'arena' || !arena) return;
-                if (e.code === 'Space') { e.preventDefault(); arena.flapHuman(); }
-                else if (e.code === 'KeyH') hardPrompt(['Multi-step math', 'Logic puzzle', 'Tricky code', 'Long context'][Math.floor(Math.random() * 4)], 'Presenter');
-                else if (e.code === 'KeyP') { arena.userPaused = !arena.paused; arena.paused = arena.userPaused; }
-                else if (e.code === 'KeyR') { arena.reset((Date.now() & 0xffff) + 1); arena.removeHuman(); }
-                else if (e.code === 'Escape') arena.removeHuman();
+            default: break;
         }
     });
 
-    // ------------------------------------------------------------ boot
-
     fit();
     loadConfig();
-    connect();
-    startArena().catch(err => { $('#arenaLoading').textContent = `Could not load the arena: ${err.message}`; });
 })();

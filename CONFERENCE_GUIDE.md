@@ -7,55 +7,33 @@
 
 ## What This Demo Does
 
-Llama 3.1 70B Instruct runs on vLLM in three deployments on NVIDIA H200s (BF16 on two GPUs, INT4 AWQ on one, and speculative decoding with an 8B draft model), and the dashboard shows the numbers measured on them. Next to that runs the Quantization Arena, where five birds are flown by the same small network I trained in PyTorch, each one storing its weights at a different precision. People in the room scan a QR code, back a bird, and throw hard prompts at the course from their phones, and those land on the big screen as narrow red gaps.
+Llama 3.1 70B Instruct runs on vLLM in three setups on NVIDIA H200s: BF16 on two GPUs, INT4 AWQ on one, and speculative decoding with an 8B draft model on two. During the demo Markell types a question from the room, it goes to all three at once, and the answers stream side by side with their timing and GPU count. The Numbers scene then shows what each setup gets you and when a router earns its keep.
 
-What the audience sees, backed by data: INT4 runs at 94% of BF16's speed on half the GPUs, which works out to 1.87 times the tokens per GPU. In the arena, plain 4-bit rounding fails on hard gaps while activation-aware scaling (the idea behind AWQ) clears every one, and the speculative decoding bird flies exactly the BF16 path.
+What the audience sees, backed by data: INT4 runs at 94% of BF16's speed on half the GPUs, which works out to 1.9 times the tokens per GPU. Speculative decoding runs on the same two GPUs as BF16, so what it buys is lower latency per request, and this benchmark ran it with CUDA graphs off.
 
 ## How It Works Under the Hood
 
-The backend is FastAPI (`app/`). In live mode it sends fixed prompts to the three vLLM endpoints. In simulated mode it replays latencies sampled from the H200 benchmark, sleeping for the real time so concurrency builds the same way. Websockets push metrics to every screen twice a second.
+The backend is FastAPI (`app/`). The presenter page (`/presenter`) has two scenes. **Ask** streams one question to every setup through the vLLM endpoints (or replays the measured speeds when they aren't connected), and **Numbers** shows the benchmark, what each setup is best for, and the router guidance. The Quantization Arena game lives at `/arena` for the booth.
 
-The presenter page (`/presenter`) has three scenes. **Arena** runs the game in the browser from weights exported by `arena/train_policy.py`, **Numbers** shows the benchmark plus live or simulated traffic, and **Quality** shows the same prompt answered by every variant (labeled illustrative until real captures are saved to `quality/`). The audience page (`/`) is where phones back a bird, throw hard prompts, and send requests to the real models.
-
-The full method, the numbers, and the answers to the questions experts ask are in the README.
+The full method, the numbers, and the technical questions are in the README.
 
 ## The Talk Flow (10 Minutes)
 
 <!-- TALK FLOW: owned by the slides session; keep in sync with the speaker notes in slides.html -->
 
-| Time | Slide | What happens |
-|---|---|---|
-| 0:00 | 1 Title | Intro the cast (Priya, Marcus, Dana), and tell people to keep their phones handy |
-| 0:35 | 2 Meet Priya | Llama 3.1 70B at BF16 fills an H200, 2 GPUs per replica, and Dana's "quick question" about 1,460 GPU-hours a month |
-| 1:20 | 3 The obvious fix | Size chart: BF16 141 GB, FP8 71 GB, INT4 about 38 GB, so INT4 fits on one GPU |
-| 1:55 | 4 The ticket | Marcus's ticket, a show of hands ("who hoped the quality was fine?"), and Priya sets up a showdown |
-| 2:35 | 5 The showdown | The three contestants, the spec-decode token animation, and a hand vote on who's fastest |
-| 3:35 | 6 Let's find out | Switch to the dashboard. Arena (1) with the QR on the sidebar, phones join, then Numbers (2) and Quality (3) |
-| 6:05 | 7 Plot twist | Benchmark charts, with a payoff for each group of voters |
-| 6:55 | 8 Sheep test | The room shouts an answer, then one click runs the sheep off and reveals the three answers |
-| 7:50 | 9 What Priya shipped | Routing: chat to INT4, deep analysis to BF16, low-traffic latency work to spec decode. Marcus closes the ticket |
-| 8:35 | 10 Lightning round | Six questions on one slide: FP8, why spec decode lost, 20 requests, 8B models, AWQ vs GPTQ/torchao, routing |
-| 9:25 | 11 Close | Everything in one place: repo QR, sim mode on a laptop, the stack, the booth |
-
-Slide keys: arrows or clicker to move, N for speaker notes, B for blackout, F for fullscreen. On slide 8, the first click is the reveal.
-
-The full speaker script is embedded at the bottom of slides.html (press N while presenting).
+The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`, then press `2` for Numbers, the money slide.
 
 ## Presenter Shortcuts
 
 | Key | What it does |
 |---|---|
-| `1` `2` `3` | Arena, Numbers, Quality scenes |
-| `Space` | Fly your own bird in the arena |
-| `H` | Throw a hard prompt onto the course |
-| `P` | Pause the arena |
-| `R` | New course |
+| `1` `2` | Ask, Numbers |
+| `/` | Jump to the question box |
+| `Enter` | Send the question to every setup |
 | `T` | Light or dark theme |
 | `F` | Full screen |
-| `Ctrl` `Shift` `S` | Start or stop background traffic |
-| `Ctrl` `Shift` `Q` | Jump to the Quality scene |
 
-`Ctrl+Shift+S` no longer switches to simulated mode. To switch while presenting, open `/presenter?mode=sim`.
+To force replay mode while presenting, open `/presenter?mode=sim`.
 
 ## The Plan
 
@@ -75,37 +53,33 @@ GPU breakdown per variant:
 
 1. **Sep 29-30:** Test run on H200s. Deploy all three model variants, run through the full demo flow, record backup video.
 2. **Oct 18:** Pre-deploy the demo app and models to OpenShift AI.
-3. **Oct 19:** Final testing on production URL. Generate QR code. Upload slides to Sessionize (deadline).
+3. **Oct 19:** Final testing on production URL. Upload slides to Sessionize (deadline).
 4. **Oct 20:** Demo day. 4:10 PM PDT, Demo Theater. Be set up and tested 30 minutes before.
 5. **Oct 21:** Conference day 2, booth availability.
 
 ### Pre-Demo Checklist (Day Before)
 
-- All model variants deployed and answering (`/health` on the demo app, `/v1/models` on each vLLM endpoint)
-- Demo app deployed behind an OpenShift Route with `PRESENTER_KEY` and `PUBLIC_URL` set
-- Presenter laptop opened `/presenter?key=<value>` once, so the control buttons work
-- QR code on the Arena sidebar scanned from a phone on cellular data, not venue wifi
-- Presenter dashboard checked full screen on the demo laptop in both themes
+- All model variants deployed and answering (`/v1/models` on each vLLM endpoint)
+- Demo app deployed behind an OpenShift Route with `PRESENTER_KEY` set
+- Presenter laptop opened `/presenter?key=<value>` once, so the Ask box works
+- One typed question and all three presets answered live on the demo laptop
 - `/presenter?mode=sim` tested as the fallback
-- Quality captures saved to `quality/` (otherwise the Quality scene says illustrative)
 - Backup video recorded and on a USB drive
 
 ### 30 Minutes Before
 
 - Open the presenter dashboard full screen (`F`)
-- Check the mode badge in the top right says what you expect (Live models or Simulated)
-- Press Reset, then Start traffic, and watch the Numbers scene fill in
-- Throw one hard prompt from your phone and watch it land in the arena
-- Have the QR code visible on the Arena scene
+- Check the badge in the top right says Live models
+- Ask one warm-up question so every model has served a request
 - Silence notifications and close other apps
 
 ## Backup Plans
 
-**If the models stop responding:** open `/presenter?mode=sim` in the same tab. The Numbers scene keeps showing the H200 benchmark, the right-now panel switches to replayed timings with a "Simulated" label, and the arena doesn't depend on the models at all, so it keeps running exactly as before.
+**If the models stop responding:** open `/presenter?mode=sim` in the same tab. The Numbers scene doesn't change, because it shows the measured benchmark. In Ask, a "Replay" badge appears and each column plays back the speed that setup measured, and preset questions still show a full answer.
 
-**If the venue network is bad:** run the app on the demo laptop with `./scripts/run-local.sh`. Fonts and everything else are bundled, so the presenter screen renders correctly with no network. Phones need to reach the laptop, so this only covers the big screen.
+**If the venue network is bad:** run the app on the demo laptop with `./scripts/run-local.sh`. Fonts and everything else are bundled, so the screen renders correctly with no network.
 
-**If the room is small:** press `H` to throw hard prompts yourself and `Space` to fly a bird. The arena tells the whole quantization story with nobody on their phones.
+**If nobody calls out a question:** use the preset buttons under the question box.
 
 **If everything fails:** play the backup video from the USB drive, narrate over it, and move to Q&A.
 
@@ -113,7 +87,6 @@ GPU breakdown per variant:
 
 - Laptop with presenter dashboard open
 - HDMI adapter (and a backup one)
-- Phone or tablet with QR code displayed
 - Backup laptop with full setup
 - USB drive with backup video
 

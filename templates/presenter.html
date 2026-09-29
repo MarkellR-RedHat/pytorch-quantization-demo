@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantization Showdown · Presenter</title>
+    <title>Not Every Question Needs Two GPUs</title>
     <link rel="preload" href="/static/fonts/RedHatDisplay-VF.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/static/fonts/RedHatText-VF.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/static/fonts/RedHatMono-VF.woff2" as="font" type="font/woff2" crossorigin>
@@ -17,144 +17,72 @@
         <div class="brand">
             <img src="/static/images/redhat-logo.png" alt="Red Hat" class="logo">
             <div class="brand-text">
-                <h1>Quantization Showdown</h1>
-                <p id="subtitle">Llama 3.1 70B Instruct on vLLM · NVIDIA H200</p>
+                <h1>Not Every Question Needs Two GPUs</h1>
+                <p id="subtitle">When to use BF16, INT4, or speculative decoding, and when a router earns its keep</p>
             </div>
         </div>
 
         <nav class="tabs" role="tablist" aria-label="Scenes">
-            <button class="tab is-active" role="tab" data-scene="arena"><kbd>1</kbd>Arena</button>
-            <button class="tab" role="tab" data-scene="numbers"><kbd>2</kbd>Numbers</button>
-            <button class="tab" role="tab" data-scene="quality"><kbd>3</kbd>Quality</button>
+            <button class="tab is-active" role="tab" data-scene="ask"><kbd>1</kbd>Ask</button>
+            <button class="tab" role="tab" data-scene="load"><kbd>2</kbd>Under load</button>
+            <button class="tab" role="tab" data-scene="numbers"><kbd>3</kbd>Numbers</button>
         </nav>
 
         <div class="controls">
             <span class="mode" id="modeBadge"><i></i><span>Connecting</span></span>
-            <span class="people" title="Phones connected">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-8 1a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm8 1c-2.7 0-8 1.3-8 4v3h16v-3c0-2.7-5.3-4-8-4Zm-8 0c-.3 0-.7 0-1.1.1A4.7 4.7 0 0 1 9 17v3H1v-3c0-2.4 4.7-4 7-4Z"/></svg>
-                <b id="participants" class="num">0</b>
-            </span>
-            <button class="btn btn-primary" id="startStopBtn">Start traffic</button>
-            <button class="btn btn-ghost" id="resetBtn">Reset</button>
         </div>
     </header>
 
-    <!-- ============================== ARENA ============================== -->
-    <section class="scene is-active" id="scene-arena" data-scene="arena">
-        <div class="arena-main">
-            <div class="canvas-card">
-                <canvas id="arenaCanvas" aria-label="Quantization Arena: birds flown by neural networks at different precisions"></canvas>
-                <div class="canvas-loading" id="arenaLoading">Loading the flock…</div>
-                <ol class="feed" id="feed" aria-live="polite"></ol>
+    <!-- ============================== ASK ============================== -->
+    <section class="scene is-active" id="scene-ask" data-scene="ask">
+        <form class="ask-bar" id="askForm" autocomplete="off">
+            <input id="askInput" type="text" maxlength="2000" placeholder="Type a question from the room and press Enter" aria-label="Question">
+            <button class="btn btn-primary" type="submit">Ask all three</button>
+        </form>
+        <div class="ask-meta">
+            <div class="presets" id="presets">
+                <span class="presets-label">Or try</span>
+                <button type="button" data-preset="reasoning">Sheep riddle</button>
+                <button type="button" data-preset="code">Python function</button>
+                <button type="button" data-preset="summary">Three bullet summary</button>
             </div>
-            <div class="caption">
-                <p>
-                    Every bird is flown by the same <b id="paramCount">4,673</b>-parameter network I trained in PyTorch,
-                    and the only thing that changes between them is how its weights are stored.
-                    Red gaps are hard prompts, <b>112 px</b> wide instead of <b>170</b>, so a tiny rounding error in the
-                    weights decides whether a bird makes it through.
-                </p>
-                <ul class="keys">
-                    <li><kbd>Space</kbd>fly one yourself</li>
-                    <li><kbd>H</kbd>throw a hard prompt</li>
-                    <li><kbd>P</kbd>pause</li>
-                    <li><kbd>R</kbd>new course</li>
-                    <li><kbd>T</kbd>theme</li>
-                </ul>
-            </div>
+            <p class="router" id="router" hidden></p>
         </div>
+        <div class="ask-grid" id="askGrid"></div>
+    </section>
 
-        <aside class="arena-side">
-            <div class="card flock">
-                <div class="card-head">
-                    <h2>Hard gaps cleared</h2>
-                    <span class="hint">click to hide a bird</span>
-                </div>
-                <ol class="rows" id="flockRows"></ol>
+    <!-- ============================== LOAD ============================== -->
+    <section class="scene" id="scene-load" data-scene="load">
+        <div class="numbers-head">
+            <div>
+                <h2 class="scene-title">What happens when the questions pile up</h2>
+                <p class="scene-sub" id="loadSetup"></p>
             </div>
-
-            <div class="card spec-card">
-                <div class="card-head">
-                    <h2><span class="glyph" style="--c: var(--v-spec)"></span>Spec decode, live</h2>
-                    <span class="hint" id="specK">draft guesses 4 moves</span>
-                </div>
-                <div class="spec-stats">
-                    <div><b id="specAccept" class="num">–</b><span>draft moves accepted</span></div>
-                    <div><b id="specFpp" class="num">–</b><span>moves per target pass</span></div>
-                    <div><b id="specDiff" class="num">–</b><span>off the BF16 path</span></div>
-                </div>
-                <div class="strips" id="specStrips" aria-label="Last speculation passes"></div>
-                <p class="strip-key"><i class="ok"></i>draft move the target agreed with <i class="fix"></i>target's own move</p>
-            </div>
-
-            <div class="card join">
-                <img id="qr" class="qr" alt="QR code to join" src="/qr.svg">
-                <div class="join-text">
-                    <h2>Throw hard prompts at them</h2>
-                    <p>Scan with your phone, back a bird, and send a hard prompt. It lands on this course as a red gap.</p>
-                    <code id="joinUrl"></code>
-                </div>
-            </div>
-        </aside>
+            <button class="btn btn-primary" id="loadPlay" type="button">Play the load run</button>
+        </div>
+        <div class="load-stage" id="loadStage"></div>
+        <p class="takeaway-big" id="loadResult"></p>
     </section>
 
     <!-- ============================== NUMBERS ============================== -->
     <section class="scene" id="scene-numbers" data-scene="numbers">
         <div class="numbers-head">
-            <div>
-                <h2 class="scene-title">What the real 70B deployments measured</h2>
-                <p class="scene-sub" id="benchNote">Loading benchmark details…</p>
-            </div>
-            <div class="legend-basis">
-                <span class="basis basis-bench">Benchmark</span>
-                <span class="basis basis-live">Live</span>
-                <span class="basis basis-sim">Simulated from benchmark</span>
-            </div>
+            <h2 class="scene-title">What each setup gets you</h2>
+            <p class="scene-sub" id="benchNote"></p>
         </div>
-        <div class="variant-grid" id="variantGrid"></div>
-        <div class="numbers-bottom">
-            <div class="card per-gpu">
-                <div class="card-head">
-                    <h2>Tokens per second, per GPU</h2>
-                    <span class="hint">one stream · higher is better</span>
-                </div>
-                <div class="bars" id="perGpuBars"></div>
-            </div>
-            <div class="card load" id="loadCard">
-                <div class="card-head">
-                    <h2>Under load</h2>
-                    <span class="hint" id="loadHint">output tokens/s per GPU vs. concurrent requests</span>
-                </div>
-                <div id="loadBody"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ============================== QUALITY ============================== -->
-    <section class="scene" id="scene-quality" data-scene="quality">
-        <div class="numbers-head">
-            <div>
-                <h2 class="scene-title">Same prompt, every variant</h2>
-                <p class="scene-sub" id="qualitySource">Pick a prompt to send it to every variant.</p>
-            </div>
-            <div class="seg" id="qualityPick">
-                <button data-scenario="complex_reasoning">Reasoning</button>
-                <button data-scenario="code_generation">Code</button>
-                <button data-scenario="summarization">Summary</button>
-            </div>
-        </div>
-        <div class="prompt-box" id="qualityPrompt"></div>
-        <div class="quality-grid" id="qualityGrid"></div>
+        <div class="money-grid" id="moneyGrid"></div>
+        <p class="takeaway-big" id="takeaway"></p>
+        <div class="router-strip" id="routerStrip"></div>
+        <p class="router-note" id="routerNote"></p>
+        <p class="numbers-foot" id="numbersFoot"></p>
     </section>
 
     <footer class="bottom">
         <span id="footLeft">PyTorch Conference North America 2026 · San Jose</span>
-        <span id="footRight"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> scenes · <kbd>F</kbd> full screen · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>S</kbd> start or stop traffic</span>
+        <span id="footRight"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> scenes · <kbd>/</kbd> type a question · <kbd>T</kbd> theme · <kbd>F</kbd> full screen</span>
     </footer>
 </div>
 
-<script src="/static/js/arena-core.js"></script>
-<script src="/static/js/arena.js"></script>
 <script src="/static/js/presenter.js"></script>
 </body>
 </html>

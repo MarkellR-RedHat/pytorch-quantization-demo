@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 VariantKey = Literal["FP16", "FP8", "INT4", "SPEC_DECODE"]
 PromptId = Literal["chat", "reasoning", "code", "summary"]
@@ -70,3 +70,10 @@ class HardPromptRequest(BaseModel):
 
 class BackRequest(BaseModel):
     variant: ArenaVariant
+
+
+class AskRequest(BaseModel):
+    """Presenter-only: a question typed on the presenter laptop, or one of the preset questions."""
+
+    prompt: str = Field(default="", max_length=2000)
+    preset: Literal["reasoning", "code", "summary"] | None = None

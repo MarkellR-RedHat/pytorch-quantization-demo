@@ -38,16 +38,18 @@ def percentile(values: list[float], pct: float) -> float:
     return ordered[max(1, math.ceil(pct / 100 * len(ordered))) - 1]
 
 
-def stream_once(client: httpx.Client, url: str, model: str, prompt: str, max_tokens: int) -> dict:
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "max_tokens": max_tokens,
-        "temperature": 0,
-        "ignore_eos": True,
-        "stream": True,
-        "stream_options": {"include_usage": True},
-    }
+def stream_once(
+    client: httpx.Client, url: str, model: str, prompt: str, max_tokens: int, natural: bool = False
+) -> dict:
+    """natural=False forces every answer to max_tokens (clean speed comparison); natural=True lets each
+    model stop on its own through the chat template, so answer length can be compared too."""
+    payload = {"model": model, "max_tokens": max_tokens, "temperature": 0, "stream": True,
+               "stream_options": {"include_usage": True}}
+    if natural:
+        payload["messages"] = [{"role": "user", "content": prompt}]
+    else:
+        payload["prompt"] = prompt
+        payload["ignore_eos"] = True
     start = time.perf_counter()
     ttft = None
     chunks = 0
@@ -60,7 +62,8 @@ def stream_once(client: httpx.Client, url: str, model: str, prompt: str, max_tok
             data = json.loads(line[6:])
             if data.get("usage"):
                 usage = data["usage"]
-            if data.get("choices") and data["choices"][0].get("text"):
+            choice = (data.get("choices") or [{}])[0]
+            if choice.get("text") or (choice.get("delta") or {}).get("content"):
                 chunks += 1
                 if ttft is None:
                     ttft = time.perf_counter() - start
@@ -72,16 +75,22 @@ def stream_once(client: httpx.Client, url: str, model: str, prompt: str, max_tok
 
 
 def run_benchmark(
-    endpoint: str, variant: str, model: str, requests: int, warmup: int, max_tokens: int
+    endpoint: str,
+    variant: str,
+    model: str,
+    requests: int,
+    warmup: int,
+    max_tokens: int,
+    natural: bool = False,
 ) -> dict:
-    url = f"{endpoint.rstrip('/')}/v1/completions"
+    url = f"{endpoint.rstrip('/')}/v1/{'chat/completions' if natural else 'completions'}"
     print(f"\nBenchmarking {variant} ({model}) at {url}: {warmup} warmup + {requests} measured, 1 stream")
     results, errors = [], 0
     with httpx.Client(timeout=300.0) as client:
         for i in range(warmup + requests):
             prompt = PROMPTS[i % len(PROMPTS)]
             try:
-                r = stream_once(client, url, model, prompt, max_tokens)
+                r = stream_once(client, url, model, prompt, max_tokens, natural)
             except (httpx.HTTPError, ValueError) as e:
                 errors += 1
                 print(f"  [ERROR] {e}")
@@ -104,7 +113,8 @@ def run_benchmark(
         "concurrency": 1,
         "temperature": 0,
         "max_tokens": max_tokens,
-        "ignore_eos": True,
+        "ignore_eos": not natural,
+        "natural_length": natural,
         "warmup_requests": warmup,
         "total_requests": len(results),
         "errors": errors,
@@ -128,13 +138,18 @@ def main():
     parser.add_argument("--requests", type=int, default=20)
     parser.add_argument("--warmup", type=int, default=3)
     parser.add_argument("--max-tokens", type=int, default=256)
+    parser.add_argument(
+        "--natural-length", action="store_true",
+        help="let each model end its own answer (chat template, no ignore_eos) to compare answer length",
+    )
     parser.add_argument("--out", help="output JSON (default bench/<VARIANT>/single_stream.json)")
     args = parser.parse_args()
     if not args.endpoint:
         parser.error("--endpoint or BENCH_ENDPOINT is required")
 
     summary = run_benchmark(
-        args.endpoint, args.variant, args.model, args.requests, args.warmup, args.max_tokens
+        args.endpoint, args.variant, args.model, args.requests, args.warmup, args.max_tokens,
+        args.natural_length,
     )
     out = Path(args.out or Path(__file__).parent.parent / "bench" / args.variant / "single_stream.json")
     out.parent.mkdir(parents=True, exist_ok=True)

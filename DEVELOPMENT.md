@@ -20,11 +20,11 @@ The backend is one FastAPI process (`app/main.py`) that keeps all state in memor
 - `app/benchmark.py` loads `benchmark_results.json` and any `bench/<VARIANT>/c<N>.json` sweeps from `vllm bench serve`. In simulated mode, each request's latency is sampled from a lognormal fitted to the measured mean and p95, and it's scaled by the in-flight concurrency once sweep files exist.
 - `app/simulation.py` replays those timings, sleeping for the real latency so concurrency builds up the way it would against real GPUs.
 - `app/openshift.py` is the live client for vLLM's OpenAI-compatible chat completions API. It runs at temperature 0 and computes tokens per second from `completion_tokens`.
-- `app/quality.py` serves the Quality scene. It reads captured outputs from `quality/<VARIANT>/<scenario>.json` when they exist, and otherwise uses illustrative text labeled as such.
-- `app/arena.py` handles the audience side of the game (anonymous handles, backing a bird, hard prompts) and relays the presenter's arena state to phones.
+- `app/ask.py` streams the Ask scene: one question to every variant, with time to first token, tokens per second, and total time measured per variant. In replay mode it plays back the measured speed, using captured outputs from `quality/<VARIANT>/<scenario>.json` for the presets when they exist and the baseline's text otherwise.
+- `app/arena.py` handles the audience side of the booth arena (anonymous handles, backing a bird, hard prompts).
 - `app/ratelimit.py` holds the token buckets that protect `/request`, `/arena/*`, and the GPUs behind them.
 
-The arena itself runs entirely in the presenter's browser. `static/js/arena-core.js` is the physics and the network forward pass (no DOM, so Node can run it in tests), `static/js/arena.js` is the game loop and renderer, and `static/arena/policy.json` holds the weights exported by `arena/train_policy.py`.
+The booth arena (`/arena`) runs entirely in the browser. `static/js/arena-core.js` is the physics and the network forward pass (no DOM, so Node can run it in tests), `static/js/arena.js` is the game loop and renderer, and `static/arena/policy.json` holds the weights exported by `arena/train_policy.py`.
 
 ## Changing the arena
 
@@ -53,9 +53,7 @@ CI runs both on Python 3.11 and 3.12, builds the container, and checks `/health`
 
 ## Troubleshooting
 
-**Phones can't connect.** Phones need a URL they can reach, which means your laptop's IP address on the same network, or an OpenShift Route. Set `PUBLIC_URL` so the QR code encodes the right address.
-
-**Start and Reset return 401.** `PRESENTER_KEY` is set. Open `/presenter?key=<value>` once and the browser keeps a cookie for 12 hours.
+**The Ask box says to open /presenter?key=….** `PRESENTER_KEY` is set. Open `/presenter?key=<value>` once and the browser keeps a cookie for 12 hours.
 
 **Live requests return 503.** The in-flight cap for that variant is full. Raise `MAX_INFLIGHT_PER_VARIANT` if the GPUs have headroom.
 

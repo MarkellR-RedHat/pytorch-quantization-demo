@@ -14,15 +14,17 @@ from datetime import datetime
 import httpx
 import segno
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.arena import HARD_PROMPT_LABELS, MAX_STATE_BYTES, ArenaRelay, ArenaVotes, handle_for
+from app.ask import ask_stream, preset_prompt
 from app.benchmark import benchmark_data
 from app.config import ALL_VARIANTS, REPO_ROOT, settings, variant_label
 from app.metrics import metrics_collector
 from app.models import (
+    AskRequest,
     BackRequest,
     DemoState,
     HardPromptRequest,
@@ -335,6 +337,23 @@ async def presenter_view(request: Request, key: str | None = None, mode: str | N
         name="presenter.html",
         context={"simulation_mode": simulator.is_enabled(), "demo_state": state_payload()},
     )
+
+
+@app.get("/arena", response_class=HTMLResponse)
+async def arena_view(request: Request):
+    return templates.TemplateResponse(request=request, name="arena.html", context={})
+
+
+@app.post("/ask/{variant}", dependencies=[Depends(require_presenter)])
+async def ask(variant: str, body: AskRequest):
+    if variant not in active_variants():
+        raise HTTPException(404, detail="unknown variant")
+    prompt = preset_prompt(body.preset) or body.prompt.strip()
+    if not prompt:
+        raise HTTPException(422, detail="empty question")
+    stream = ask_stream(variant, prompt, body.preset, not simulator.is_enabled(), benchmark_data)
+    headers = {"Cache-Control": "no-store", "X-Accel-Buffering": "no"}
+    return StreamingResponse(stream, media_type="application/x-ndjson", headers=headers)
 
 
 @app.post("/request", response_model=InferenceResponse)

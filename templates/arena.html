@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantization Arena</title>
+    <link rel="preload" href="/static/fonts/RedHatDisplay-VF.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/fonts/RedHatText-VF.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/fonts/RedHatMono-VF.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/presenter.css">
+</head>
+<body class="presenter">
+<div id="stage" class="stage">
+
+    <header class="top">
+        <div class="brand">
+            <img src="/static/images/redhat-logo.png" alt="Red Hat" class="logo">
+            <div class="brand-text">
+                <h1>Quantization Arena</h1>
+                <p id="subtitle">One network, four ways to store its weights</p>
+            </div>
+        </div>
+        <div></div>
+
+        <div class="controls"></div>
+    </header>
+
+    <!-- ============================== ARENA ============================== -->
+    <section class="scene is-active" id="scene-arena" data-scene="arena">
+        <div class="arena-main">
+            <div class="canvas-card">
+                <canvas id="arenaCanvas" aria-label="Quantization Arena: birds flown by neural networks at different precisions"></canvas>
+                <div class="canvas-loading" id="arenaLoading">Loading the flock…</div>
+                <ol class="feed" id="feed" aria-live="polite"></ol>
+            </div>
+            <div class="caption">
+                <p>
+                    Every bird is flown by the same <b id="paramCount">4,673</b>-parameter network I trained in PyTorch,
+                    and the only thing that changes between them is how its weights are stored.
+                    Red gaps are hard prompts, <b>112 px</b> wide instead of <b>170</b>, so a tiny rounding error in the
+                    weights decides whether a bird makes it through.
+                </p>
+                <ul class="keys">
+                    <li><kbd>Space</kbd>fly one yourself</li>
+                    <li><kbd>H</kbd>throw a hard prompt</li>
+                    <li><kbd>P</kbd>pause</li>
+                    <li><kbd>R</kbd>new course</li>
+                    <li><kbd>T</kbd>theme</li>
+                </ul>
+            </div>
+        </div>
+
+        <aside class="arena-side">
+            <div class="card flock">
+                <div class="card-head">
+                    <h2>Hard gaps cleared</h2>
+                    <span class="hint">click to hide a bird</span>
+                </div>
+                <ol class="rows" id="flockRows"></ol>
+            </div>
+
+            <div class="card spec-card">
+                <div class="card-head">
+                    <h2><span class="glyph" style="--c: var(--v-spec)"></span>Spec decode, live</h2>
+                    <span class="hint" id="specK">draft guesses 4 moves</span>
+                </div>
+                <div class="spec-stats">
+                    <div><b id="specAccept" class="num">–</b><span>draft moves accepted</span></div>
+                    <div><b id="specFpp" class="num">–</b><span>moves per target pass</span></div>
+                    <div><b id="specDiff" class="num">–</b><span>off the BF16 path</span></div>
+                </div>
+                <div class="strips" id="specStrips" aria-label="Last speculation passes"></div>
+                <p class="strip-key"><i class="ok"></i>draft move the target agreed with <i class="fix"></i>target's own move</p>
+            </div>
+        </aside>
+    </section>
+
+    <footer class="bottom">
+        <span id="footLeft">PyTorch Conference North America 2026 · San Jose</span>
+        <span id="footRight"><kbd>F</kbd> full screen</span>
+    </footer>
+</div>
+
+<script src="/static/js/arena-core.js"></script>
+<script src="/static/js/arena.js"></script>
+<script src="/static/js/arena-page.js"></script>
+</body>
+</html>

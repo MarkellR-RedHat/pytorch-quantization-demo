@@ -1,12 +1,12 @@
-# Quantization Showdown
+# Not Every Question Needs Two GPUs
 
-Everyone who has shipped a 70B model has had the same conversation with their GPU bill, and the first answer is always to quantize it. This demo puts that decision on a big screen. It shows real numbers from Llama 3.1 70B Instruct served by vLLM on NVIDIA H200s in three ways (BF16 on two GPUs, INT4 AWQ on one, and speculative decoding with an 8B draft model), and it runs a small game where the audience throws hard prompts at birds flown by neural networks stored at different precisions, so you can watch a rounding error decide who makes it through.
+Everyone who has shipped a 70B model has had the same conversation with their GPU bill, and the first answer is usually to quantize it. This demo puts that decision side by side. It sends the same question to Llama 3.1 70B Instruct served by vLLM on NVIDIA H200s in three setups (BF16 on two GPUs, INT4 AWQ on one, and speculative decoding with an 8B draft model on two), streams all three answers at once, and then shows what each setup gets you, what it costs, and where a router fits.
 
 Built for the Demo Theater at PyTorch Conference North America 2026 in San Jose.
 
 ## Run it on your laptop
 
-You don't need a GPU or a cluster. Simulated mode replays the timings measured on the H200s, and everything (fonts included) is bundled, so it works with no network at all.
+You don't need a GPU or a cluster. Without model endpoints the dashboard runs in replay mode, which plays back the speeds measured on the H200s, and everything (fonts included) is bundled, so it works with no network at all.
 
 ```bash
 git clone https://github.com/MarkellR-RedHat/pytorch-quantization-demo.git
@@ -15,13 +15,23 @@ cd pytorch-quantization-demo
 ./scripts/run-local.sh
 ```
 
-Open http://localhost:8000/presenter on the big screen and http://localhost:8000 on your phone (use your laptop's IP address instead of localhost). You need Python 3.11 or newer.
+Open http://localhost:8000/presenter. You need Python 3.11 or newer.
 
 ## What's on the screen
 
 The presenter dashboard is a fixed 1920 by 1080 stage that scales to whatever it's plugged into, so nothing reflows or clips on a 720p projector.
 
-**Arena** (press `1`). Five birds fly the same course. Every one of them is flown by the same 4,673-parameter network I trained in PyTorch, and the only thing that changes between them is how its weights are stored. Red gaps are hard prompts, 112 px wide instead of 170, and people in the room add more of them from their phones.
+**Ask** (press `1`). Type a question, or pick one of the presets, and it goes to every setup at once. The answers stream side by side with the time to first token, tokens per second, how many tokens each answer used, total time, and how many GPUs each setup uses. Answer length matters, because a setup that writes shorter answers can look faster per token while reasoning less. A line above the answers shows where a simple example router would send that question and why. With live endpoints connected these are real answers from the real deployments. Without them, a small "Replay" badge shows in the corner and each column plays back the speed that setup measured, without calling a model and without inventing a difference in the answers.
+
+**Under load** (press `2`, then `Space`). A replay of the `vllm bench serve` load test: 1, 8, 32, then 64 questions in flight at once against each setup, with tokens per second per GPU, total tokens per second, and median time per answer at each step, and the result in one line at the end. It plays back whatever sweep files are in `bench/`, and says so when there aren't any yet.
+
+**Numbers** (press `3`). The money slide: tokens per second for one request, tokens per second per GPU, and accuracy for each setup, what each one is best for, and when a router is worth adding.
+
+**The arena** (http://localhost:8000/arena). A booth game where birds flown by the same small PyTorch network, stored at different precisions, fly a course with hard gaps. It isn't part of the talk, and the next section explains how it works.
+
+## How the arena works, and how to check it
+
+The arena is a booth demo, and I wanted it to hold up if someone who works on quantization kernels looks at it for more than ten seconds, so nothing in it is scripted.
 
 | Bird | Weights | Hard gaps cleared* |
 |---|---|---|
@@ -32,16 +42,6 @@ The presenter dashboard is a fixed 1920 by 1080 stage that scales to whatever it
 | Spec Decode | BF16 network plus a 4-unit draft network | same path as BF16, to the pixel |
 
 \* Measured by `arena/train_policy.py` on 20 held-out courses. Every variant also clears every easy gap.
-
-**Numbers** (press `2`). The H200 benchmark for each deployment, plus a "right now" panel with whatever traffic is flowing (live requests in live mode, replayed timings in simulated mode). Every number carries a label that says where it came from.
-
-**Quality** (press `3`). The same prompt sent to every variant. These are marked "illustrative" until real captures from the deployments are dropped into `quality/`, and then the dashboard shows those instead with no code change.
-
-**Phones.** People scan the QR code on the Arena sidebar, back a bird, throw hard prompts at the course, and send requests to the real models. Nothing anyone types is sent anywhere, because every prompt is fixed on the server.
-
-## How the arena works, and how to check it
-
-I wanted the game to hold up if someone who works on quantization kernels looks at it for more than ten seconds, so nothing in it is scripted.
 
 The birds are flown by a 6-64-64-1 MLP trained in PyTorch by imitation learning (DAgger) from a simple rule-based pilot. The four precision variants are the same trained weights quantized after training: BF16 and FP8 use PyTorch's own `torch.bfloat16` and `torch.float8_e4m3fn` casts, INT4 RTN is asymmetric round-to-nearest with one scale and zero point per group of 16 inputs, and INT4 AWQ scales each input channel by its mean activation raised to a power (searched per layer to minimize output error) before doing the same group rounding, which is the core idea of [AWQ](https://arxiv.org/abs/2306.00978). Biases stay in higher precision, as they do in W4A16 serving formats.
 
@@ -73,23 +73,36 @@ Measured on September 29, 2026 on NVIDIA H200 (141 GB) with vLLM `0.18.0+rhaiv.1
 
 The raw file is `benchmark_results.json`. The dashboard reads it directly, and `scripts/benchmark.py` produces it.
 
-These are single-stream numbers, so they tell you about latency and not about how much traffic a GPU can serve. The load test (`vllm bench serve` at 1, 8, 32, and 64 concurrent requests) drops into `bench/<VARIANT>/c<N>.json`, and the Numbers scene draws the under-load chart as soon as those files exist.
+These are single-stream numbers, so they tell you about latency and not about how much traffic a GPU can serve. The load test (`vllm bench serve` at 1, 8, 32, and 64 concurrent requests) drops into `bench/<VARIANT>/c<N>.json`, and replay mode scales its timings by concurrency once those files exist.
 
-## Questions people ask
+## Technical questions
 
-**Why isn't INT4 faster than BF16?** At one request at a time, decoding is limited by how fast the GPU can read the weights. BF16 across two H200s reads about 70 GB per GPU per token against 4.8 TB/s each, and INT4 on one H200 reads about 35 to 40 GB. BF16 lands at about 70% of its bandwidth ceiling and INT4 at a much lower fraction, which is typical for 4-bit kernels at batch size 1. The result that matters for the bill is that INT4 runs at 94% of BF16's speed on half the GPUs, so it gets 1.87 times the tokens per GPU.
+**Why not FP8?**
+Llama 3.1 70B in FP8 is about 71 GB, so it fits on one H200 with room left for KV cache, and Hopper GPUs have native FP8 tensor cores. Red Hat's FP8 build of this model ([RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8)) keeps 99.9% of the BF16 score on the OpenLLM v1 benchmarks, so it's the next variant to add.
 
-**Why is speculative decoding the slowest?** The benchmark deployment ran with `enforce_eager=true`, which turns off torch.compile and CUDA graphs for both the 70B target and the 8B draft. The draft also runs at the same tensor parallel size as the target in vLLM 0.18, so it pays for cross-GPU communication on every step. A rerun without `enforce_eager`, along with the acceptance rate from vLLM's `spec_decode` metrics, is the next measurement.
+**Why was speculative decoding slow in this benchmark?**
+The run used `enforce_eager`, which in vLLM 0.18 turns off both `torch.compile` and CUDA graphs. Speculative decoding runs many small forward passes (the 8B draft proposes five tokens for every 70B pass), so it loses the most when every pass pays full kernel-launch cost. Draft-model speculative decoding in vLLM supports CUDA graphs, so a rerun without `enforce_eager` is the fair comparison. Also keep in mind that spec decode uses the same GPUs as BF16. It buys lower latency per request, not fewer GPUs.
 
-**Is speculative decoding really lossless?** The verification step keeps the output distribution of the target model, so the quality you get is the target's quality. vLLM describes it as lossless up to the precision limits of hardware numerics, so greedy outputs can differ in rare cases because verification runs with a different batch shape. The arena bird is bit-exact because it's a tiny network doing float64 math in your browser.
+**Does this hold for an 8B model?**
+The trade-offs have the same shape, but smaller models lose more when quantized. In Red Hat's quantization study, INT4 kept 97.4% of the 70B's score on the OpenLLM v2 benchmarks and 96.1% of the 8B's, so test an 8B carefully on your own prompts.
 
-**Why not FP8?** FP8 on Hopper is the format Red Hat's own study ([Kurtic et al., 2024](https://arxiv.org/abs/2411.02355)) found effectively lossless, and a 70B model in FP8 fits on one H200. It's the FP8 bird in the arena, and the dashboard picks up a fourth column automatically when an FP8 endpoint or benchmark entry exists.
+**AWQ or GPTQ?**
+Both produce INT4 weights that vLLM serves with fast mixed-precision kernels. Red Hat's study found GPTQ slightly ahead on harder benchmarks, and Red Hat's published INT4 build of this model ([RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16)) is GPTQ.
 
-**Are the quality answers real model output?** Only when the dashboard says "captured". Until the temperature 0 captures from each deployment are saved to `quality/<VARIANT>/<scenario>.json`, the Quality scene uses illustrative text and labels it that way. INT4 on a 70B model keeps around 99% of BF16's accuracy on standard benchmarks, so a single riddle is an anecdote, and I treat it as one.
+**Where do these numbers come from?**
+Red Hat's quantization study is Kurtic et al., ["Give Me BF16 or Give Me Death? Accuracy-Performance Trade-Offs in LLM Quantization"](https://arxiv.org/abs/2411.02355), ACL 2025, which ran more than 500,000 evaluations. The benchmark numbers in this repo come from 20 sequential requests per variant on NVIDIA H200s with vLLM 0.18, so they measure one request at a time and not throughput under heavy load.
 
-**Which INT4 checkpoint was this?** vLLM reported `awq_marlin`, which is the AutoAWQ checkpoint format. LLM Compressor writes the `compressed-tensors` format and supports AWQ through its `AWQModifier`, and Red Hat also publishes a GPTQ-based W4A16 build of Llama 3.1 70B.
+**Why isn't INT4 faster than BF16?**
+At one request at a time, decoding is limited by how fast the GPU can read the weights. BF16 across two H200s reads about 70 GB per GPU per token against 4.8 TB/s each, and INT4 on one H200 reads about 35 to 40 GB. BF16 lands at about 70% of its bandwidth ceiling and INT4 at a much lower fraction, which is typical for 4-bit kernels at batch size 1. The result that matters for the bill is that INT4 runs at 94% of BF16's speed on half the GPUs, so it gets 1.87 times the tokens per GPU.
 
-**Where's PyTorch in all this?** vLLM is a PyTorch Foundation project and compiles its models with torch.compile, LLM Compressor calibrates in PyTorch, and the arena's networks are trained and quantized in PyTorch.
+**Is speculative decoding really lossless?**
+The verification step keeps the output distribution of the target model, so the quality you get is the target's quality. vLLM describes it as lossless up to the precision limits of hardware numerics, so greedy outputs can differ in rare cases because verification runs with a different batch shape.
+
+**Which INT4 checkpoint was this?**
+vLLM reported `awq_marlin`, which is the AutoAWQ checkpoint format. LLM Compressor writes the `compressed-tensors` format and supports AWQ through its `AWQModifier`.
+
+**Where's PyTorch in all this?**
+vLLM is a PyTorch Foundation project and compiles its models with torch.compile, LLM Compressor calibrates in PyTorch, and the arena's networks are trained and quantized in PyTorch.
 
 ## Running with real models
 
@@ -102,8 +115,7 @@ Copy `.env.example` to `.env`, set `SIMULATION_MODE=false`, and point the endpoi
 | `MODEL_SPEC_DECODE_ENDPOINT` | Speculative decoding deployment |
 | `MODEL_FP8_ENDPOINT` | Optional FP8 deployment, adds a fourth column |
 | `MODEL_<VARIANT>_NAME` | The `--served-model-name` for each deployment |
-| `PRESENTER_KEY` | Protects start, stop, and reset. Open `/presenter?key=<value>` once on the presenter laptop |
-| `PUBLIC_URL` | The URL phones should open, encoded in the QR code |
+| `PRESENTER_KEY` | Protects the Ask box and the controls. Open `/presenter?key=<value>` once on the presenter laptop |
 | `MAX_INFLIGHT_PER_VARIANT` | Caps concurrent requests per deployment (default 32) |
 | `GPU_HOURLY_USD` | Shows cost per request when set, labeled as an assumption |
 
@@ -132,16 +144,14 @@ The deployment runs one replica on purpose. Metrics, votes, and websocket connec
 
 | Key | What it does |
 |---|---|
-| `1` `2` `3` | Arena, Numbers, Quality |
-| `Space` | Fly your own bird in the arena |
-| `H` | Throw a hard prompt |
-| `P` | Pause the arena |
-| `R` | New course |
+| `1` `2` `3` | Ask, Under load, Numbers |
+| `Space` | Play the load run (on Under load) |
+| `/` | Jump to the question box |
+| `Enter` | Send the question to every setup |
 | `T` | Light or dark theme |
 | `F` | Full screen |
-| `Ctrl` `Shift` `S` | Start or stop background traffic |
 
-To switch to simulated mode while presenting, open `/presenter?mode=sim`.
+To force replay mode while presenting, open `/presenter?mode=sim`.
 
 ## Tests
 
@@ -156,7 +166,7 @@ pytest
 app/                 FastAPI backend (simulation, live vLLM client, metrics, arena relay, rate limits)
 arena/               PyTorch training and quantization for the arena policies
 static/arena/        Exported policy weights the browser runs
-static/js/           Arena engine, presenter dashboard, audience phone view
+static/js/           Presenter dashboard, arena engine
 templates/           Presenter and audience pages
 benchmark_results.json, bench/, quality/   Measured data the dashboard reads
 scripts/             Setup, local run, and benchmark scripts
