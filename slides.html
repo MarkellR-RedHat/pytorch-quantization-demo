@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantization Showdown | PyTorch Conference 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;600;700;900&family=Red+Hat+Text:wght@400;500;600;700&family=Red+Hat+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fbfcfe;
+  --ink: #0a0f1e;
+  --ink-soft: #1a1a1a;
+  --ink-faint: #444444;
+  --ink-muted: #888888;
+  --red: #ee0000;
+  --red2: #cc0000;
+  --blue: #0066cc;
+  --gold: #f0ab00;
+  --purple: #7B2D8E;
+  --green: #3e8635;
+  --glow: rgba(238, 0, 0, 0.26);
+  --grad-red: linear-gradient(135deg, #ee0000, #cc0000, #ff3333, #ee0000);
+  --grad-flow: linear-gradient(160deg, #ee0000, #cc0000, #ee0000, #ffffff, #ee0000, #cc0000, #ee0000);
+  --grad: linear-gradient(152deg, #ee0000 0%, #cc0000 47%, #ffffff 100%);
+  --ease: cubic-bezier(.4,0,.2,1);
+  --display: 'Red Hat Display', sans-serif;
+  --text: 'Red Hat Text', -apple-system, sans-serif;
+  --mono: 'Red Hat Mono', monospace;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { overflow: hidden; width: 100%; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--text); -webkit-font-smoothing: antialiased; }
+
+canvas#particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; width: 100%; height: 100%; }
+
+/* ── Progress ── */
+.progress-bar {
+  position: fixed; top: 0; left: 0; height: 3px; z-index: 100;
+  background: var(--grad-red);
+  background-size: 220% 220%;
+  animation: gradSweep 8s ease-in-out infinite;
+  transition: width 0.7s var(--ease);
+}
+
+/* ── Slide Counter ── */
+.slide-counter {
+  position: fixed; bottom: 28px; right: 32px; z-index: 100;
+  font-family: var(--display); font-weight: 700; font-size: 14px;
+  color: var(--ink-faint); letter-spacing: 1px; user-select: none;
+}
+
+/* ── Logo ── */
+.fixed-logo {
+  position: fixed; top: 24px; right: 32px; z-index: 101;
+  height: clamp(28px, 3vw, 40px);
+}
+
+/* ── Animations ── */
+@keyframes gradSweep {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes gradFlow {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 300% 100%; }
+}
+
+.anim { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.slide.active .anim { opacity: 1; transform: translateY(0); }
+.slide.active .anim-d1 { transition-delay: 0.1s; }
+.slide.active .anim-d2 { transition-delay: 0.2s; }
+.slide.active .anim-d3 { transition-delay: 0.3s; }
+.slide.active .anim-d4 { transition-delay: 0.4s; }
+.slide.active .anim-d5 { transition-delay: 0.5s; }
+.slide.active .anim-d6 { transition-delay: 0.6s; }
+.slide.active .anim-d7 { transition-delay: 0.7s; }
+
+/* ── Slide System ── */
+.slides-container { position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden; }
+.slides-track { display: flex; height: 100%; transition: transform 0.7s var(--ease); }
+
+.slide {
+  flex: 0 0 100%; height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 60px 80px 80px;
+}
+.slide-inner { max-width: 1100px; width: 100%; }
+
+/* ── Typography ── */
+h1, h2 { font-family: var(--display); font-weight: 900; }
+h1 { font-size: 48px; line-height: 1.08; }
+h2 { font-size: 38px; line-height: 1.15; font-weight: 700; }
+
+.accent {
+  background: var(--grad-red);
+  background-size: 220% 220%;
+  animation: gradSweep 8s ease-in-out infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-num {
+  font-family: var(--display); font-weight: 900; font-size: 14px;
+  color: var(--ink-faint); letter-spacing: 2px; margin-bottom: 20px;
+}
+
+.subtitle { font-size: 20px; color: var(--ink-soft); font-weight: 400; line-height: 1.6; max-width: 700px; }
+
+.blue { color: var(--blue); }
+.gold { color: var(--gold); }
+.purple { color: var(--purple); }
+.green { color: var(--green); }
+.red { color: var(--red); }
+.muted { color: var(--ink-faint); }
+.mono { font-family: var(--mono); }
+
+/* ── Glass Card ── */
+.glass {
+  background: linear-gradient(160deg, #ffffff, #fff0f0, #ffffff, #ffe0e0, #ffffff, #fff0f0, #ffffff);
+  background-size: 220% 220%;
+  animation: gradSweep 8s ease-in-out infinite;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(238, 0, 0, 0.08);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+.glass:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(238, 0, 0, 0.14);
+}
+
+/* ── Card with top accent ── */
+.accent-card {
+  position: relative; overflow: hidden;
+  background: linear-gradient(160deg, #ffffff, #fff0f0, #ffffff, #ffe0e0, #ffffff);
+  background-size: 220% 220%;
+  animation: gradSweep 8s ease-in-out infinite;
+  border: none; border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 8px 32px rgba(238, 0, 0, 0.06);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+.accent-card:hover { transform: translateY(-3px); box-shadow: 0 14px 42px rgba(238, 0, 0, 0.12); }
+.accent-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.accent-card.ac-blue::before { background: var(--blue); }
+.accent-card.ac-gold::before { background: var(--gold); }
+.accent-card.ac-purple::before { background: var(--purple); }
+.accent-card.ac-green::before { background: var(--green); }
+.accent-card.ac-red::before { background: var(--red); }
+
+.accent-card h3 { font-family: var(--display); font-weight: 700; font-size: 18px; margin-bottom: 6px; }
+.accent-card .tag { margin-bottom: 18px; }
+.accent-card .metric { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; }
+.accent-card .metric:last-child { border-bottom: none; }
+.accent-card .mv { font-family: var(--mono); font-weight: 700; font-size: 13px; }
+
+/* ── Tags ── */
+.tag {
+  display: inline-block; padding: 4px 14px; border-radius: 100px;
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px;
+}
+.tag-blue { background: rgba(0,102,204,0.08); color: #0052a3; }
+.tag-gold { background: rgba(240,171,0,0.08); color: #b37a00; }
+.tag-purple { background: rgba(123,45,142,0.08); color: #7B2D8E; }
+.tag-red { background: rgba(238,0,0,0.06); color: #cc0000; }
+.tag-green { background: rgba(62,134,53,0.08); color: #2d6a27; }
+
+/* ── Grids ── */
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 36px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 36px; }
+
+/* ── Stat Row ── */
+.stat-row { display: flex; gap: 48px; margin: 36px 0; align-items: flex-end; }
+.stat-value { font-family: var(--display); font-size: 56px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+.stat-label { font-size: 13px; color: var(--ink-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-emoji { font-size: 60px; line-height: 1; margin-bottom: 6px; }
+
+/* ── Quality boxes ── */
+.quality-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 24px; }
+.q-box {
+  background: rgba(255,255,255,0.92); border-radius: 12px; padding: 18px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.q-box h4 { font-family: var(--display); font-size: 14px; font-weight: 700; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.q-box pre { font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--ink-faint); white-space: pre-wrap; word-wrap: break-word; }
+.q-box.correct pre { color: var(--green); }
+.q-box.wrong pre { color: #c9190b; }
+
+/* ── Ticket / Callout ── */
+.callout {
+  margin: 28px 0; padding: 22px 28px;
+  background: rgba(238,0,0,0.03); border-left: 3px solid var(--red);
+  border-radius: 0 14px 14px 0; max-width: 72%;
+  display: flex; align-items: center; gap: 18px;
+}
+.callout-emoji { font-size: 36px; flex-shrink: 0; }
+.callout p { font-size: 18px; color: var(--ink); font-style: italic; line-height: 1.5; }
+
+/* ── Promise list ── */
+.promise-list { list-style: none; margin-top: 20px; counter-reset: p; }
+.promise-list li {
+  font-size: 18px; color: var(--ink-soft); line-height: 1.5;
+  padding: 14px 0 14px 52px; position: relative; counter-increment: p;
+}
+.promise-list li::before {
+  content: counter(p);
+  position: absolute; left: 0; top: 14px;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(238,0,0,0.06); color: var(--red);
+  font-family: var(--display); font-weight: 900; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Bullets ── */
+.bullets { list-style: none; margin-top: 20px; }
+.bullets li { font-size: 17px; color: var(--ink-soft); line-height: 1.55; padding: 10px 0 10px 22px; position: relative; }
+.bullets li::before { content: ''; position: absolute; left: 0; top: 18px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); opacity: 0.35; }
+
+/* ── Audience Slide ── */
+.audience-center { text-align: center; display: flex; flex-direction: column; align-items: center; }
+.wave-emoji { font-size: 80px; margin-bottom: 16px; display: block; animation: wave 1.8s ease-in-out infinite; }
+@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(20deg); } 75% { transform: rotate(-15deg); } }
+
+/* ── FAQ cards ── */
+.faq-card {
+  background: rgba(255,255,255,0.92); border-radius: 14px; padding: 24px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.faq-card .faq-q { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); margin-bottom: 10px; }
+.faq-card .faq-a { font-size: 14px; color: var(--ink-faint); line-height: 1.55; }
+
+/* ── Data Source ── */
+.data-source {
+  margin-top: 20px; font-family: var(--mono); font-size: 11px;
+  color: var(--ink-muted); letter-spacing: 0.3px;
+}
+
+/* ── Stack items ── */
+.stack-item {
+  background: rgba(255,255,255,0.92); border-radius: 12px; padding: 22px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.stack-item h3 { font-family: var(--display); font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+.stack-item p { font-size: 14px; color: var(--ink-faint); line-height: 1.5; }
+
+/* ── Decision card ── */
+.decision-card h3 { font-family: var(--display); font-weight: 700; font-size: 17px; margin-bottom: 10px; }
+.decision-card .use { font-size: 14px; color: var(--ink-faint); line-height: 1.55; margin-bottom: 14px; }
+.decision-card .spec { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.06); }
+
+/* ── CTA ── */
+.cta-center { text-align: center; display: flex; flex-direction: column; align-items: center; }
+
+/* ── Hero panel ── */
+.hero-panel-slide {
+  background: var(--grad-flow);
+  background-size: 220% 220%;
+  animation: gradSweep 8s ease-in-out infinite;
+  border-radius: 20px;
+  padding: 56px 64px;
+  box-shadow: 0 30px 70px -34px rgba(50, 0, 0, 0.35);
+  position: relative; overflow: hidden;
+  max-width: 720px;
+}
+.hero-panel-slide::after {
+  content: ""; position: absolute; top: -30%; right: -25%;
+  width: 70%; height: 160%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255,255,255,0.18), transparent 70%);
+}
+.hero-panel-slide > * { position: relative; z-index: 1; }
+.hero-panel-slide h1 { font-size: clamp(36px, 5vw, 52px); color: var(--ink); margin-bottom: 16px; }
+.hero-panel-slide .subtitle { color: rgba(0,0,0,0.7); margin-bottom: 36px; }
+.hero-panel-slide .author { font-size: 15px; color: rgba(0,0,0,0.55); font-weight: 500; }
+.hero-panel-slide .author strong { color: var(--ink); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+<div class="progress-bar" id="progress"></div>
+<div class="slide-counter" id="counter"></div>
+
+<div class="slides-container">
+<div class="slides-track" id="track">
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 1: TITLE                         -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide active" data-shape="scatter" data-color="red">
+  <div class="slide-inner" style="display:flex;align-items:center;gap:48px;">
+    <div class="hero-panel-slide anim">
+      <h1>Quantization<br>Showdown</h1>
+      <p class="subtitle">I ran three serving strategies for Llama 70B on real H200s and the results weren't what I expected. Let me show you what actually happened.</p>
+      <p class="author"><strong>Markell Rawls</strong></p>
+      <p class="author">AI Developer Advocate, Red Hat</p>
+      <p class="author" style="margin-top:10px;color:rgba(0,0,0,0.35);">PyTorch Conference NA 2026 &middot; San Jose</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 2: THE PROBLEM                   -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="dollar" data-color="red">
+  <div class="slide-inner">
+    <div class="section-num anim">01 &mdash; THE PROBLEM</div>
+    <h2 class="anim anim-d1" style="max-width:85%;">You shipped Llama 70B. <span class="muted">Full precision. FP16.</span></h2>
+    <p class="subtitle anim anim-d2" style="margin-top:16px;">It works, users love it, your P95 is clean, and life is good.</p>
+    <div class="stat-row anim anim-d3">
+      <div><div class="stat-value red">$47K</div><div class="stat-label">GPU bill, month one</div></div>
+      <div><div class="stat-value" style="color:var(--ink);">2&times; H200</div><div class="stat-label">130 GB each, tensor parallel</div></div>
+      <div><div class="stat-emoji">&#x1F62C;</div><div class="stat-label">your manager's face</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 3: THE OBVIOUS FIX               -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="compress" data-color="gold">
+  <div class="slide-inner">
+    <div class="section-num anim">02 &mdash; THE OBVIOUS FIX</div>
+    <h2 class="anim anim-d1">So you do what everyone does. <span class="accent">You quantize.</span></h2>
+    <p class="subtitle anim anim-d2" style="margin-top:16px;">INT4 with AWQ. One GPU instead of two. Bill drops overnight. You're a hero for about two weeks.</p>
+    <div class="callout anim anim-d3">
+      <span class="callout-emoji">&#x1F4AC;</span>
+      <p>"Your model used to give me detailed analysis. Now it just gives me bullet points."</p>
+    </div>
+    <p class="subtitle anim anim-d4">You saved 50% on GPUs but you lost that customer's trust &#x1F480;</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 4: AUDIENCE MOMENT               -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="circle" data-color="purple">
+  <div class="slide-inner audience-center">
+    <span class="wave-emoji anim">&#x270B;</span>
+    <h2 class="anim anim-d1" style="max-width:75%;text-align:center;line-height:1.3;">Real quick, hands up if you've ever quantized a model and then just... <span class="accent">hoped the quality was fine.</span></h2>
+    <p class="anim anim-d2" style="margin-top:28px;font-size:18px;color:var(--ink-muted);font-style:italic;">Yeah, me too &#x1F605; and that's exactly why we're here.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 5: THE PROMISE                   -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="rings" data-color="red">
+  <div class="slide-inner">
+    <div class="section-num anim">03 &mdash; WHAT YOU'LL WALK AWAY WITH</div>
+    <h2 class="anim anim-d1">In the next 7 minutes, three things &#x1F3AF;</h2>
+    <ol class="promise-list anim anim-d2">
+      <li><strong>Real numbers</strong> from FP16, INT4, and speculative decode running on actual H200s. Not a blog post, not theory.</li>
+      <li><strong>At least one result that will surprise you.</strong> One of these is faster than you think, one is slower than you think, and one is kind of a trap.</li>
+      <li><strong>A cheat sheet</strong> for when to use which strategy based on your workload.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 6: THE CONTESTANTS               -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="columns" data-color="blue">
+  <div class="slide-inner">
+    <div class="section-num anim">04 &mdash; THE CONTESTANTS</div>
+    <h2 class="anim anim-d1">Same model. Same prompts. Same hardware. &#x1F3C1;</h2>
+    <p class="subtitle anim anim-d2">All three are serving Llama 70B on NVIDIA H200s through vLLM.</p>
+    <div class="grid-3 anim anim-d3">
+      <div class="accent-card ac-blue">
+        <h3 class="blue">FP16 &#x1F535;</h3>
+        <div class="tag"><span class="tag tag-blue">Half Precision</span></div>
+        <div class="metric"><span>GPUs</span><span class="mv">2&times; H200</span></div>
+        <div class="metric"><span>Memory</span><span class="mv">130 GB each</span></div>
+        <div class="metric"><span>Throughput</span><span class="mv">???</span></div>
+        <div class="metric"><span>Quality</span><span class="mv">???</span></div>
+      </div>
+      <div class="accent-card ac-gold">
+        <h3 class="gold">INT4 AWQ &#x1F7E1;</h3>
+        <div class="tag"><span class="tag tag-gold">4-bit Quantized</span></div>
+        <div class="metric"><span>GPUs</span><span class="mv gold">1&times; H200</span></div>
+        <div class="metric"><span>Memory</span><span class="mv gold">38 GB</span></div>
+        <div class="metric"><span>Throughput</span><span class="mv">???</span></div>
+        <div class="metric"><span>Quality</span><span class="mv">???</span></div>
+      </div>
+      <div class="accent-card ac-purple">
+        <h3 class="purple">Speculative Decode &#x1F7E3;</h3>
+        <div class="tag"><span class="tag tag-purple">70B + 8B Draft</span></div>
+        <div class="metric"><span>GPUs</span><span class="mv">2&times; H200</span></div>
+        <div class="metric"><span>Memory</span><span class="mv">130 GB each</span></div>
+        <div class="metric"><span>Throughput</span><span class="mv">???</span></div>
+        <div class="metric"><span>Quality</span><span class="mv">???</span></div>
+      </div>
+    </div>
+    <p class="anim anim-d4" style="margin-top:18px;font-size:15px;color:var(--ink-muted);">Before I show you the numbers, take a guess. Which one's fastest? &#x1F914;</p>
+    <p class="data-source anim anim-d5">NVIDIA H200 (143 GB) &middot; TMM Cluster &middot; vLLM 0.18.0+rhaiv.14 &middot; FlashAttention v3 &middot; Sep 2026</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 7: LIVE DEMO                     -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="play" data-color="red">
+  <div class="slide-inner cta-center">
+    <h1 class="anim" style="font-size:64px;"><span class="accent">Let's find out.</span> &#x1F680;</h1>
+    <p class="anim anim-d1" style="margin-top:12px;font-size:20px;color:var(--ink-soft);">Three variants, real H200 benchmarks, traffic generating live.</p>
+    <p class="anim anim-d2" style="margin-top:40px;font-size:14px;color:var(--ink-muted);">(switching to presenter dashboard)</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 8: THE RESULTS                   -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="bars" data-color="blue">
+  <div class="slide-inner">
+    <div class="section-num anim">05 &mdash; WHAT THE DATA ACTUALLY SAYS</div>
+    <h2 class="anim anim-d1">Three things that surprised me &#x1F92F;</h2>
+    <ul class="bullets" style="max-width:88%;">
+      <li class="anim anim-d2"><strong class="gold">INT4 is the value play.</strong> It gets 44 tok/s on one GPU compared to FP16's 47 tok/s on two GPUs. So you're getting nearly identical throughput at a third of the GPU cost.</li>
+      <li class="anim anim-d3"><strong class="blue">FP16 is the fastest.</strong> Not INT4. Tensor parallelism across 2&times; H200s gives you more raw compute bandwidth than a single quantized GPU. Nobody guesses this &#x1F937;</li>
+      <li class="anim anim-d4"><strong class="purple">Speculative decode is the slowest.</strong> 40 tok/s. The <span class="mono" style="font-size:15px;">enforce_eager</span> flag disables CUDA graph optimizations in vLLM 0.18, so the theory is sound but the tooling isn't there yet.</li>
+    </ul>
+    <p class="data-source anim anim-d5">Benchmarked with 20 requests, avg 220+ tokens/response &middot; Llama 3.1 70B Instruct</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 9: QUALITY                       -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="split" data-color="green">
+  <div class="slide-inner">
+    <div class="section-num anim">06 &mdash; BUT SPEED ISN'T THE WHOLE STORY</div>
+    <h2 class="anim anim-d1" style="font-size:30px;">Same prompt, three different answers &#x1F411;&#x1F411;&#x1F411;</h2>
+    <div class="anim anim-d2" style="background:rgba(255,255,255,0.9);border-radius:10px;padding:12px 16px;margin:14px 0;border:1px solid rgba(0,0,0,0.05);max-width:85%;">
+      <span class="mono" style="font-size:13px;color:var(--gold);">A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left?</span>
+    </div>
+    <div class="quality-grid anim anim-d3">
+      <div class="q-box correct">
+        <h4 class="blue">FP16 &nbsp;<span style="font-weight:400;font-size:11px;color:var(--green);">&#10003; CORRECT</span></h4>
+        <pre>The farmer has 9 sheep left.
+
+"All but 9" means every sheep
+except 9 ran away. So 17 - 9 = 8
+sheep ran away, leaving 9 behind.
+
+The tricky part is that "all but 9"
+means 9 remain, not that 9 left.</pre>
+      </div>
+      <div class="q-box wrong">
+        <h4 class="gold">INT4 &nbsp;<span style="font-weight:400;font-size:11px;color:#c9190b;">&#10007; WRONG</span></h4>
+        <pre>The farmer has 8 sheep left.
+
+Step 1: Start with 17 sheep.
+Step 2: 9 sheep run away.
+Step 3: 17 - 9 = 8 sheep remain.
+
+The answer is 8 sheep.</pre>
+      </div>
+      <div class="q-box correct" style="border-color:rgba(123,45,142,0.12);">
+        <h4 class="purple">Spec Decode &nbsp;<span style="font-weight:400;font-size:11px;color:var(--green);">&#10003; CORRECT</span></h4>
+        <pre>The farmer has 9 sheep left.
+
+"All but 9 run away" means every
+sheep except 9 ran away. So 17 - 9
+= 8 sheep ran away, leaving 9.
+
+"All but 9" describes how many
+remain, not how many left.</pre>
+      </div>
+    </div>
+    <p class="anim anim-d4" style="margin-top:14px;font-size:15px;"><span class="red">INT4 confidently gets it wrong</span>, and that's not a performance metric, that's a support ticket &#x1F4E9;</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 10: ANTICIPATED QUESTIONS        -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="arrows" data-color="purple">
+  <div class="slide-inner">
+    <div class="section-num anim">07 &mdash; QUESTIONS I CAN SEE FORMING</div>
+    <h2 class="anim anim-d1" style="font-size:30px;">Before you ask &#x1F60F;</h2>
+    <div class="grid-2" style="margin-top:28px;">
+      <div class="faq-card glass anim anim-d2">
+        <p class="faq-q">"Why not FP8? That's the real sweet spot."</p>
+        <p class="faq-a">Fair point. FP8 gives you most of FP16 quality with better memory usage. We tested the extremes on purpose because the boundaries of the tradeoff are where the interesting decisions live. FP8 is a great middle ground for a lot of workloads.</p>
+      </div>
+      <div class="faq-card glass anim anim-d3">
+        <p class="faq-q">"Can you just route to the right variant per request?"</p>
+        <p class="faq-a">Yes, and that's exactly the play. Run INT4 for your chatbot traffic, FP16 for your reasoning workloads, on the same cluster. That's what OpenShift AI's model serving is built for, routing requests to the right variant based on the workload.</p>
+      </div>
+      <div class="faq-card glass anim anim-d4">
+        <p class="faq-q">"Is this just a Llama 70B thing?"</p>
+        <p class="faq-a">The relative tradeoffs hold across models, but smaller models actually quantize better because there's more redundancy per parameter. A 7B model at INT4 loses less quality than 70B at INT4. These benchmarks are Llama 70B because that's what people actually deploy at scale.</p>
+      </div>
+      <div class="faq-card glass anim anim-d5">
+        <p class="faq-q">"When will spec decode actually be fast?"</p>
+        <p class="faq-a">When vLLM ships CUDA graph support for speculative decoding, which is active development. The technique itself is proven, but <span class="mono" style="font-size:13px;">enforce_eager</span> disables the optimizations that make vLLM fast in the first place. We showed it honestly because you deserve real data.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 11: THE CHEAT SHEET              -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="grid" data-color="purple">
+  <div class="slide-inner">
+    <div class="section-num anim">08 &mdash; THE CHEAT SHEET &#x1F4CB;</div>
+    <h2 class="anim anim-d1" style="font-size:30px;">Quantization strategy is an <span class="accent">infrastructure decision</span> and the right answer depends on your workload.</h2>
+    <div class="grid-3" style="margin-top:28px;">
+      <div class="accent-card ac-gold decision-card anim anim-d2">
+        <h3 class="gold">Use INT4 when... &#x1F7E1;</h3>
+        <p class="use">Cost is king. Your workload is chatbots, content generation, classification, or summarization at scale, and you can tolerate edge-case quality loss.</p>
+        <p class="spec">1 GPU &middot; 38 GB &middot; 44 tok/s</p>
+      </div>
+      <div class="accent-card ac-blue decision-card anim anim-d3">
+        <h3 class="blue">Use FP16 when... &#x1F535;</h3>
+        <p class="use">A wrong answer has consequences. Safety-critical apps, complex reasoning, code generation, anything where "close enough" isn't good enough.</p>
+        <p class="spec">2 GPUs &middot; 260 GB &middot; 47 tok/s</p>
+      </div>
+      <div class="accent-card ac-purple decision-card anim anim-d4">
+        <h3 class="purple">Use Spec Decode when... &#x1F7E3;</h3>
+        <p class="use">You need FP16 quality on interactive workloads and can wait for vLLM to ship CUDA graph support. The technique works, the tooling is catching up.</p>
+        <p class="spec">2 GPUs &middot; 260 GB &middot; 40 tok/s</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 12: THE STACK                    -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="quads" data-color="red">
+  <div class="slide-inner">
+    <div class="section-num anim">09 &mdash; THE STACK</div>
+    <h2 class="anim anim-d1" style="font-size:30px;">Everything you just saw, no custom inference code &#x1F6E0;&#xFE0F;</h2>
+    <div class="grid-2 anim anim-d2">
+      <div class="stack-item glass">
+        <h3><span class="red">vLLM 0.18</span></h3>
+        <p>Serves all three variants through the same OpenAI-compatible API. Speculative decoding is one flag. FlashAttention v3 for H200s.</p>
+      </div>
+      <div class="stack-item glass">
+        <h3><span class="red">LLM Compressor</span></h3>
+        <p>Produces the INT4 AWQ weights. Marlin kernels for hardware-accelerated quantized inference. Open source from Red Hat.</p>
+      </div>
+      <div class="stack-item glass">
+        <h3><span class="red">Red Hat OpenShift AI</span></h3>
+        <p>Deploys and manages all three with GPU scheduling, autoscaling, and observability baked in. The platform layer.</p>
+      </div>
+      <div class="stack-item glass">
+        <h3><span class="red">PyTorch</span></h3>
+        <p>The foundation under all of it. vLLM's kernels, LLM Compressor's calibration, the weights themselves. All PyTorch.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SLIDE 13: CLOSE                        -->
+<!-- ═══════════════════════════════════════ -->
+<div class="slide" data-shape="check" data-color="green">
+  <div class="slide-inner cta-center">
+    <h1 class="anim" style="font-size:40px;line-height:1.2;max-width:85%;">You don't have to choose between fast and good, you just have to <span class="accent">know your workload.</span></h1>
+    <ul class="bullets anim anim-d1" style="text-align:left;display:inline-block;margin-top:32px;">
+      <li>Come to the Red Hat booth and try this with your own models</li>
+      <li>Repo: <span class="mono" style="font-size:15px;">github.com/MarkellR-RedHat/pytorch-quantization-demo</span></li>
+      <li>Run it locally in simulation mode, no GPUs needed &#x1F44D;</li>
+    </ul>
+    <div class="anim anim-d2" style="margin-top:44px;">
+      <p style="font-size:15px;color:var(--ink-soft);"><strong style="color:var(--ink);">Markell Rawls</strong></p>
+      <p style="font-size:15px;color:var(--ink-faint);">AI Developer Advocate, Red Hat</p>
+      <p style="font-size:14px;color:var(--ink-muted);margin-top:8px;">&#x1F44B; mrawls@redhat.com</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /track -->
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════
+// PARTICLE SYSTEM (Red Deck style)
+// ═══════════════════════════════════════
+
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = canvas.width = window.innerWidth * dpr;
+  H = canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.scale(dpr, dpr);
+}
+resize();
+window.addEventListener('resize', () => { resize(); setTargets(currentSlide); });
+
+const N = 90;
+const COLORS = {
+  red: {r:238,g:0,b:0},
+  blue: {r:0,g:102,b:204},
+  gold: {r:240,g:171,b:0},
+  purple: {r:123,g:45,b:142},
+  green: {r:62,g:134,b:53},
+};
+
+const dots = [];
+for (let i = 0; i < N; i++) {
+  dots.push({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    tx: 0, ty: 0,
+    sz: 1.2 + Math.random() * 2.5,
+    shape: Math.floor(Math.random() * 4),
+    rot: Math.random() * Math.PI * 2,
+    rs: (Math.random() - 0.5) * 0.008,
+    ph: Math.random() * Math.PI * 2,
+    r: 238, g: 0, b: 0, a: 0.08,
+    tr: 238, tg: 0, tb: 0, ta: 0.14,
+  });
+}
+
+function makeShape(name, w, h) {
+  const cx = w * 0.85, cy = h * 0.42, s = Math.min(w, h) * 0.13;
+  const pts = [];
+
+  const line = (x1,y1,x2,y2,n) => { for (let i=0;i<n;i++){const t=i/(n-1);pts.push({x:x1+(x2-x1)*t,y:y1+(y2-y1)*t});} };
+  const arc = (ox,oy,r,a1,a2,n) => { for (let i=0;i<n;i++){const a=a1+(a2-a1)*i/(n-1);pts.push({x:ox+r*Math.cos(a),y:oy+r*Math.sin(a)});} };
+
+  switch(name) {
+    case 'scatter':
+      for (let i=0;i<N;i++) pts.push({x:Math.random()*w, y:Math.random()*h});
+      break;
+    case 'dollar':
+      line(cx,cy-s*1.2,cx,cy+s*1.2,14);
+      arc(cx,cy-s*0.35,s*0.6, Math.PI*1.5,Math.PI*2.5,22);
+      arc(cx,cy+s*0.35,s*0.6, Math.PI*0.5,Math.PI*1.5,22);
+      break;
+    case 'compress':
+      line(cx-s*1.4,cy-s*0.5,cx-s*0.3,cy,12); line(cx-s*1.4,cy+s*0.5,cx-s*0.3,cy,12);
+      line(cx+s*1.4,cy-s*0.5,cx+s*0.3,cy,12); line(cx+s*1.4,cy+s*0.5,cx+s*0.3,cy,12);
+      line(cx-s*0.3,cy,cx+s*0.3,cy,8);
+      break;
+    case 'circle':
+      arc(cx,cy,s,0,Math.PI*2,50);
+      break;
+    case 'rings':
+      arc(cx,cy,s*0.35,0,Math.PI*2,20); arc(cx,cy,s*0.65,0,Math.PI*2,24); arc(cx,cy,s,0,Math.PI*2,28);
+      break;
+    case 'columns':
+      for (const xo of [-s*1.2,0,s*1.2]) for (let i=0;i<22;i++) pts.push({x:cx+xo+(Math.random()-0.5)*s*0.2,y:cy-s+s*2*i/21});
+      break;
+    case 'play':
+      line(cx-s*0.8,cy-s,cx-s*0.8,cy+s,20); line(cx-s*0.8,cy+s,cx+s,cy,20); line(cx+s,cy,cx-s*0.8,cy-s,20);
+      break;
+    case 'bars':
+      for (const [bx,bh] of [[cx-s*1.1,s*1.7],[cx,s*1.4],[cx+s*1.1,s*1.1]])
+        for (let i=0;i<22;i++) pts.push({x:bx+(Math.random()-0.5)*s*0.5,y:cy+s*0.8-Math.random()*bh});
+      break;
+    case 'split':
+      for (let i=0;i<35;i++){const a=Math.random()*Math.PI*2,d=Math.random()*s*0.7;pts.push({x:cx-s*1.2+d*Math.cos(a),y:cy+d*Math.sin(a)});}
+      for (let i=0;i<25;i++){const a=Math.random()*Math.PI*2,d=Math.random()*s*0.5;pts.push({x:cx+s*1.2+d*Math.cos(a),y:cy+d*Math.sin(a)});}
+      break;
+    case 'arrows':
+      line(cx-s*1.5,cy,cx-s*0.5,cy,12);
+      line(cx-s*0.5,cy,cx+s*1,cy-s*0.9,16); line(cx-s*0.5,cy,cx+s*1,cy,16); line(cx-s*0.5,cy,cx+s*1,cy+s*0.9,16);
+      break;
+    case 'grid':
+      for (const [qx,qy] of [[cx-s*0.5,cy-s*0.5],[cx+s*0.5,cy-s*0.5],[cx-s*0.5,cy+s*0.5],[cx+s*0.5,cy+s*0.5]])
+        for (let i=0;i<16;i++) pts.push({x:qx+(Math.random()-0.5)*s*0.7,y:qy+(Math.random()-0.5)*s*0.7});
+      break;
+    case 'quads':
+      const qs=s*0.55,qg=s*0.15;
+      for (const [qx,qy] of [[cx-qs-qg,cy-qs-qg],[cx+qs+qg,cy-qs-qg],[cx-qs-qg,cy+qs+qg],[cx+qs+qg,cy+qs+qg]])
+        for (let i=0;i<18;i++) pts.push({x:qx+(Math.random()-0.5)*qs*1.2,y:qy+(Math.random()-0.5)*qs*1.2});
+      break;
+    case 'check':
+      line(cx-s*0.8,cy,cx-s*0.2,cy+s*0.6,25); line(cx-s*0.2,cy+s*0.6,cx+s*1,cy-s*0.8,40);
+      break;
+  }
+
+  while (pts.length < N) pts.push({x:cx+(Math.random()-0.5)*s*3.5,y:cy+(Math.random()-0.5)*s*3.5});
+  return pts.slice(0,N);
+}
+
+function setTargets(idx) {
+  const slide = slides[idx];
+  const shape = slide?.dataset.shape || 'scatter';
+  const colorName = slide?.dataset.color || 'red';
+  const color = COLORS[colorName] || COLORS.red;
+  const targets = makeShape(shape, window.innerWidth, window.innerHeight);
+  dots.forEach((d,i) => {
+    d.tx = targets[i].x; d.ty = targets[i].y;
+    d.tr = color.r; d.tg = color.g; d.tb = color.b; d.ta = 0.16;
+  });
+}
+
+function drawDot(d) {
+  ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+  ctx.beginPath();
+  switch(d.shape) {
+    case 0: ctx.arc(0,0,d.sz,0,Math.PI*2); break;
+    case 1: ctx.rect(-d.sz,-d.sz,d.sz*2,d.sz*2); break;
+    case 2: ctx.moveTo(0,-d.sz*1.1); ctx.lineTo(d.sz,d.sz*0.8); ctx.lineTo(-d.sz,d.sz*0.8); ctx.closePath(); break;
+    case 3: for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6;i===0?ctx.moveTo(d.sz*Math.cos(a),d.sz*Math.sin(a)):ctx.lineTo(d.sz*Math.cos(a),d.sz*Math.sin(a));}ctx.closePath(); break;
+  }
+  ctx.fill(); ctx.restore();
+}
+
+function animate() {
+  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  const t = Date.now() * 0.001;
+
+  dots.forEach(d => {
+    d.x += (d.tx - d.x) * 0.025;
+    d.y += (d.ty - d.y) * 0.025;
+    d.x += Math.sin(t + d.ph) * 0.35;
+    d.y += Math.cos(t * 0.7 + d.ph * 1.3) * 0.35;
+    d.rot += d.rs;
+    d.r += (d.tr - d.r) * 0.03;
+    d.g += (d.tg - d.g) * 0.03;
+    d.b += (d.tb - d.b) * 0.03;
+    d.a += (d.ta - d.a) * 0.03;
+
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = `rgba(${Math.round(d.r)},${Math.round(d.g)},${Math.round(d.b)},0.3)`;
+    ctx.fillStyle = `rgba(${Math.round(d.r)},${Math.round(d.g)},${Math.round(d.b)},${d.a.toFixed(3)})`;
+    drawDot(d);
+  });
+  ctx.shadowBlur = 0;
+
+  for (let i = 0; i < dots.length; i++) {
+    for (let j = i+1; j < dots.length; j++) {
+      const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
+      const d2 = dx*dx + dy*dy;
+      if (d2 < 7000) {
+        const alpha = 0.035 * (1 - Math.sqrt(d2) / 84);
+        ctx.strokeStyle = `rgba(${Math.round(dots[i].r)},${Math.round(dots[i].g)},${Math.round(dots[i].b)},${alpha.toFixed(4)})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke();
+      }
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// ═══════════════════════════════════════
+// SLIDE NAVIGATION (horizontal track)
+// ═══════════════════════════════════════
+
+const track = document.getElementById('track');
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let currentSlide = 0;
+
+function goTo(n) {
+  slides[currentSlide].classList.remove('active');
+  // reset animations for old slide
+  slides[currentSlide].querySelectorAll('.anim').forEach(el => { el.style.opacity = '0'; el.style.transform = 'translateY(30px)'; });
+
+  currentSlide = Math.max(0, Math.min(n, total - 1));
+  track.style.transform = `translateX(-${currentSlide * 100}%)`;
+  slides[currentSlide].classList.add('active');
+
+  // trigger animations
+  setTimeout(() => {
+    slides[currentSlide].querySelectorAll('.anim').forEach(el => { el.style.opacity = ''; el.style.transform = ''; });
+  }, 50);
+
+  document.getElementById('counter').textContent = `${currentSlide + 1} / ${total}`;
+  document.getElementById('progress').style.width = `${((currentSlide + 1) / total) * 100}%`;
+  setTargets(currentSlide);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); goTo(currentSlide + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goTo(currentSlide - 1); }
+  else if (e.key === 'Home') goTo(0);
+  else if (e.key === 'End') goTo(total - 1);
+});
+
+document.addEventListener('click', e => {
+  if (e.clientX > window.innerWidth / 2) goTo(currentSlide + 1);
+  else goTo(currentSlide - 1);
+});
+
+// Touch swipe
+let touchX = 0;
+document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 50) { dx < 0 ? goTo(currentSlide + 1) : goTo(currentSlide - 1); }
+});
+
+// Init
+setTargets(0);
+goTo(0);
+animate();
+</script>
+
+</body>
+</html>
