@@ -16,8 +16,8 @@
         },
         INT4: {
             color: '--v-int4', role: 'Half the GPUs',
-            gets: 'Half the GPUs, at about the same speed per request',
-            best: 'High-volume chat and easy questions',
+            gets: 'Half the GPUs, at about the same speed for one request at a time',
+            best: 'Everyday chat and easy questions',
             trade: 'Small accuracy loss that shows up on hard reasoning, so test it on your own prompts',
             route: 'Easy questions',
             acc: '≈99%', accNote: 'Red Hat\'s INT4 build, 97% on harder tests*',
