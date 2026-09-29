@@ -1,317 +1,62 @@
-# Development Guide
+# Development guide
 
-Complete guide for developing and testing the PyTorch Quantization Demo locally.
+## Setup
 
-## Prerequisites
-
-- Python 3.9 or higher
-- Virtual environment tool (venv)
-- Git
-- Docker/Podman (for containerization)
-- Access to OpenShift AI cluster (for production mode)
-
-## Local Development Setup
-
-### 1. Clone Repository
+You need Python 3.11 or newer. Node is optional, and the arena parity tests use it when it's installed.
 
 ```bash
-git clone https://github.com/MarkellR-RedHat/pytorch-quantization-demo.git
-cd pytorch-quantization-demo
+./scripts/setup.sh          # creates venv/ and installs requirements.txt
+source venv/bin/activate
+pip install -r requirements-dev.txt
+./scripts/run-local.sh      # simulated mode on http://localhost:8000
 ```
 
-### 2. Create Virtual Environment
+No `.env` file is needed for simulated mode. Every setting has a default, and `.env.example` lists all of them with a comment each.
+
+## How the pieces fit
+
+The backend is one FastAPI process (`app/main.py`) that keeps all state in memory, which is why the OpenShift deployment runs a single replica.
+
+- `app/benchmark.py` loads `benchmark_results.json` and any `bench/<VARIANT>/c<N>.json` sweeps from `vllm bench serve`. In simulated mode, each request's latency is sampled from a lognormal fitted to the measured mean and p95, and it's scaled by the in-flight concurrency once sweep files exist.
+- `app/simulation.py` replays those timings, sleeping for the real latency so concurrency builds up the way it would against real GPUs.
+- `app/openshift.py` is the live client for vLLM's OpenAI-compatible chat completions API. It runs at temperature 0 and computes tokens per second from `completion_tokens`.
+- `app/quality.py` serves the Quality scene. It reads captured outputs from `quality/<VARIANT>/<scenario>.json` when they exist, and otherwise uses illustrative text labeled as such.
+- `app/arena.py` handles the audience side of the game (anonymous handles, backing a bird, hard prompts) and relays the presenter's arena state to phones.
+- `app/ratelimit.py` holds the token buckets that protect `/request`, `/arena/*`, and the GPUs behind them.
+
+The arena itself runs entirely in the presenter's browser. `static/js/arena-core.js` is the physics and the network forward pass (no DOM, so Node can run it in tests), `static/js/arena.js` is the game loop and renderer, and `static/arena/policy.json` holds the weights exported by `arena/train_policy.py`.
+
+## Changing the arena
+
+The physics constants live in two places, `arena/train_policy.py` and the world block of `static/arena/policy.json`, which the browser reads. After any change to the physics, the features, or the training:
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r arena/requirements.txt
+python arena/train_policy.py
+pytest tests/test_arena.py
 ```
 
-### 3. Install Dependencies
+The training script prints the evaluation for every variant. `tests/test_arena.py` fails if the browser and Python disagree on a single frame, or if the numbers quoted in the README and on screen stop matching the exported evaluation, so update the caption and README when the numbers move.
+
+## Working on the dashboard
+
+The presenter page is a fixed 1920 by 1080 stage scaled to the window, so check layout changes at full HD and at 1280 by 720, in both themes (`T`). Colors are defined once in `static/css/base.css`. The four variant colors were checked for color-blind separation and contrast, so keep them unless you re-run that check.
+
+## Tests and lint
 
 ```bash
-pip install -r requirements.txt
+pytest
+ruff check app tests scripts
 ```
 
-### 4. Configure Environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` file with your configuration:
-
-```env
-# For local development, use simulation mode
-SIMULATION_MODE=true
-
-# These can be dummy values in simulation mode
-OPENSHIFT_AI_ENDPOINT=https://dummy-endpoint.com
-OPENSHIFT_AI_TOKEN=dummy-token
-MODEL_FP32_ENDPOINT=https://dummy.com
-MODEL_FP16_ENDPOINT=https://dummy.com
-MODEL_INT8_ENDPOINT=https://dummy.com
-MODEL_INT4_ENDPOINT=https://dummy.com
-
-PORT=8000
-HOST=0.0.0.0
-LOG_LEVEL=INFO
-```
-
-### 5. Run Application
-
-```bash
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Application will be available at:
-- Audience interface: http://localhost:8000
-- Presenter dashboard: http://localhost:8000/presenter
-
-## Development Workflow
-
-### Running in Simulation Mode
-
-Simulation mode is perfect for local development and testing without needing real model endpoints:
-
-```bash
-# Via environment variable
-SIMULATION_MODE=true python -m uvicorn app.main:app --reload
-
-# Or set in .env file
-SIMULATION_MODE=true
-```
-
-Features in simulation mode:
-- Synthetic metrics generation
-- Realistic latency simulation
-- No external dependencies
-- Perfect for testing UI/UX
-
-### Testing with Real Models
-
-To test with actual OpenShift AI models:
-
-1. Get OpenShift AI credentials and model endpoints
-2. Update `.env` with real values
-3. Set `SIMULATION_MODE=false`
-4. Run the application
-
-```bash
-SIMULATION_MODE=false python -m uvicorn app.main:app --reload
-```
-
-### Presenter Controls
-
-When running the presenter dashboard:
-
-- **Ctrl+Shift+S**: Toggle simulation mode on/off
-- **URL parameter**: `http://localhost:8000/presenter?mode=sim` to enable simulation
-- **Reset button**: Clear all metrics and reset demo state
-
-## Running Tests
-
-### Install Test Dependencies
-
-```bash
-pip install pytest pytest-asyncio pytest-cov
-```
-
-### Run All Tests
-
-```bash
-pytest tests/
-```
-
-### Run with Coverage
-
-```bash
-pytest --cov=app --cov-report=html tests/
-```
-
-View coverage report:
-```bash
-open htmlcov/index.html
-```
-
-### Run Specific Test File
-
-```bash
-pytest tests/test_simulation.py -v
-```
-
-## Building Container Image
-
-### Using Docker
-
-```bash
-docker build -t pytorch-quantization-demo:latest .
-docker run -p 8000:8000 --env-file .env pytorch-quantization-demo:latest
-```
-
-### Using Podman
-
-```bash
-podman build -t pytorch-quantization-demo:latest .
-podman run -p 8000:8000 --env-file .env pytorch-quantization-demo:latest
-```
-
-### Push to Registry
-
-```bash
-# Tag for your registry
-podman tag pytorch-quantization-demo:latest quay.io/your-org/pytorch-quantization-demo:latest
-
-# Login to registry
-podman login quay.io
-
-# Push
-podman push quay.io/your-org/pytorch-quantization-demo:latest
-```
-
-## Deploying to OpenShift
-
-### 1. Create Namespace/Project
-
-```bash
-oc new-project pytorch-demo
-```
-
-### 2. Create Secrets
-
-```bash
-oc create secret generic openshift-ai-config \
-  --from-literal=endpoint=https://your-openshift-ai-endpoint.com \
-  --from-literal=token=your-api-token
-```
-
-### 3. Update ConfigMap
-
-Edit `kubernetes/configmap.yaml` with your actual model endpoints, then apply:
-
-```bash
-oc apply -f kubernetes/configmap.yaml
-```
-
-### 4. Deploy Application
-
-```bash
-oc apply -f kubernetes/deployment.yaml
-oc apply -f kubernetes/service.yaml
-oc apply -f kubernetes/route.yaml
-```
-
-### 5. Get Route URL
-
-```bash
-oc get route pytorch-quantization-demo
-```
-
-## Project Structure Explained
-
-```
-pytorch-quantization-demo/
-├── app/                      # Backend application
-│   ├── main.py              # FastAPI app with all endpoints
-│   ├── config.py            # Configuration and settings
-│   ├── models.py            # Pydantic data models
-│   ├── openshift.py         # OpenShift AI client
-│   ├── simulation.py        # Simulation mode logic
-│   ├── metrics.py           # Metrics collection and aggregation
-│   └── websocket.py         # WebSocket connection manager
-├── static/                  # Frontend assets
-│   ├── css/style.css        # Styling for both views
-│   ├── js/audience.js       # Audience interface logic
-│   └── js/presenter.js      # Presenter dashboard logic
-├── templates/               # HTML templates
-│   ├── index.html           # Audience view
-│   └── presenter.html       # Presenter dashboard
-├── kubernetes/              # OpenShift/K8s manifests
-├── tests/                   # Test suite
-└── [config files]           # Docker, requirements, etc.
-```
-
-## Common Development Tasks
-
-### Adding New Metrics
-
-1. Update `app/models.py` to add metric field to `MetricsSnapshot`
-2. Update `app/metrics.py` to collect and calculate new metric
-3. Update `templates/presenter.html` to display new metric
-4. Update `static/js/presenter.js` to update new metric value
-
-### Modifying UI
-
-- Audience interface: Edit `templates/index.html`, `static/js/audience.js`, and `static/css/style.css`
-- Presenter dashboard: Edit `templates/presenter.html`, `static/js/presenter.js`, and `static/css/style.css`
-
-### Adding API Endpoints
-
-Add new endpoints to `app/main.py`:
-
-```python
-@app.get("/your-endpoint")
-async def your_endpoint():
-    return {"message": "Hello"}
-```
+CI runs both on Python 3.11 and 3.12, builds the container, and checks `/health`.
 
 ## Troubleshooting
 
-### WebSocket Connection Issues
+**Phones can't connect.** Phones need a URL they can reach, which means your laptop's IP address on the same network, or an OpenShift Route. Set `PUBLIC_URL` so the QR code encodes the right address.
 
-If WebSocket connections fail:
-- Check firewall settings
-- Ensure correct protocol (ws:// for http, wss:// for https)
-- Check browser console for errors
+**Start and Reset return 401.** `PRESENTER_KEY` is set. Open `/presenter?key=<value>` once and the browser keeps a cookie for 12 hours.
 
-### Simulation Mode Not Working
+**Live requests return 503.** The in-flight cap for that variant is full. Raise `MAX_INFLIGHT_PER_VARIANT` if the GPUs have headroom.
 
-- Verify `SIMULATION_MODE=true` in environment
-- Check logs for simulation mode activation message
-- Try toggling with Ctrl+Shift+S in presenter view
-
-### Model Endpoint Errors
-
-- Verify endpoints are reachable
-- Check authentication token is valid
-- Enable debug logging: `LOG_LEVEL=DEBUG`
-
-### Port Already in Use
-
-```bash
-# Find process using port 8000
-lsof -i :8000
-
-# Kill process
-kill -9 <PID>
-
-# Or use different port
-uvicorn app.main:app --port 8001
-```
-
-## Performance Optimization
-
-### For Large Audience
-
-- Increase replica count in `kubernetes/deployment.yaml`
-- Use Redis for shared state across replicas
-- Enable horizontal pod autoscaling
-
-### For Better Metrics
-
-- Adjust `window_size` in `MetricsCollector` initialization
-- Modify `maxlen` values in deque collections
-- Increase WebSocket broadcast frequency for more responsive updates
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
-
-## Support
-
-For issues or questions:
-- GitHub Issues: https://github.com/MarkellR-RedHat/pytorch-quantization-demo/issues
-- Email: mrawls@redhat.com
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file.
+**Port 8000 is taken.** `lsof -i :8000` shows what's using it, or run on another port with `python -m uvicorn app.main:app --port 8001`.

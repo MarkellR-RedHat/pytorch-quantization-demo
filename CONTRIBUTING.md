@@ -16,24 +16,23 @@ Thank you for your interest in contributing to the PyTorch Quantization Demo pro
 ## Development Setup
 
 ```bash
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 ## Code Style
 
-- Follow PEP 8 guidelines
-- Use meaningful variable names
-- Add docstrings to functions and classes
-- Keep functions focused and concise
+- `ruff check app tests scripts` must pass (configuration is in `pyproject.toml`)
+- Match the style of the surrounding code
+- Any number shown on the dashboard needs a source: the benchmark file, a capture, or a test that checks it
 
 ## Testing
 
 All new features should include tests. Run the test suite before submitting:
 
 ```bash
-pytest tests/ --cov=app
+pytest --cov=app
 ```
 
 ## Pull Request Process

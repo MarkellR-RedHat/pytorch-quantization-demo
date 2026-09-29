@@ -7,40 +7,39 @@
 
 ## What This Demo Does
 
-Three versions of the same model (Llama 70B) running side by side on vLLM, and the audience gets to beat on all three of them in real time. Everyone in the room scans a QR code on their phone, picks a variant, and starts firing requests. A presenter dashboard on the big screen shows what's happening to latency, GPU memory, throughput, and cost as traffic flows in.
+Llama 3.1 70B Instruct runs on vLLM in three deployments on NVIDIA H200s (BF16 on two GPUs, INT4 AWQ on one, and speculative decoding with an 8B draft model), and the dashboard shows the numbers measured on them. Next to that runs the Quantization Arena, where five birds are flown by the same small network I trained in PyTorch, each one storing its weights at a different precision. People in the room scan a QR code, back a bird, and throw hard prompts at the course from their phones, and those land on the big screen as narrow red gaps.
 
-The three variants are FP16 (full precision, the quality baseline), INT4 (quantized down to 4 bits for speed), and Speculative Decode (pairs a small draft model with the full model to get INT4-like speed without losing FP16-level quality). The whole point is showing that the "speed vs quality" trade-off everyone accepts as unavoidable actually has a third option most teams haven't tried yet.
-
-The demo runs on FastAPI with WebSocket connections pushing metric updates to the presenter view twice a second. There's a simulation mode built in that generates realistic synthetic data, so the whole thing works locally with zero GPU access. That's also the backup plan if anything goes wrong day-of.
+What the audience sees, backed by data: INT4 runs at 94% of BF16's speed on half the GPUs, which works out to 1.87 times the tokens per GPU. In the arena, plain 4-bit rounding fails on hard gaps while activation-aware scaling (the idea behind AWQ) clears every one, and the speculative decoding bird flies exactly the BF16 path.
 
 ## How It Works Under the Hood
 
-The backend sits in `app/` and does a few things. `main.py` is the FastAPI app with routes for inference requests and a quality comparison endpoint. `simulation.py` handles the synthetic data path with pre-built scenarios covering reasoning tasks, code generation, and summarization. `metrics.py` aggregates everything coming in from the audience and computes per-variant stats. `websocket.py` manages the real-time connections to the presenter dashboard.
+The backend is FastAPI (`app/`). In live mode it sends fixed prompts to the three vLLM endpoints. In simulated mode it replays latencies sampled from the H200 benchmark, sleeping for the real time so concurrency builds the same way. Websockets push metrics to every screen twice a second.
 
-The frontend has two views. The audience interface (`templates/index.html` + `static/js/audience.js`) is mobile-optimized with three big buttons, one per variant. The presenter dashboard (`templates/presenter.html` + `static/js/presenter.js`) is a 3-column metrics grid with hero stats for latency and GPU memory, plus a quality comparison panel you can toggle with `Ctrl+Shift+Q`. Dark theme, optimized for projector screens.
+The presenter page (`/presenter`) has three scenes. **Arena** runs the game in the browser from weights exported by `arena/train_policy.py`, **Numbers** shows the benchmark plus live or simulated traffic, and **Quality** shows the same prompt answered by every variant (labeled illustrative until real captures are saved to `quality/`). The audience page (`/`) is where phones back a bird, throw hard prompts, and send requests to the real models.
 
-For the live version, each variant points at a separate vLLM endpoint running on OpenShift AI. FP16 needs 2x H200 GPUs with tensor parallelism, INT4 fits on a single H200, and Speculative Decode uses 2x H200 (one for the target model at INT8, one shared with the Llama 8B draft model). Quantization is handled by LLM Compressor, and speculative decoding is native to vLLM with just a `--speculative-model` flag.
+The full method, the numbers, and the answers to the questions experts ask are in the README.
 
 ## The Talk Flow (10 Minutes)
 
-**[0:00 to 1:30] The Story.** Open with the scenario everyone's lived through. Your team ships Llama 70B at FP16, everything's great for a week, then traffic doubles and your GPU bill hits $47K in a month. So you quantize to INT4, costs drop, latency drops, everyone's happy. Until a customer files a support ticket because the model stopped giving detailed analysis on complex prompts. You didn't lose speed, you lost trust.
+<!-- TALK FLOW: owned by the slides session; keep in sync with the speaker notes in slides.html -->
 
-**[1:30 to 4:30] The Trade-off is Real.** Walk through the live metrics on the presenter dashboard. FP16 sits around 95ms per request, INT4 is at 45ms, more than 2x faster. FP16 eats 40GB of GPU memory, INT4 only needs 10GB. Then toggle the quality comparison panel (`Ctrl+Shift+Q`) and show the same reasoning prompt answered by both. FP16 nails it. INT4 misses the trick question. That's the support ticket.
-
-**[4:30 to 7:30] The Solve.** Introduce speculative decoding. Instead of just compressing the model, you pair it with a small draft model that speculates tokens ahead of time. The full model just verifies instead of generating from scratch. Point at the Speculative Decode column on the dashboard: 55ms latency (approaching INT4 speed), and when you toggle quality comparison again, the output matches FP16. No quality loss. The draft model costs almost nothing to run.
-
-**[7:30 to 8:30] The Stack.** Quick callout: all three variants running simultaneously on vLLM, quantization done with LLM Compressor, speculative decoding is native to vLLM with just a flag, no custom inference code required.
-
-**[8:30 to 9:30] Audience Pile-On.** Show the QR code, invite people to scan and start hammering the models. If people join, point at the metrics spiking on screen. If the room is small or nobody bites, that's fine because you already delivered the core demo.
-
-**[9:30 to 10:00] Close.** "The quantization trade-off is real, but it's not the only option anymore." CTA to visit the booth to try it on their own models, and plug Sasa's vLLM meetup if there is one.
+The talk flow and speaker script live in the speaker notes of `slides.html`.
 
 ## Presenter Shortcuts
 
-| Shortcut | What it does |
-|----------|-------------|
-| `Ctrl+Shift+S` | Toggle simulation mode on/off |
-| `Ctrl+Shift+Q` | Toggle quality comparison panel |
+| Key | What it does |
+|---|---|
+| `1` `2` `3` | Arena, Numbers, Quality scenes |
+| `Space` | Fly your own bird in the arena |
+| `H` | Throw a hard prompt onto the course |
+| `P` | Pause the arena |
+| `R` | New course |
+| `T` | Light or dark theme |
+| `F` | Full screen |
+| `Ctrl` `Shift` `S` | Start or stop background traffic |
+| `Ctrl` `Shift` `Q` | Jump to the Quality scene |
+
+`Ctrl+Shift+S` no longer switches to simulated mode. To switch while presenting, open `/presenter?mode=sim`.
 
 ## The Plan
 
@@ -54,7 +53,7 @@ For the live version, each variant points at a separate vLLM endpoint running on
 GPU breakdown per variant:
 - FP16 Llama 70B: 2x H200 (tensor parallel)
 - INT4 Llama 70B: 1x H200
-- Speculative Decode (Llama 70B INT8 + Llama 8B draft): 2x H200
+- Speculative Decode (Llama 3.1 70B BF16 target + Llama 3.1 8B draft, both tensor parallel 2): 2x H200
 
 ### Timeline
 
@@ -66,32 +65,33 @@ GPU breakdown per variant:
 
 ### Pre-Demo Checklist (Day Before)
 
-- All 3 model variants deployed and responding
-- Demo app deployed with production URL
-- QR code generated and printed/on a device
-- Presenter dashboard tested on demo laptop
-- Audience interface tested on a phone
-- Simulation mode tested as fallback
+- All model variants deployed and answering (`/health` on the demo app, `/v1/models` on each vLLM endpoint)
+- Demo app deployed behind an OpenShift Route with `PRESENTER_KEY` and `PUBLIC_URL` set
+- Presenter laptop opened `/presenter?key=<value>` once, so the control buttons work
+- QR code on the Arena sidebar scanned from a phone on cellular data, not venue wifi
+- Presenter dashboard checked full screen on the demo laptop in both themes
+- `/presenter?mode=sim` tested as the fallback
+- Quality captures saved to `quality/` (otherwise the Quality scene says illustrative)
 - Backup video recorded and on a USB drive
-- Quality comparison scenarios all loading
 
 ### 30 Minutes Before
 
-- Open presenter dashboard full screen
-- Verify all 3 model endpoints responding (`/health`)
-- Test WebSocket connections (metrics should be updating)
-- Reset demo metrics to zero
-- Test simulation toggle
-- Have QR code ready on a separate device
-- Silence notifications, close other apps
+- Open the presenter dashboard full screen (`F`)
+- Check the mode badge in the top right says what you expect (Live models or Simulated)
+- Press Reset, then Start traffic, and watch the Numbers scene fill in
+- Throw one hard prompt from your phone and watch it land in the arena
+- Have the QR code visible on the Arena scene
+- Silence notifications and close other apps
 
 ## Backup Plans
 
-**If models don't respond:** Toggle to simulation mode with `Ctrl+Shift+S`. The simulation uses realistic baseline metrics pulled from actual H200 benchmarks, so the demo narrative works exactly the same. Keep presenting, nobody in the audience will know the difference.
+**If the models stop responding:** open `/presenter?mode=sim` in the same tab. The Numbers scene keeps showing the H200 benchmark, the right-now panel switches to replayed timings with a "Simulated" label, and the arena doesn't depend on the models at all, so it keeps running exactly as before.
 
-**If the audience is small:** Skip the pile-on section entirely. The core demo (story, trade-off, solve) stands on its own without audience participation. The pile-on is a bonus, not a requirement.
+**If the venue network is bad:** run the app on the demo laptop with `./scripts/run-local.sh`. Fonts and everything else are bundled, so the presenter screen renders correctly with no network. Phones need to reach the laptop, so this only covers the big screen.
 
-**If complete failure (app down, projector issues, etc.):** Play the backup video from the USB drive. Narrate over it. Turn the remaining time into Q&A. Having the backup video recorded during the Sep 29-30 test run is specifically for this scenario.
+**If the room is small:** press `H` to throw hard prompts yourself and `Space` to fly a bird. The arena tells the whole quantization story with nobody on their phones.
+
+**If everything fails:** play the backup video from the USB drive, narrate over it, and move to Q&A.
 
 ## Equipment
 
@@ -112,7 +112,7 @@ cd pytorch-quantization-demo
 ./scripts/run-local.sh
 ```
 
-Open http://localhost:8000 for the audience view and http://localhost:8000/presenter for the presenter dashboard.
+Open http://localhost:8000/presenter for the presenter dashboard and http://localhost:8000 for the audience view.
 
 ## Contacts
 
@@ -123,5 +123,5 @@ Open http://localhost:8000 for the audience view and http://localhost:8000/prese
 ## Author
 
 **Markell Rawls**  
-Technical Marketing Engineer, Red Hat  
+AI Developer Advocate, Red Hat  
 mrawls@redhat.com
