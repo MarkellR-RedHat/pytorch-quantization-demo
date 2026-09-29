@@ -15,9 +15,9 @@ COPY benchmark_results.json ./
 COPY quality/ ./quality/
 COPY bench/ ./bench/
 
-# OpenShift runs containers with an arbitrary UID in group 0
-RUN useradd -m -u 1001 demouser && \
-    chown -R 1001:0 /app && chmod -R g=u /app
+# The UBI image already has the non-root user 1001. OpenShift runs containers with an
+# arbitrary UID in group 0, so group 0 gets the same permissions as the owner.
+RUN chown -R 1001:0 /app && chmod -R g=u /app
 
 USER 1001
 
