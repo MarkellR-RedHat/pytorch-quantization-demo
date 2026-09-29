@@ -16,14 +16,14 @@
         INT4: {
             color: '--v-int4', role: 'Half the GPUs',
             gets: 'Half the GPUs, at about the same speed per request',
-            best: 'High-volume chat and summaries',
+            best: 'High-volume chat and easy questions',
             trade: 'Small accuracy loss that shows up on hard reasoning, so test it on your own prompts',
-            route: 'High volume',
+            route: 'Easy questions',
             acc: '≈99%', accNote: 'of BF16 accuracy*',
         },
         SPEC_DECODE: {
-            color: '--v-spec', role: 'Same GPUs, faster answers',
-            gets: 'Faster answers on the same GPUs, with the same output as BF16',
+            color: '--v-spec', role: 'Same GPUs, built for lower latency',
+            gets: 'Can answer faster on the same GPUs once CUDA graphs are on, with the same output as BF16',
             best: 'Latency-sensitive, low-traffic work',
             trade: 'A draft model to host next to the big one, and the gain shrinks as traffic grows',
             note: 'This run had CUDA graphs turned off (enforce_eager), which slows speculative decoding the most. The rerun without it is next.',
