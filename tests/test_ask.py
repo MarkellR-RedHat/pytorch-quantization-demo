@@ -31,8 +31,11 @@ def test_preset_streams_and_finishes_with_timing(client):
     ev = events(r)
     assert ev[0] == {"t": "start", "source": "replay"}
     assert ev[-1]["t"] == "done"
-    assert ev[-1]["completion_tokens"] > 0
-    assert ev[-1]["ttft_ms"] is None  # replay never invents a time to first token
+    # replay never invents what it didn't measure: no first-token time, no token count
+    assert ev[-1]["ttft_ms"] is None
+    assert ev[-1]["completion_tokens"] is None
+    # and the speed it plays back is the benchmark's single-stream number for that setup
+    assert ev[-1]["tokens_per_second"] == main.benchmark_data.variant("INT4")["throughput_tps"]
     text = "".join(e["text"] for e in ev if e["t"] == "delta")
     assert "9 sheep" in text
 
@@ -71,3 +74,18 @@ def test_live_failure_becomes_an_error_event(client):
 
 def test_arena_booth_page_is_served(client):
     assert client.get("/arena").status_code == 200
+
+
+def test_load_points_report_median_and_request_sizes(tmp_path):
+    from app.benchmark import BenchmarkData
+
+    (tmp_path / "INT4").mkdir()
+    (tmp_path / "INT4" / "c8.json").write_text(json.dumps({
+        "output_throughput": 400.0, "mean_e2el_ms": 6000.0, "median_e2el_ms": 5500.0,
+        "completed": 64, "total_input_tokens": 64 * 512, "total_output_tokens": 64 * 256,
+    }))
+    bench = BenchmarkData(main.settings.resolve(main.settings.benchmark_file), tmp_path)
+    [point] = bench.load_points("INT4")
+    assert point["latency_ms"] == 5500.0 and point["latency_kind"] == "median"
+    assert point["avg_input_tokens"] == 512 and point["avg_output_tokens"] == 256
+    assert point["output_tokens_per_second_per_gpu"] == 400.0  # INT4 runs on one GPU

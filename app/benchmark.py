@@ -36,6 +36,11 @@ def _interp(points: list[tuple[int, float]], n: float) -> float:
     return points[-1][1]
 
 
+def _per_request(data: dict, key: str, done: int) -> int | None:
+    value = data.get(key)
+    return round(value / done) if done and isinstance(value, int | float) else None
+
+
 class BenchmarkData:
     """benchmark_results.json plus optional `vllm bench serve` sweeps in bench/<VARIANT>/c<N>.json"""
 
@@ -99,13 +104,18 @@ class BenchmarkData:
             tput = data.get("output_throughput")
             if not isinstance(tput, int | float):
                 continue
-            found = [data[k] for k in SWEEP_LATENCY_KEYS if isinstance(data.get(k), int | float)]
+            keys = ("median_e2el_ms", "mean_e2el_ms")
+            found = [data[k] for k in keys if isinstance(data.get(k), int | float)]
             latency = found[0] if found else None
+            done = data.get("completed") or 0
             points.append({
                 "concurrency": int(m.group(1)),
                 "output_tokens_per_second": round(float(tput), 1),
                 "output_tokens_per_second_per_gpu": round(float(tput) / gpus, 1),
                 "latency_ms": round(float(latency), 1) if latency else None,
+                "latency_kind": "median" if isinstance(data.get("median_e2el_ms"), int | float) else "mean",
+                "avg_input_tokens": _per_request(data, "total_input_tokens", done),
+                "avg_output_tokens": _per_request(data, "total_output_tokens", done),
             })
         return sorted(points, key=lambda p: p["concurrency"])
 

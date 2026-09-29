@@ -72,9 +72,9 @@ async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIte
         await _sleep(due)
         yield event("delta", text=buf)
     total = time.perf_counter() - start
-    tokens = round(len(pieces) * 1.3)
+    # Replay plays back the measured speed; it has no tokenizer, so it reports no token count.
     yield event("done", source="replay", ttft_ms=None, total_ms=round(total * 1000),
-                completion_tokens=tokens, tokens_per_second=round(tokens / total, 1) if total else None)
+                completion_tokens=None, tokens_per_second=round(tps, 1))
 
 
 async def live_stream(variant: str, prompt: str) -> AsyncIterator[bytes]:
@@ -116,14 +116,14 @@ async def live_stream(variant: str, prompt: str) -> AsyncIterator[bytes]:
                     yield event("delta", text=text)
     end = time.perf_counter()
     tokens = int(usage_tokens or chunks)
-    decode_s = end - (first or start)
     yield event(
         "done",
         source="live",
         ttft_ms=round((first - start) * 1000) if first else None,
         total_ms=round((end - start) * 1000),
         completion_tokens=tokens,
-        tokens_per_second=round(tokens / decode_s, 1) if decode_s > 0 else None,
+        # same definition as benchmark_results.json: output tokens over the whole request time
+        tokens_per_second=round(tokens / (end - start), 1) if end > start else None,
     )
 
 
