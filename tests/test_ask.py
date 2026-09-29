@@ -29,7 +29,8 @@ def test_preset_streams_and_finishes_with_timing(client):
     r = client.post("/ask/INT4", json={"preset": "reasoning"})
     assert r.status_code == 200
     ev = events(r)
-    assert ev[0] == {"t": "start", "source": "replay"}
+    # with no captured outputs yet, replay says the preset text is a scripted example
+    assert ev[0] == {"t": "start", "source": "replay", "text_source": "scripted"}
     assert ev[-1]["t"] == "done"
     # replay never invents what it didn't measure: no first-token time, no token count
     assert ev[-1]["ttft_ms"] is None

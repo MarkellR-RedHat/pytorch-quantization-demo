@@ -4,7 +4,7 @@
   "vllm_version": "0.18.0+rhaiv.14",
   "model": "meta-llama/Meta-Llama-3.1-70B-Instruct",
   "date": "2026-09-29",
-  "notes": "Single stream (concurrency 1): 20 sequential requests per variant, 5 prompts, temperature 0.7, max_tokens 256, no warmup. Latency is end-to-end per request; throughput_tps is completion tokens divided by summed request time, so it is single-stream decode speed, not server capacity. vllm_pool_gib_per_gpu is the memory vLLM preallocates (gpu_memory_utilization x GPU memory, mostly KV cache), not model weight size. weights_gb is filled from the vLLM startup log line 'Model weights take X GiB' once re-measured.",
+  "notes": "Single stream (concurrency 1): 20 sequential requests per variant, 5 prompts, temperature 0.7, max_tokens 256, no warmup. Latency is end-to-end per request; throughput_tps is completion tokens divided by summed end-to-end request time (so it includes time to first token), which makes it single-stream speed, not server capacity. vllm_pool_gib_per_gpu is the memory vLLM preallocates (gpu_memory_utilization x GPU memory, mostly KV cache), not model weight size. weights_gb is filled from the vLLM startup log line 'Model weights take X GiB' once re-measured.",
   "variants": {
     "INT4": {
       "quantization": "awq_marlin",

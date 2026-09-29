@@ -23,9 +23,9 @@ The presenter dashboard is a fixed 1920 by 1080 stage that scales to whatever it
 
 **Ask** (press `1`). Type a question, or pick one of the presets, and it goes to every setup at once. The answers stream side by side with the time to first token, tokens per second, how many tokens each answer used, total time, and how many GPUs each setup uses. Answer length matters, because a setup that writes shorter answers can look faster per token while reasoning less. A line above the answers shows where a simple example router would send that question and why. With live endpoints connected these are real answers from the real deployments. Without them, a small "Replay" badge shows in the corner and each column plays back the speed that setup measured, without calling a model and without inventing a difference in the answers.
 
-**Under load** (press `2`, then `Space`). A replay of the `vllm bench serve` load test: 1, 8, 32, then 64 questions in flight at once against each setup, with tokens per second per GPU, total tokens per second, and median time per answer at each step, and the result in one line at the end. It plays back whatever sweep files are in `bench/<VARIANT>/c<N>.json` (the `vllm bench serve --save-result` output), and until those exist the scene stays out of the numbered flow, so `1` and `2` go to Ask and Numbers.
+**Under load** (press `2`, then `Space`). A replay of the `vllm bench serve` load test: 1, 8, 32, then 64 requests in flight at once against each setup (synthetic random-token prompts), with output tokens per second per GPU, total output tokens per second, and median time per answer at each step. The result line compares INT4 with BF16 at the same load per GPU, and Spec Decode with BF16 on the same GPUs. It plays back whatever sweep files are in `bench/<VARIANT>/c<N>.json` (the `vllm bench serve --save-result` output), and until those exist the scene stays out of the numbered flow, so `1` and `2` go to Ask and Numbers.
 
-**Numbers** (press `3`). The money slide: tokens per second for one request, tokens per second per GPU, and accuracy for each setup, what each one is best for, and when a router is worth adding.
+**Numbers** (press `3`). The money slide: GPUs, tokens per second and mean time for one request, and accuracy against BF16 for each setup (shown as pending where it hasn't been measured), what each one is best for, what to watch out for, and when a router is worth adding.
 
 **The arena** (http://localhost:8000/arena). A booth game where birds flown by the same small PyTorch network, stored at different precisions, fly a course with hard gaps. It isn't part of the talk, and the next section explains how it works.
 
@@ -65,13 +65,15 @@ The arena is a teaching model, and I'd say that out loud on stage. A 4,673-param
 
 Measured on September 29, 2026 on NVIDIA H200 (141 GB) with vLLM `0.18.0+rhaiv.14`, the vLLM build that ships with Red Hat AI. Each variant got 20 requests sent one at a time, with up to 256 output tokens.
 
-| Variant | GPUs | Mean time per request | p95 | Tokens/s per stream | Tokens/s per GPU |
+| Variant | GPUs | Mean time per request | p95 | Tokens/s, one request | Tokens/s ÷ GPUs, one request |
 |---|---|---|---|---|---|
 | BF16 (tensor parallel 2) | 2 | 4.96 s | 5.53 s | 47.3 | 23.6 |
 | INT4 AWQ (`awq_marlin`) | 1 | 5.07 s | 5.84 s | 44.3 | 44.3 |
 | Spec decode (70B + 8B draft, 5 tokens) | 2 | 5.54 s | 8.65 s | 40.0 | 20.0 |
 
-The raw file is `benchmark_results.json`. The dashboard reads it directly, and `scripts/benchmark.py` produces it.
+The raw file is `benchmark_results.json`, and the dashboard reads it directly. It was produced by the first version of `scripts/benchmark.py` (see commit `50987ff`): 5 prompts cycled to 20 sequential requests, temperature 0.7, max_tokens 256, no warmup, tokens/s as output tokens over summed request time. The current script adds warmup requests, temperature 0, and first-token timing for the rerun. One known inconsistency: BF16's recorded 47.3 tokens/s doesn't follow from its own averages (232.5 tokens over 4.96 s is 46.9), while INT4 and Spec Decode do. It's being re-derived from the raw log, and either value gives INT4 at 94% of BF16's speed.
+
+The last column divides one request's speed by the GPU count. It's a way to see what half the GPUs costs you in speed, not a measure of how much traffic a GPU can serve, which is what the load test measures.
 
 These are single-stream numbers, so they tell you about latency and not about how much traffic a GPU can serve. The load test (`vllm bench serve` at 1, 8, 32, and 64 concurrent requests) drops into `bench/<VARIANT>/c<N>.json`, and replay mode scales its timings by concurrency once those files exist.
 
@@ -81,7 +83,7 @@ These are single-stream numbers, so they tell you about latency and not about ho
 Llama 3.1 70B in FP8 is about 71 GB, so it fits on one H200 with room left for KV cache, and Hopper GPUs have native FP8 tensor cores. Red Hat's FP8 build of this model ([RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8)) keeps 99.9% of the BF16 score on the OpenLLM v1 benchmarks, so it's the next variant to add.
 
 **Why was speculative decoding slow in this benchmark?**
-The run used `enforce_eager`, which in vLLM 0.18 turns off both `torch.compile` and CUDA graphs. Speculative decoding runs many small forward passes (the 8B draft proposes five tokens for every 70B pass), so it loses the most when every pass pays full kernel-launch cost. Draft-model speculative decoding in vLLM supports CUDA graphs, so a rerun without `enforce_eager` is the fair comparison. Also keep in mind that spec decode uses the same GPUs as BF16. It buys lower latency per request, not fewer GPUs.
+The spec decode run had `enforce_eager` on, which in vLLM 0.18 turns off both `torch.compile` and CUDA graphs for the 70B target and the 8B draft. Speculative decoding runs many small forward passes (the draft proposes five tokens for every 70B pass), so launch overhead is a likely cost, but it isn't the only suspect, and none of them were measured separately: in vLLM 0.18 the draft runs at the same tensor parallel size as the target (2 GPUs here), the run used temperature 0.7 where the draft's greedy proposals get accepted less often, and the acceptance rate wasn't recorded. The rerun turns `enforce_eager` off, runs at temperature 0 and 0.7, and logs acceptance. Also keep in mind that spec decode uses the same GPUs as BF16. It's meant to lower latency per request, not to save GPUs.
 
 **Does this hold for an 8B model?**
 The trade-offs have the same shape, but smaller models lose more when quantized. In Red Hat's quantization study, INT4 kept 97.4% of the 70B's score on the OpenLLM v2 benchmarks and 96.1% of the 8B's, so test an 8B carefully on your own prompts.
@@ -93,7 +95,7 @@ Both produce INT4 weights that vLLM serves with fast mixed-precision kernels. Re
 Red Hat's quantization study is Kurtic et al., ["Give Me BF16 or Give Me Death? Accuracy-Performance Trade-Offs in LLM Quantization"](https://arxiv.org/abs/2411.02355), ACL 2025, which ran more than 500,000 evaluations. The benchmark numbers in this repo come from 20 sequential requests per variant on NVIDIA H200s with vLLM 0.18, so they measure one request at a time and not throughput under heavy load.
 
 **Why isn't INT4 faster than BF16?**
-At one request at a time, decoding is limited by how fast the GPU can read the weights. BF16 across two H200s reads about 70 GB per GPU per token against 4.8 TB/s each, and INT4 on one H200 reads about 35 to 40 GB. BF16 lands at about 70% of its bandwidth ceiling and INT4 at a much lower fraction, which is typical for 4-bit kernels at batch size 1. The result that matters for the bill is that INT4 runs at 94% of BF16's speed on half the GPUs, so it gets 1.87 times the tokens per GPU.
+At one request at a time, decoding is limited by how fast the GPU can read the weights. BF16 across two H200s reads about 70 GB per GPU per token against 4.8 TB/s each, and INT4 on one H200 reads about 35 to 40 GB. BF16 lands at about 70% of its bandwidth ceiling and INT4 at a much lower fraction, which is typical for 4-bit kernels at batch size 1. The result that matters for the bill is that, one request at a time, INT4 runs at 94% of BF16's speed on half the GPUs. How the two compare per GPU under heavy traffic is what the load test measures.
 
 **Is speculative decoding really lossless?**
 The verification step keeps the output distribution of the target model, so the quality you get is the target's quality. vLLM describes it as lossless up to the precision limits of hardware numerics, so greedy outputs can differ in rare cases because verification runs with a different batch shape.

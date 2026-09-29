@@ -6,38 +6,34 @@
     // What each setup buys you. Wording matches the slides.
     const SETUPS = {
         FP16: {
-            color: '--v-bf16', role: 'The baseline',
-            gets: 'Full quality, the answer every other setup is measured against',
+            color: '--v-bf16', role: 'The reference',
+            gets: 'The reference the other two are measured against',
             best: 'Questions where a wrong answer is expensive',
-            trade: 'Two GPUs for every replica, so every new replica doubles the bill',
-            watch: 'Two GPUs per replica, so scaling out gets expensive fast',
+            watch: 'Every replica needs two GPUs',
             route: 'A wrong answer is expensive',
-            acc: '100%', accNote: 'the baseline',
+            acc: '100%', accNote: 'the reference',
         },
         INT4: {
             color: '--v-int4', role: 'Half the GPUs',
             gets: 'Half the GPUs, at about the same speed for one request at a time',
             best: 'Everyday chat and easy questions',
-            trade: 'Small accuracy loss that shows up on hard reasoning, so test it on your own prompts',
+            watch: 'Loses the most on hard reasoning, so test it on your own prompts',
             route: 'Easy questions',
-            acc: '≈99%', accNote: 'Red Hat\'s INT4 build, 97% on harder tests*',
-            watch: 'Slips first on hard reasoning, so test it on your own prompts',
+            acc: 'Pending', accSmall: true, accNote: 'not evaluated yet*',
         },
         SPEC_DECODE: {
-            color: '--v-spec', role: 'Same GPUs, built for lower latency',
-            gets: 'Built for faster answers on the same GPUs, with BF16 quality',
-            best: 'Latency-sensitive, low-traffic work',
-            trade: 'A draft model to host next to the big one, and the gain shrinks as traffic grows',
-            note: 'This run had CUDA graphs turned off (enforce_eager), which slows speculative decoding the most. The rerun without it is next.',
-            route: 'Latency-sensitive, low traffic', pending: 'after the rerun',
-            acc: '100%', accNote: 'the 70B checks every token',
-            watch: 'Came out slower in this run, with CUDA graphs off, so it\'s being rerun before we route to it',
+            color: '--v-spec', role: 'Same 2 GPUs, 70B + 8B draft',
+            gets: 'Meant to cut latency on the same GPUs, and this run didn\'t',
+            best: 'Latency-sensitive, low-traffic work, if the rerun wins',
+            watch: 'This run had enforce_eager on (no torch.compile or CUDA graphs) and its acceptance rate wasn\'t measured, so it\'s being rerun',
+            route: 'Latency-sensitive, low traffic', pending: 'if rerun wins',
+            acc: '= BF16', accNote: 'by design, the 70B checks every token',
         },
         FP8: {
-            color: '--v-fp8', role: 'One GPU, near-lossless',
+            color: '--v-fp8', role: 'One GPU, 8-bit',
             gets: '8-bit weights and activations on a single GPU',
             best: 'High-throughput serving on Hopper GPUs',
-            trade: 'Needs GPUs with FP8 support',
+            watch: 'Not measured in this run yet',
         },
     };
     const ORDER = ['FP16', 'INT4', 'SPEC_DECODE', 'FP8'];
@@ -114,19 +110,14 @@
     // A deliberately simple, visible rule that shows where a router fits. It isn't a trained classifier.
     function route(q) {
         const t = q.toLowerCase();
-        if (/\b(legal|contract|diagnos\w*|analy[sz]e|compliance|medical|financial)\b/.test(t)) {
+        if (/\b(legal|contract|diagnos\w*|compliance|medical|financial|audit)\b/.test(t)) {
             return { key: 'FP16', why: 'a wrong answer here is expensive' };
         }
-        if (/\b(debug|code|function|python|sql|regex|script)\b/.test(t)) {
-            return { key: 'FP16', why: 'it\'s code, where one wrong token breaks the answer' };
+        if (/\b(why|prove|step by step|how many|calculate|reason\w*|riddle|puzzle|math)\b/.test(t)) {
+            return { key: 'FP16', why: 'it\'s multi-step reasoning, where INT4 loses the most accuracy' };
         }
-        if (/\b(why|prove|step by step|how many|calculate|compare|reason\w*|riddle|puzzle)\b/.test(t)) {
-            return { key: 'FP16', why: 'it\'s a multi-step reasoning question, and that\'s where 4-bit models slip first' };
-        }
-        if (/\b(write|draft|explain|describe|story|essay|report)\b/.test(t) && t.length > 60) {
-            return { key: 'SPEC_DECODE', why: 'it\'s a long answer and someone is waiting on it' };
-        }
-        return { key: 'INT4', why: 'it\'s an everyday question, so the cheapest tokens win' };
+        // Nothing routes to Spec Decode until a rerun shows it's faster on the same GPUs.
+        return { key: 'INT4', why: 'nothing here needs the full model, so the cheapest tokens win' };
     }
 
     // ------------------------------------------------------------ ask
@@ -144,12 +135,12 @@
             col.innerHTML = `
                 <div class="acol-head">
                     <div class="row1"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
-                    <p class="role">${esc((SETUPS[key] || {}).role || '')}</p>
+                    <p class="role">${esc((SETUPS[key] || {}).role || '')}<span class="src" hidden></span></p>
                 </div>
                 <pre class="answer idle">Waiting for a question.</pre>
                 <div class="astats">
                     <div><b class="num s-ttft">–</b><span>first token</span></div>
-                    <div><b class="num s-tps">–</b><span>tokens/s</span></div>
+                    <div><b class="num s-tps">–</b><span class="s-tps-label">tokens/s</span></div>
                     <div><b class="num s-len">–</b><span>tokens in answer</span></div>
                     <div><b class="num s-total">–</b><span>total</span></div>
                     <span class="place"></span>
@@ -206,7 +197,12 @@
                     buf = buf.slice(nl + 1);
                     if (!line.trim()) continue;
                     const ev = JSON.parse(line);
-                    if (ev.t === 'delta') {
+                    if (ev.t === 'start') {
+                        const src = $('.src', col);
+                        const tag = ev.source === 'replay' ? { scripted: 'scripted example, not model output', captured: 'captured answer' }[ev.text_source] : '';
+                        src.hidden = !tag;
+                        src.textContent = tag || '';
+                    } else if (ev.t === 'delta') {
                         raw += ev.text;
                         out.textContent = markdownToText(raw);
                         out.scrollTop = out.scrollHeight;
@@ -217,13 +213,18 @@
                         ttft.classList.toggle('na', ev.ttft_ms == null);
                         ttft.textContent = ev.ttft_ms != null ? secs(ev.ttft_ms) : 'live only';
                         $('.s-tps', col).textContent = ev.tokens_per_second != null ? ev.tokens_per_second.toFixed(0) : '–';
-                        $('.s-total', col).textContent = secs(ev.total_ms);
+                        $('.s-tps-label', col).textContent = ev.source === 'replay' ? 'benchmark tok/s' : 'tokens/s';
+                        const total = $('.s-total', col);
+                        total.classList.toggle('na', ev.total_ms == null);
+                        total.textContent = ev.total_ms != null ? secs(ev.total_ms) : 'live only';
                         const len = $('.s-len', col);
                         len.classList.toggle('na', ev.completion_tokens == null);
                         len.textContent = ev.completion_tokens != null ? ev.completion_tokens : 'live only';
-                        finished += 1;
-                        place.textContent = ['1st', '2nd', '3rd', '4th'][finished - 1] || '';
-                        if (finished === 1) place.classList.add('first');
+                        if (ev.source === 'live') {
+                            finished += 1;
+                            place.textContent = ['1st', '2nd', '3rd', '4th'][finished - 1] || '';
+                            if (finished === 1) place.classList.add('first');
+                        }
                     } else if (ev.t === 'error') {
                         throw new Error('This model didn\'t answer.');
                     }
@@ -262,7 +263,7 @@
         for (const key of keys) {
             const s = SETUPS[key] || {}, b = bench(key), n = gpus(key);
             const tps = b ? b.throughput_tps : null;
-            const tpg = b ? (b.tokens_per_second_per_gpu || tps / n) : null;
+            const mean = b ? b.avg_latency_ms : null;
             const card = document.createElement('div');
             card.className = 'card mcard';
             card.style.setProperty('--c', `var(${color(key)})`);
@@ -271,18 +272,17 @@
                 <p class="gets">${esc(s.gets || '')}</p>
                 <div class="nums three">
                     <div><b class="num">${tps != null ? one(tps) : '–'}</b><span>tokens/s, one request</span></div>
-                    <div><b class="num">${tpg != null ? one(tpg) : '–'}</b><span>tokens/s per GPU</span></div>
-                    <div><b class="num">${esc(s.acc || '–')}</b><span>${esc(s.accNote || 'accuracy')}</span></div>
+                    <div><b class="num">${mean != null ? `${(mean / 1000).toFixed(2)} s` : '–'}</b><span>mean time, one request</span></div>
+                    <div><b class="num${s.accSmall ? ' small' : ''}">${esc(s.acc || '–')}</b><span>${esc(s.accNote || 'accuracy vs BF16')}</span></div>
                 </div>
                 <dl><div><dt>Best for</dt><dd>${esc(s.best || '')}</dd></div>${s.watch ? `<div><dt>Watch out for</dt><dd>${esc(s.watch)}</dd></div>` : ''}</dl>`;
             grid.appendChild(card);
         }
         const bf = bench('FP16'), q = bench('INT4');
         if (bf && q && bf.throughput_tps && q.throughput_tps) {
-            const perGpu = (q.throughput_tps / gpus('INT4')) / (bf.throughput_tps / gpus('FP16'));
             const speed = q.throughput_tps / bf.throughput_tps;
-            $('#takeaway').innerHTML = `One request at a time, ${esc(label('INT4'))} gets <b>${one(perGpu)}× the tokens per GPU</b> of ${esc(label('FP16'))}, because it runs at ${Math.round(100 * speed)}% of the speed on half the GPUs.`
-                + (loadData().keys.length ? '' : ' <span class="pending-note">Under heavy batching, Red Hat\'s study found 8-bit pulls ahead of 4-bit, and the load test shows where these three land.</span>');
+            $('#takeaway').innerHTML = `One request at a time, ${esc(label('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(label('FP16'))}'s speed on half the GPUs</b>.`
+                + (loadData().keys.length ? '' : ' <span class="pending-note">Under heavy batching on high-end GPUs, Red Hat\'s study found 8-bit (W8A8) more cost-efficient than 4-bit, and the load test shows where these three land.</span>');
         }
         const strip = $('#routerStrip');
         strip.className = 'card router-strip';
@@ -290,10 +290,10 @@
             `<div class="route">${esc(SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k))}</b>${SETUPS[k].pending ? `<em class="pend">${esc(SETUPS[k].pending)}</em>` : ''}</div>`).join('');
         const bm = (config && config.benchmark) || {};
         const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-        $('#numbersFoot').textContent = '* Red Hat\'s published INT4 (GPTQ) build of Llama 3.1 70B keeps 99.4% of BF16 on the OpenLLM v1 benchmarks and 97.4% on the harder, reasoning-heavy v2 set. The AWQ build measured here still needs its own eval. Spec decode ran with CUDA graphs off (enforce_eager), which slows it the most, so it gets rerun.';
+        $('#numbersFoot').textContent = '* The INT4 build measured here (AWQ, W4A16 on Marlin kernels) hasn\'t been evaluated. For reference, Red Hat\'s published INT4 build of this model (GPTQ) recovers 99.4% of BF16 on the OpenLLM v1 benchmarks and 97.4% on the harder v2 set. Spec Decode used Llama 3.1 8B as the draft, proposing 5 tokens per step.';
         $('#routerNote').textContent = 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions.';
-        $('#benchNote').textContent = `Llama 3.1 70B Instruct on NVIDIA H200 with vLLM ${bm.vllm_version || ''}, measured ${when}: 20 requests per setup, one at a time, up to 256 output tokens, temperature 0.7.`
-            + (keys.includes('FP8') ? '' : ' FP8 fits on one H200 and is near-lossless in Red Hat\'s own tests, so it\'s the next setup worth measuring.');
+        $('#benchNote').textContent = `Llama 3.1 70B Instruct on NVIDIA H200 with vLLM ${bm.vllm_version || ''}, measured ${when}: 20 requests per setup (5 prompts), one at a time, no warmup, up to 256 output tokens, temperature 0.7.`
+            + (keys.includes('FP8') ? '' : ' FP8 fits on one H200 and recovers 99.7% or more in Red Hat\'s published tests, so it\'s the next setup to measure.');
     }
 
     // ------------------------------------------------------------ under load (replay of the load test)
@@ -323,7 +323,7 @@
         }
         play.hidden = false;
         const any = load[keys[0]].find(p => p.avg_input_tokens && p.avg_output_tokens);
-        const sizes = any ? ` Synthetic prompts of about ${any.avg_input_tokens} tokens, each asking for ${any.avg_output_tokens}.` : '';
+        const sizes = any ? ` Synthetic random-token prompts of about ${any.avg_input_tokens} tokens, each asking for ${any.avg_output_tokens}.` : ' Synthetic random-token prompts.';
         $('#loadSetup').textContent = `A replay of the vllm bench serve load test on the H200s: ${levels.join(', ').replace(/, (\d+)$/, ' and $1')} requests in flight at once, sent to each setup.${sizes}`;
         stage.style.setProperty('--cols', keys.length);
         const maxPerGpu = Math.max(...keys.flatMap(k => load[k].map(p => p.output_tokens_per_second_per_gpu)));
@@ -334,10 +334,10 @@
             card.style.setProperty('--c', `var(${color(key)})`);
             card.innerHTML = `
                 <div class="mhead"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
-                <div class="big"><b class="num l-pergpu">–</b><span>tokens/s per GPU</span></div>
+                <div class="big"><b class="num l-pergpu">–</b><span>output tokens/s per GPU</span></div>
                 <svg class="spark"></svg>
                 <div class="lstats">
-                    <div><b class="num l-total">–</b><span>tokens/s, whole setup</span></div>
+                    <div><b class="num l-total">–</b><span>output tokens/s, whole setup</span></div>
                     <div><b class="num l-lat">–</b><span class="l-lat-label">median time per answer</span></div>
                 </div>`;
             card.dataset.max = maxPerGpu;
@@ -386,19 +386,28 @@
         }
         const play = $('#loadPlay');
         play.textContent = animate && i < levels.length - 1 ? `${levels[i]} at a time…` : 'Play the load run';
-        if (i === levels.length - 1 && animate) loadResult(levels[i]);
+        if (i === levels.length - 1 && animate) loadResult();
     }
 
-    function loadResult(c) {
-        const { load } = loadData();
-        const bf = pointAt(load.FP16 || [], c), q = pointAt(load.INT4 || [], c), sp = pointAt(load.SPEC_DECODE || [], c);
+    // Compare INT4 with BF16 at the same load per GPU (INT4 runs on 1 GPU, BF16 on 2), and
+    // Spec Decode with BF16 at the same load, since they run on the same 2 GPUs.
+    function loadResult() {
+        const { load, levels } = loadData();
+        const bfPts = load.FP16 || [], qPts = load.INT4 || [], spPts = load.SPEC_DECODE || [];
         const parts = [];
-        if (bf && q) parts.push(`With ${c} requests at once, ${esc(label('INT4'))} serves <b>${(q.output_tokens_per_second_per_gpu / bf.output_tokens_per_second_per_gpu).toFixed(1)}× the tokens per GPU</b> of ${esc(label('FP16'))}`);
-        if (bf && sp && bf.latency_ms && sp.latency_ms) {
-            const r = sp.latency_ms / bf.latency_ms;
-            const verdict = Math.abs(r - 1) < 0.03 ? '<b>at about the same speed</b> as'
-                : r < 1 ? `<b>${Math.round(100 * (1 - r))}% faster</b> than` : `<b>${Math.round(100 * (r - 1))}% slower</b> than`;
-            parts.push(`${esc(label('SPEC_DECODE'))} answers ${verdict} ${esc(label('FP16'))} on the same GPUs`);
+        const gb = gpus('FP16'), gq = gpus('INT4');
+        const pair = [...levels].reverse().map(c => ({ c, bf: pointAt(bfPts, c), q: pointAt(qPts, c * gq / gb) })).find(o => o.bf && o.q);
+        if (pair) {
+            const perGpu = pair.c / gb;
+            const r = pair.q.output_tokens_per_second_per_gpu / pair.bf.output_tokens_per_second_per_gpu;
+            parts.push(`At ${perGpu} requests per GPU, ${esc(label('INT4'))} serves <b>${one(r)}× the output tokens per GPU</b> of ${esc(label('FP16'))}`);
+        }
+        const same = [...levels].reverse().map(c => ({ c, bf: pointAt(bfPts, c), sp: pointAt(spPts, c) })).find(o => o.bf && o.sp && o.bf.latency_ms && o.sp.latency_ms);
+        if (same) {
+            const r = same.sp.latency_ms / same.bf.latency_ms;
+            const kind = same.bf.latency_kind === 'mean' ? 'mean' : 'median';
+            const verdict = Math.abs(r - 1) < 0.03 ? 'about the same as' : r < 1 ? `<b>${Math.round(100 * (1 - r))}% lower</b> than` : `<b>${Math.round(100 * (r - 1))}% higher</b> than`;
+            parts.push(`at ${same.c} requests on the same 2 GPUs, ${esc(label('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(label('FP16'))}'s`);
         }
         $('#loadResult').innerHTML = parts.length ? parts.join(', and ') + '.' : '';
     }

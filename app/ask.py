@@ -37,14 +37,15 @@ def event(kind: str, **data) -> bytes:
     return (json.dumps({"t": kind, **data}) + "\n").encode()
 
 
-def replay_text(variant: str, preset: str | None) -> str:
+def replay_text(variant: str, preset: str | None) -> tuple[str, str]:
+    """(text, where it came from): "captured" model output, a "scripted" example, or the replay "note"."""
     scenario = PRESETS.get(preset or "")
     if not scenario:
-        return REPLAY_NOTE
+        return REPLAY_NOTE, "note"
     comparison = get_comparison(scenario, [variant, "FP16"])
     if comparison["source"] == "captured" and variant in comparison["responses"]:
-        return comparison["responses"][variant]["text"]
-    return ILLUSTRATIVE[scenario]["FP16"]
+        return comparison["responses"][variant]["text"], "captured"
+    return ILLUSTRATIVE[scenario]["FP16"], "scripted"
 
 
 def preset_prompt(preset: str | None) -> str | None:
@@ -53,13 +54,12 @@ def preset_prompt(preset: str | None) -> str | None:
 
 
 async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIterator[bytes]:
-    text = replay_text(variant, preset)
+    text, text_source = replay_text(variant, preset)
     pieces = re.findall(r"\S+\s*|\s+", text)
     tps = float(benchmark.variant(variant).get("throughput_tps") or 40.0)
     # about 1.3 tokens per word piece for English text
     per_piece = 1.3 / tps
-    start = time.perf_counter()
-    yield event("start", source="replay")
+    yield event("start", source="replay", text_source=text_source)
     buf, due = "", 0.0
     for piece in pieces:
         buf += piece
@@ -71,9 +71,9 @@ async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIte
     if buf:
         await _sleep(due)
         yield event("delta", text=buf)
-    total = time.perf_counter() - start
-    # Replay plays back the measured speed; it has no tokenizer, so it reports no token count.
-    yield event("done", source="replay", ttft_ms=None, total_ms=round(total * 1000),
+    # Replay only paces the text at the measured speed. It reports that measured speed and nothing
+    # else, since first-token time, token count, and total time weren't measured for this text.
+    yield event("done", source="replay", ttft_ms=None, total_ms=None,
                 completion_tokens=None, tokens_per_second=round(tps, 1))
 
 
