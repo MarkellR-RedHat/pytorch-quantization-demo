@@ -29,7 +29,23 @@ Step-by-step guide for presenting "Quantization Showdown: PyTorch Inference Opti
 
 <!-- TALK FLOW: owned by the slides session; keep in sync with the speaker notes in slides.html -->
 
-The talk flow and speaker script live in the speaker notes of `slides.html`.
+| Time | Slide | What happens |
+|---|---|---|
+| 0:00 | 1 Title | Intro the cast (Priya, Marcus, Dana), and tell people to keep their phones handy |
+| 0:35 | 2 Meet Priya | Llama 3.1 70B at BF16 fills an H200, 2 GPUs per replica, and Dana's "quick question" about 1,460 GPU-hours a month |
+| 1:20 | 3 The obvious fix | Size chart: BF16 141 GB, FP8 71 GB, INT4 about 38 GB, so INT4 fits on one GPU |
+| 1:55 | 4 The ticket | Marcus's ticket, a show of hands ("who hoped the quality was fine?"), and Priya sets up a showdown |
+| 2:35 | 5 The showdown | The three contestants, the spec-decode token animation, and a hand vote on who's fastest |
+| 3:35 | 6 Let's find out | Switch to the dashboard. Arena (1) with the QR on the sidebar, phones join, then Numbers (2) and Quality (3) |
+| 6:05 | 7 Plot twist | Benchmark charts, with a payoff for each group of voters |
+| 6:55 | 8 Sheep test | The room shouts an answer, then one click runs the sheep off and reveals the three answers |
+| 7:50 | 9 What Priya shipped | Routing: chat to INT4, deep analysis to BF16, low-traffic latency work to spec decode. Marcus closes the ticket |
+| 8:35 | 10 Lightning round | Six questions on one slide: FP8, why spec decode lost, 20 requests, 8B models, AWQ vs GPTQ/torchao, routing |
+| 9:25 | 11 Close | Everything in one place: repo QR, sim mode on a laptop, the stack, the booth |
+
+Slide keys: arrows or clicker to move, N for speaker notes, B for blackout, F for fullscreen. On slide 8, the first click is the reveal.
+
+The full speaker script is embedded at the bottom of slides.html (press N while presenting).
 
 ## Presenter Shortcuts
 
