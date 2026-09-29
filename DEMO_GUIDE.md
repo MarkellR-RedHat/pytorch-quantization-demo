@@ -26,13 +26,14 @@ Step-by-step guide for presenting "Quantization Showdown: PyTorch Inference Opti
 
 <!-- TALK FLOW: owned by the slides session; keep in sync with the speaker notes in slides.html -->
 
-The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`, then press `2` for Numbers, the money slide.
+The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`. Then press `2` for Under load and `Space` to play the load run, and finish on `3`, Numbers, the money slide.
 
 ## Presenter Shortcuts
 
 | Key | What it does |
 |---|---|
-| `1` `2` | Ask, Numbers |
+| `1` `2` `3` | Ask, Under load, Numbers |
+| `Space` | Play the load run (on Under load) |
 | `/` | Jump to the question box |
 | `Enter` | Send the question to every setup |
 | `T` | Light or dark theme |

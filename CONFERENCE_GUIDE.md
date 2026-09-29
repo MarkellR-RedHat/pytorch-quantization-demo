@@ -13,7 +13,7 @@ What the audience sees, backed by data: INT4 runs at 94% of BF16's speed on half
 
 ## How It Works Under the Hood
 
-The backend is FastAPI (`app/`). The presenter page (`/presenter`) has two scenes. **Ask** streams one question to every setup through the vLLM endpoints (or replays the measured speeds when they aren't connected), and **Numbers** shows the benchmark, what each setup is best for, and the router guidance. The Quantization Arena game lives at `/arena` for the booth.
+The backend is FastAPI (`app/`). The presenter page (`/presenter`) has three scenes. **Ask** streams one question to every setup through the vLLM endpoints (or replays the measured speeds when they aren't connected), **Under load** replays the `vllm bench serve` load test, and **Numbers** shows the benchmark, accuracy, what each setup is best for, and the router guidance. The Quantization Arena game lives at `/arena` for the booth.
 
 The full method, the numbers, and the technical questions are in the README.
 
@@ -21,13 +21,14 @@ The full method, the numbers, and the technical questions are in the README.
 
 <!-- TALK FLOW: owned by the slides session; keep in sync with the speaker notes in slides.html -->
 
-The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`, then press `2` for Numbers, the money slide.
+The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`. Then press `2` for Under load and `Space` to play the load run, and finish on `3`, Numbers, the money slide.
 
 ## Presenter Shortcuts
 
 | Key | What it does |
 |---|---|
-| `1` `2` | Ask, Numbers |
+| `1` `2` `3` | Ask, Under load, Numbers |
+| `Space` | Play the load run (on Under load) |
 | `/` | Jump to the question box |
 | `Enter` | Send the question to every setup |
 | `T` | Light or dark theme |
