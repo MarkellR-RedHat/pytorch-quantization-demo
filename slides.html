@@ -514,7 +514,7 @@ h1, h2 { word-spacing: .08em; }
     <div class="beat step" style=" --c:var(--bf16)"><div class="dot emo">🚀</div><div class="t">Priya ships a 70B at full precision</div></div>
     <div class="beat step" style=" --c:var(--bf16)"><div class="dot emo">📈</div><div class="t">It gets popular, so she adds replicas</div></div>
     <div class="beat step" style=" --c:var(--int4)"><div class="dot emo">🗜️</div><div class="t">The bill climbs, so she grabs the first fix</div></div>
-    <div class="beat step" style=" --c:var(--red)"><div class="dot emo">🎫</div><div class="t">Marcus starts getting wrong answers</div></div>
+    <div class="beat step" style=" --c:var(--red)"><div class="dot emo">🎫</div><div class="t">Marcus thinks the answers got worse</div></div>
     <div class="beat step" style=" --c:var(--spec)"><div class="dot emo">🔀</div><div class="t">She stops looking for one winner</div></div>
   </div>
 </section>
@@ -569,13 +569,13 @@ h1, h2 { word-spacing: .08em; }
     </div>
     <div class="size-row">
       <div class="size-lab"><div class="nm t-int4">INT4</div><div class="bp">&frac12; byte + scales</div></div>
-      <div class="size-track"><div class="size-bar" style="background:var(--int4)" data-gb="38"><span class="val t-int4">~38 GB<small>fits on 1 GPU</small></span></div></div>
+      <div class="size-track"><div class="size-bar" style="background:var(--int4)" data-gb="41"><span class="val t-int4">~41 GB<small>fits on 1 GPU</small></span></div></div>
     </div>
     <div class="h200-line" id="h200line"><span>one H200 = 141 GB</span></div>
   </div>
   <div class="size-note">
     <p class="body rise" style="--d:3">Four INT4 replicas need four H200s instead of eight, Dana replies with <span class="emo">🎉</span>, and Priya is a hero for about two weeks.</p>
-    <p class="foot rise" style="--d:4">Weights only, from 70.6B parameters</p>
+    <p class="foot rise" style="--d:4">Weights only. BF16 and FP8 from 70.6B params, INT4 as loaded by vLLM</p>
   </div>
 </section>
 
@@ -585,7 +585,7 @@ h1, h2 { word-spacing: .08em; }
   <div class="ticket ticket-solo rise" style="--d:1">
     <div class="ticket-bar"><span class="ticket-id">SUP-4471 &middot; from Marcus on the data science team <span class="emo">😤</span></span><span class="prio">PRIORITY: HIGH</span></div>
     <div class="ticket-body">
-      <p class="ticket-q">&ldquo;The model used to nail my analysis questions. Now it's returning wrong answers.&rdquo;</p>
+      <p class="ticket-q">&ldquo;Did the model get worse? My analysis answers have felt off since the switch.&rdquo;</p>
       <p class="ticket-sub">Assigned to Priya &middot; 3 more like it this week</p>
     </div>
   </div>
@@ -602,14 +602,14 @@ h1, h2 { word-spacing: .08em; }
       <div class="chips-row"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s</span></div>
       <div class="kv-rows">
         <div class="kv2"><span>Buys you</span><b>The reference answer</b></div>
-        <div class="kv2"><span>Best for</span><b>Questions where a wrong answer is expensive</b></div>
+        <div class="kv2"><span>Best for</span><b>Your hardest questions, until INT4 is tested on them</b></div>
       </div>
     </div>
     <div class="vcard step" style="--c:var(--int4); --ct:var(--int4-tx); --tint:var(--int4-tint)">
       <h3><span class="emo">🟡</span> INT4 AWQ</h3><div class="sub">4-BIT WEIGHTS</div>
       <div class="chips-row"><div class="gchip">H200</div><span class="gcount">1 H200</span></div>
       <div class="kv-rows">
-        <div class="kv2"><span>Buys you</span><b>Half the GPUs, at about the same speed for one request at a time</b></div>
+        <div class="kv2"><span>Buys you</span><b>Half the GPUs, about the same speed up to 8 requests at once</b></div>
         <div class="kv2"><span>Best for</span><b>Everyday chat and easy questions</b></div>
       </div>
     </div>
@@ -617,7 +617,7 @@ h1, h2 { word-spacing: .08em; }
       <h3><span class="emo">🟣</span> Speculative decode</h3><div class="sub">70B + SMALL 8B DRAFT</div>
       <div class="chips-row"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s, same as BF16</span></div>
       <div class="kv-rows">
-        <div class="kv2"><span>Buys you</span><b>Meant to cut latency, with BF16 quality</b><em class="caveat">This run came out slower (torch.compile and CUDA graphs off, draft at TP 2, temperature 0.7), so it's being rerun</em></div>
+        <div class="kv2"><span>Buys you</span><b>About 1.4× faster answers, with BF16 quality</b><em class="caveat">One request at a time, on our benchmark prompt</em></div>
         <div class="kv2"><span>Best for</span><b>Latency-sensitive, low-traffic work</b></div>
       </div>
     </div>
@@ -638,7 +638,7 @@ h1, h2 { word-spacing: .08em; }
   <div class="router">
     <div class="rcol">
       <div class="req rise" style="--d:2"><span class="emo">💬</span><span class="w">Easy questions<small>most of the traffic</small></span></div>
-      <div class="req rise" style="--d:3"><span class="emo">🧠</span><span class="w">Marcus's analysis<small>wrong answers are expensive</small></span></div>
+      <div class="req rise" style="--d:3"><span class="emo">🧠</span><span class="w">The hardest questions<small>until INT4 is tested on them</small></span></div>
       <div class="req rise" style="--d:4"><span class="emo">⚡</span><span class="w">Latency-critical<small>low traffic, needs speed</small></span></div>
     </div>
     <div class="wires" style="--d:4"><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg></div>
@@ -647,7 +647,7 @@ h1, h2 { word-spacing: .08em; }
     <div class="rcol">
       <div class="dest rise" style="--d:6; --c:var(--int4); --ct:var(--int4-tx)"><h3>INT4</h3><p>1 GPU per replica</p></div>
       <div class="dest rise" style="--d:7; --c:var(--bf16); --ct:var(--bf16-tx)"><h3>BF16</h3><p>2 GPUs, full precision</p></div>
-      <div class="dest rise" style="--d:8; --c:var(--spec); --ct:var(--spec-tx)"><h3>Spec decode</h3><p>2 GPUs, if the rerun wins</p></div>
+      <div class="dest rise" style="--d:8; --c:var(--spec); --ct:var(--spec-tx)"><h3>Spec decode</h3><p>2 GPUs, ~1.4× faster</p></div>
     </div>
   </div>
   <div class="plugs step"><span class="lab"><span class="emo">🔌</span> Also plugs into the same router</span><span class="chipset"><span>FP8</span><span>INT8 (W8A8)</span><span>GPTQ</span><span>EAGLE-3 speculators</span><span>A smaller 8B for easy questions</span></span></div>
@@ -662,9 +662,9 @@ h1, h2 { word-spacing: .08em; }
     <div class="rise" style="--d:2">
       <h3>The points we made</h3>
       <ol class="pts">
-        <li class="step"><span><b>INT4 is a cost tool.</b> It served the 70B on half the GPUs at about the same speed, one request at a time.</span></li>
-        <li class="step"><span><b>Spec decode is meant to cut latency.</b> Same GPUs and BF16 quality, but this run came out slower, so it's being rerun.</span></li>
-        <li class="step"><span><b>Quality depends on the workload,</b> so test on your own prompts.</span></li>
+        <li class="step"><span><b>INT4 is a cost tool.</b> Half the GPUs at about the same speed, up to 8 requests at once.</span></li>
+        <li class="step"><span><b>Spec decode is a latency tool.</b> About 1.4× faster on the same GPUs, and the 70B checks every token.</span></li>
+        <li class="step"><span><b>Measure, don't guess.</b> INT4 held up on our questions, so test it on yours.</span></li>
         <li class="step"><span><b>A router</b> lets each one run where it's best, once your traffic is big and mixed enough to run more than one.</span></li>
       </ol>
     </div>
@@ -910,7 +910,7 @@ SPEAKER SCRIPT (10-minute Demo Theater slot, 10 slides). Keys: arrows or clicker
 Hey everyone, I'm Markell, AI Developer Advocate at Red Hat. Not every question needs two GPUs. This talk is about when to use BF16, INT4, or speculative decoding, and when a router earns its keep, and the answer depends on the question your model is answering.
 
 [2 The story | 0:25 to 1:00]
-I'll tell it as a story with three people. Priya runs the model on the platform team and she's a little naive about it, Marcus is on data science and needs answers he can trust, and Dana is in finance watching the bill. [Click through the five steps one at a time.] Priya ships a 70B at full precision, it gets popular so she adds replicas, the bill climbs so she grabs the first fix, Marcus starts getting wrong answers, and she ends up not picking one winner at all.
+I'll tell it as a story with three people. Priya runs the model on the platform team and she's a little naive about it, Marcus is on data science and needs answers he can trust, and Dana is in finance watching the bill. [Click through the five steps one at a time.] Priya ships a 70B at full precision, it gets popular so she adds replicas, the bill climbs so she grabs the first fix, Marcus thinks the answers got worse, and she ends up not picking one winner at all.
 
 [3 Meet Priya | 1:00 to 1:40]
 Priya shipped Llama 3.1 70B at BF16. That's 70.6 billion parameters at two bytes each, 141 GB, and an H200 has 141 GB, so the weights alone fill a card and every replica needs two. Then it got popular, one replica became four, and that's eight H200s running all month. So Dana sends the message everyone in this room has gotten. Quick question, why did the chatbot go to 5,840 GPU-hours a month? It is never a quick question.
@@ -919,22 +919,22 @@ Priya shipped Llama 3.1 70B at BF16. That's 70.6 billion parameters at two bytes
 Priya's a little naive, so she grabs the first fix everyone reaches for and quantizes it. FP8 halves the weights, INT4 takes them to about a quarter, and now a whole replica fits on one GPU. Four replicas need four H200s instead of eight, Dana sends a party emoji, and Priya is a hero for about two weeks.
 
 [5 The ticket | 2:10 to 2:45]
-Then Marcus files this. Let the room read it. The model used to nail his analysis questions, and now it's returning wrong answers. [Click] Quick show of hands, who has quantized a model and then just hoped the quality was fine? Yeah. Priya was in that club too, so she stopped grabbing the first fix and started comparing her options.
+Two weeks later Marcus files this. Let the room read it. Did the model get worse? His analysis answers have felt off since the switch. [Click] Quick show of hands, who has quantized a model and then just hoped the quality was fine? Yeah. Priya didn't know either, and guessing is how she got here, so this time she measured.
 
 [6 The options | 2:45 to 3:45]
-So Priya started investigating less naive ways to improve inference, and here are her three options, apples to apples. [Click] BF16 is two H200s and the reference answer. [Click] INT4 is one H200, so half the GPUs at about the same speed when requests come one at a time, and it's the fit for everyday chat and easy questions. Under heavy batching on high-end GPUs, Red Hat's study found 8-bit (W8A8) more cost-efficient than 4-bit, so this is a light-traffic win. [Click] Speculative decoding is the one people ask about, because it still needs the same two H200s as BF16. What it buys you is speed on the same hardware. A smaller, cheaper 8B model drafts a few tokens ahead, and the 70B checks them in one pass and keeps the ones it agrees with, so it doesn't have to generate every token itself, and because the 70B checks every token you keep BF16 quality. Be upfront that it came out slower in this run, and don't pin it on one cause. It ran with enforce_eager, which in vLLM 0.18 turns off both torch.compile and CUDA graphs, the 8B draft ran at tensor parallel 2, the requests used temperature 0.7 where vLLM 0.18's greedy drafts get accepted less often, and we didn't measure the acceptance rate. So it's being rerun. Quick vote before the demo, hands up if you think BF16 is fastest. INT4? Spec decode? Let's find out.
+So Priya started investigating less naive ways to improve inference, and here are her three options, apples to apples. [Click] BF16 is two H200s and the reference answer, and it's where your hardest questions stay until INT4 has been tested on them. [Click] INT4 is one H200. On our runs it hit 97% of BF16's speed for one request, and it kept pace all the way up to 8 requests at once, 34.5 tokens a second each versus 35.1, on half the GPUs. On H200 vLLM runs it with the Machete kernel, the Hopper successor to Marlin. Under heavy batching on high-end GPUs, Red Hat's study found 8-bit (W8A8) more cost-efficient than 4-bit, and we haven't tested past 8 at once yet. [Click] Speculative decoding still needs the same two H200s as BF16, and what it buys you is speed. A smaller 8B model drafts five tokens ahead and the 70B checks them in one pass, and on average the 70B kept about four and a half tokens per pass. Because the 70B checks every token, you keep BF16 quality. With enforce_eager off, so torch.compile and CUDA graphs are on, it ran about 1.4 times faster than BF16 on our benchmark prompt. Quick vote before the demo, hands up if you think BF16 is fastest. INT4? Spec decode? Let's find out.
 
 [7 Let's find out | 3:45 to 7:00]
 Call out a question and I'll send it to all three setups at once. Switch to the dashboard.
-Scene 1, Ask. Type the question from the room, or use a preset (Sheep riddle, Python function, Three bullet summary) if it's quiet. Point at each column: time to first token, tokens per second, tokens in the answer, total time, and who finished first. Call out the tokens-in-answer number, because a setup can look faster just by writing a shorter answer. Read the router line out loud, where it says which setup a router would send this question to and why. Do two or three questions.
-Scene 2, Under load. Say what the run was: 1, 8, 32, then 64 questions at once. Press Space to play it and watch tokens per second per GPU climb for each setup, then read the one-line result.
-Scene 3, Numbers, the money slide. For each setup: speed for one request, tokens per second per GPU, accuracy, and best for. One request at a time, INT4 runs at 94% of BF16's speed on half the GPUs. Spec decode runs on the same two GPUs and the 70B checks every token, and this run came out slower, with torch.compile and CUDA graphs off among the untested causes, so it's being rerun.
+Scene 1, Ask. Type the question from the room, or use a preset (Sheep riddle, Python function, Three bullet summary) if it's quiet. Point at each column: time to first token, tokens per second, tokens in the answer, total time, and who finished first. On the sheep riddle all three got it right, 20 out of 20 each when we sampled it, and that's Marcus's answer. Read the router line out loud. Do two or three questions.
+Scene 2, Under load. Only if the 32 and 64 run was recorded; otherwise skip it and say so.
+Scene 3, Numbers, the money slide. BF16 46.9 tokens a second on two GPUs, INT4 45.3 on one, spec decode about 65 on two. INT4 wins on GPUs, spec decode wins on speed, and BF16 is the reference.
 
 [8 Priya adds a router | 7:00 to 7:50]
-So there wasn't one winner, and Priya added a router. Easy questions go to INT4, Marcus's analysis stays on BF16, and latency-critical work can use spec decode if the rerun wins. It started as one BF16 replica, got popular, and every new replica cost two more H200s. [Click] And these three aren't the only options. FP8, INT8, GPTQ, EAGLE-style speculators, or a smaller 8B for the easy questions all plug into the same router, I just didn't have time for all of them today. [Click] Only the hard questions go to BF16 now, so she needs far fewer GPUs overall. Marcus closes his ticket, and Dana sends another party emoji.
+So there wasn't one winner, and Priya added a router. Easy questions go to INT4, latency-critical work goes to spec decode, and the hardest questions stay on BF16 until INT4 has been tested on them. It started as one BF16 replica, got popular, and every new replica cost two more H200s. [Click] And these three aren't the only options. FP8, INT8, GPTQ, EAGLE-style speculators, or a smaller 8B for the easy questions all plug into the same router, I just didn't have time for all of them today. [Click] Only the hard questions go to BF16 now, so she needs far fewer GPUs overall. Marcus closes his ticket, and Dana sends another party emoji.
 
 [9 Wrap-up | 7:50 to 9:25]
-Four points to take home, one click each. INT4 is a cost tool. Spec decode is meant to cut latency, and this run came out slower, so it's being rerun. Quality depends on the workload, so test on your own prompts. And a router lets each one run where it's best, once your traffic is big and mixed enough. If you're small, three pools of GPUs is overkill, so pick the one that fits most of your questions. A few things to think about are how much of your traffic really needs full precision, whether your target is cost per token or time to answer, and whether you have an eval set built from real prompts. If technical questions come up and we're short on time, point to the link at the bottom, where the repo answers them. FP8 fits on one H200 and keeps 99.9% of the score on Red Hat's build. The spec decode run had enforce_eager on, which in vLLM 0.18 turns off torch.compile and CUDA graphs, plus the draft at tensor parallel 2 and temperature 0.7, and acceptance wasn't measured. Smaller models lose more under quantization, which is 97.4% kept for the 70B vs 96.1% for the 8B in Red Hat's study. GPTQ was slightly ahead of AWQ there too. If asked why vLLM 0.18, it's the Red Hat AI build the cluster runs.
+Four points to take home, one click each. INT4 is a cost tool, half the GPUs at about the same speed up to 8 requests at once. Spec decode is a latency tool, about 1.4 times faster on the same GPUs. Measure, don't guess, because INT4 held up on our questions and that's exactly why you test it on yours. And a router lets each one run where it's best, once your traffic is big and mixed enough. If you're small, three pools of GPUs is overkill, so pick the one that fits most of your questions. A few things to think about are how much of your traffic really needs full precision, whether your target is cost per token or time to answer, and whether you have an eval set built from real prompts. If technical questions come up and we're short on time, point to the link at the bottom, where the repo answers them. If asked why spec decode was slow in the first run: it had enforce_eager on, which in vLLM 0.18 turns off torch.compile and CUDA graphs, and it also used temperature 0.7, so we can't pin the difference on one cause. If asked about identical output: greedy spec decode matched BF16 word for word on the sheep riddle and split on a near-tie word after 100-plus matching tokens on two other prompts, which is the hardware-numerics caveat vLLM documents. FP8 fits on one H200 and keeps 99.9% of the score on Red Hat's build. Smaller models lose more under quantization, 97.4% kept for the 70B vs 96.1% for the 8B in Red Hat's study. If asked why vLLM 0.18, it's the Red Hat AI build the cluster runs.
 
 [10 Close | 9:25 to 10:00]
 Here's all the source code I used. If you want to see how I did this, it's all in the repo. Thank you.
