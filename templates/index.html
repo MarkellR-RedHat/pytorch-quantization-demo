@@ -2,128 +2,79 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#f2f2f2">
     <title>Quantization Showdown</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;600;700;900&family=Red+Hat+Text:wght@400;500;600;700&family=Red+Hat+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body class="audience-view">
-    <canvas id="bgParticles"></canvas>
-    <img src="/static/images/redhat-logo.png" alt="Red Hat" class="fixed-logo" style="position:fixed;top:16px;right:20px;z-index:101;height:clamp(20px,2.2vw,30px);opacity:0.7;">
-    <div class="container">
-        <header>
-            <h1>Quantization Showdown</h1>
-            <p class="subtitle">Stress test PyTorch inference optimization</p>
-        </header>
-
-        <main>
-            <div class="model-selector">
-                <h2>Pick a Variant</h2>
-                <div class="model-buttons three-buttons">
-                    <button class="model-btn selected" data-model="FP16">
-                        <span class="model-name">FP16</span>
-                        <span class="model-desc">Half Precision — Quality baseline</span>
-                    </button>
-                    <button class="model-btn" data-model="INT4">
-                        <span class="model-name">INT4</span>
-                        <span class="model-desc">4-bit — Best value</span>
-                    </button>
-                    <button class="model-btn" data-model="SPEC_DECODE">
-                        <span class="model-name">Spec Decode</span>
-                        <span class="model-desc">Draft + verify — Full quality</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="action-area">
-                <button id="sendRequestBtn" class="send-btn">
-                    <span class="btn-text">TAP TO SEND</span>
-                    <span class="btn-subtext" id="btnSubtext">FP16 selected — Tap away!</span>
-                </button>
-            </div>
-
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-value" id="yourRequests">0</div>
-                    <div class="stat-label">Your Requests</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalRequests">0</div>
-                    <div class="stat-label">Total Requests</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="participants">0</div>
-                    <div class="stat-label">Participants</div>
-                </div>
-            </div>
-
-            <div class="status-message" id="statusMessage"></div>
-        </main>
-
-        <footer>
-            <p>Powered by vLLM + LLM Compressor | Red Hat</p>
-        </footer>
-    </div>
-
-    <style>
-    canvas#bgParticles {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        pointer-events: none;
-        width: 100%; height: 100%;
-    }
-    .container { position: relative; z-index: 1; }
-    </style>
-    <script src="/static/js/audience.js"></script>
+    <link rel="preload" href="/static/fonts/RedHatDisplay-VF.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/fonts/RedHatText-VF.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/audience.css">
     <script>
-    (function(){
-        var c = document.getElementById('bgParticles');
-        if (!c) return;
-        var ctx = c.getContext('2d');
-        var particles = [];
-        var N = 40, CONNECT = 120;
-        function resize(){ c.width = window.innerWidth; c.height = window.innerHeight; }
-        window.addEventListener('resize', resize); resize();
-        for (var i = 0; i < N; i++) {
-            particles.push({
-                x: Math.random() * c.width,
-                y: Math.random() * c.height,
-                vx: (Math.random() - 0.5) * 0.4,
-                vy: (Math.random() - 0.5) * 0.4,
-                r: Math.random() * 2 + 1
-            });
-        }
-        function draw(){
-            ctx.clearRect(0, 0, c.width, c.height);
-            for (var i = 0; i < N; i++) {
-                var p = particles[i];
-                p.x += p.vx; p.y += p.vy;
-                if (p.x < 0 || p.x > c.width) p.vx *= -1;
-                if (p.y < 0 || p.y > c.height) p.vy *= -1;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(238, 0, 0, 0.12)';
-                ctx.fill();
-                for (var j = i + 1; j < N; j++) {
-                    var q = particles[j];
-                    var dx = p.x - q.x, dy = p.y - q.y;
-                    var dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist < CONNECT) {
-                        ctx.beginPath();
-                        ctx.moveTo(p.x, p.y);
-                        ctx.lineTo(q.x, q.y);
-                        ctx.strokeStyle = 'rgba(238, 0, 0, ' + (0.06 * (1 - dist / CONNECT)) + ')';
-                        ctx.stroke();
-                    }
-                }
-            }
-            requestAnimationFrame(draw);
-        }
-        draw();
-    })();
+        try { if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark'; } catch (e) {}
     </script>
+</head>
+<body class="audience">
+<main class="wrap">
+    <header class="head">
+        <img src="/static/images/redhat-logo.png" alt="Red Hat" class="logo">
+        <span class="me" id="me">Joining…</span>
+    </header>
+
+    <section class="intro">
+        <h1>Quantization Showdown</h1>
+        <p>The birds on the big screen are all flown by the same neural network, stored at different precisions. Pick one to back, then throw hard prompts at them and see who makes it through.</p>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <h2>Back a bird</h2>
+            <span class="hint" id="backHint">tap one</span>
+        </div>
+        <div class="birds" id="birds" role="radiogroup" aria-label="Back a bird"></div>
+        <p class="yours" id="yours" hidden></p>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <h2>Throw a hard prompt</h2>
+        </div>
+        <div class="throws">
+            <button class="throw" data-kind="math"><span class="ico">∑</span><span>Multi-step math</span><i></i></button>
+            <button class="throw" data-kind="logic"><span class="ico">⋀</span><span>Logic puzzle</span><i></i></button>
+            <button class="throw" data-kind="code"><span class="ico">{ }</span><span>Tricky code</span><i></i></button>
+            <button class="throw" data-kind="long_context"><span class="ico">¶</span><span>Long context</span><i></i></button>
+        </div>
+        <p class="note">Each one lands on the big screen as a narrow red gap.</p>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <h2>Load test the 70B models</h2>
+            <span class="mode-pill" id="modePill">…</span>
+        </div>
+        <div class="seg" id="variantSeg" role="radiogroup" aria-label="Model variant"></div>
+        <button class="send" id="sendBtn">
+            <b>Send a request</b>
+            <span id="sendSub">each tap is one real request</span>
+        </button>
+        <ol class="results" id="results"></ol>
+        <div class="totals">
+            <div><b id="yourCount" class="num">0</b><span>you sent</span></div>
+            <div><b id="totalCount" class="num">0</b><span>whole room</span></div>
+            <div><b id="peopleCount" class="num">0</b><span>phones here</span></div>
+        </div>
+    </section>
+
+    <details class="how">
+        <summary>How does this work?</summary>
+        <p>Every bird runs the same 4,673-parameter network trained in PyTorch. BF16 keeps 16 bits per weight, FP8 keeps 8, and both INT4 birds keep 4. INT4 RTN rounds each weight to the nearest step, while INT4 AWQ first rescales the weights that matter most (the idea behind AWQ), and that small change is the difference on hard gaps.</p>
+        <p>Spec Decode flies the BF16 network, but a tiny draft network guesses the next few moves and the big one checks them all at once. It keeps the moves it agrees with and replaces the first one it doesn't, which is why its path matches BF16 exactly.</p>
+        <p>The load-test button sends a fixed prompt to a real Llama 3.1 70B deployment on vLLM (or, in simulated mode, replays timings measured on H200s). Nothing you type is ever sent anywhere.</p>
+    </details>
+
+    <footer class="foot">PyTorch Conference North America 2026 · Red Hat</footer>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/static/js/audience.js"></script>
 </body>
 </html>

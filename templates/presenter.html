@@ -3,864 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantization Showdown - Presenter</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;600;700;900&family=Red+Hat+Text:wght@400;500;600;700&family=Red+Hat+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-    .presenter-view {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f0f0 30%, #fff5f5 60%, #ffffff 100%);
-        color: #1a1a1a;
-        font-family: 'Red Hat Text', -apple-system, BlinkMacSystemFont, sans-serif;
-        -webkit-font-smoothing: antialiased;
-        min-height: 100vh;
-        overflow-x: hidden;
-    }
-
-    canvas#bgParticles {
-        position: fixed; inset: 0; z-index: 0;
-        pointer-events: none; width: 100%; height: 100%;
-    }
-
-    .fixed-logo {
-        position: fixed; bottom: 20px; right: 28px; z-index: 101;
-        height: clamp(24px, 2.5vw, 36px); opacity: 0.55;
-    }
-
-    .presenter-container {
-        position: relative; z-index: 1;
-        max-width: 1440px; margin: 0 auto; padding: 24px 28px;
-    }
-
-    /* Header */
-    .presenter-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 24px; padding-bottom: 16px;
-        border-bottom: 1px solid rgba(238, 0, 0, 0.15);
-    }
-    .presenter-header h1 {
-        font-family: 'Red Hat Display', sans-serif; font-weight: 900;
-        font-size: clamp(1.4rem, 2.5vw, 1.8rem); line-height: 1.1;
-        background: linear-gradient(152deg, #ee0000 0%, #cc0000 47%, #8b0000 100%);
-        background-size: 200% 200%;
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        background-clip: text; animation: gradSweep 8s ease infinite;
-    }
-    @keyframes gradSweep {
-        0%, 100% { background-position: 0% 50%; }
-        50%      { background-position: 100% 50%; }
-    }
-    .header-subtitle {
-        color: rgba(0,0,0,0.45); font-size: 0.85rem; font-weight: 500; margin-top: 4px;
-    }
-    .header-controls { display: flex; gap: 10px; align-items: center; }
-
-    .control-btn {
-        background: rgba(0,0,0,0.04); color: rgba(0,0,0,0.6);
-        border: 1px solid rgba(0,0,0,0.08); padding: 7px 14px; border-radius: 8px;
-        cursor: pointer; font-family: 'Red Hat Text', sans-serif;
-        font-size: 0.75rem; font-weight: 600;
-        transition: all 0.25s cubic-bezier(.4,0,.2,1);
-    }
-    .control-btn:hover {
-        background: rgba(0,0,0,0.08); color: rgba(0,0,0,0.85);
-        transform: translateY(-1px);
-    }
-    .control-btn.start-btn {
-        background: rgba(62,134,53,0.1); border-color: rgba(62,134,53,0.25); color: #2d6a27;
-    }
-    .control-btn.stop-btn {
-        background: rgba(238,0,0,0.1); border-color: rgba(238,0,0,0.25); color: #cc0000;
-    }
-    .control-btn.challenge-btn-style {
-        background: rgba(123,45,142,0.08); border-color: rgba(123,45,142,0.15); color: #7B2D8E;
-    }
-
-    /* Game Arena */
-    .game-arena {
-        background: rgba(255,255,255,0.8); backdrop-filter: blur(24px);
-        border-radius: 16px; padding: 20px 24px 16px;
-        margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.08);
-        box-shadow: 0 2px 16px rgba(0,0,0,0.04); position: relative; overflow: hidden;
-    }
-    .game-arena::after {
-        content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-        background: linear-gradient(90deg, #cc0000, #0a7e3e, #7B2D8E);
-    }
-    .game-header {
-        display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
-    }
-    .game-header h2 {
-        font-family: 'Red Hat Display', sans-serif; font-size: 1rem; font-weight: 700;
-        color: rgba(0,0,0,0.7); margin: 0;
-    }
-    .game-hint {
-        font-family: 'Red Hat Mono', monospace; font-size: 0.7rem;
-        color: rgba(0,0,0,0.35); letter-spacing: 0.3px;
-    }
-    .game-hint kbd {
-        background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px;
-        font-size: 0.65rem; border: 1px solid rgba(0,0,0,0.08);
-    }
-    canvas#gameCanvas {
-        width: 100%; height: 260px; display: block; border-radius: 8px;
-        cursor: pointer;
-    }
-    .game-scoreboard {
-        display: flex; justify-content: center; gap: 50px;
-        margin-top: 12px; padding-top: 10px;
-        border-top: 1px solid rgba(0,0,0,0.06);
-    }
-    .game-score { text-align: center; }
-    .game-score-label {
-        font-family: 'Red Hat Display', sans-serif; font-size: 0.7rem;
-        font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
-    }
-    .game-score-label.fp16 { color: #cc0000; }
-    .game-score-label.int4 { color: #0a7e3e; }
-    .game-score-label.spec { color: #7B2D8E; }
-    .game-score-val {
-        font-family: 'Red Hat Mono', monospace; font-weight: 700;
-        font-size: 1.1rem; color: rgba(0,0,0,0.8);
-    }
-    .game-score-crashes {
-        font-family: 'Red Hat Mono', monospace; font-size: 0.65rem; color: #cc0000;
-    }
-
-    /* Metric Cards */
-    .metrics-grid.three-col {
-        display: grid; grid-template-columns: repeat(3, 1fr);
-        gap: 16px; margin-bottom: 20px;
-    }
-    .metric-card {
-        background: rgba(255,255,255,0.7); backdrop-filter: blur(24px);
-        border-radius: 14px; padding: 20px;
-        border: 1px solid rgba(0,0,0,0.08);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-        transition: all 0.3s ease; position: relative; overflow: hidden;
-    }
-    .metric-card:hover {
-        background: rgba(255,255,255,0.85); transform: translateY(-2px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    }
-    .metric-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 14px; padding-bottom: 10px;
-        border-bottom: 1px solid rgba(0,0,0,0.06);
-    }
-    .metric-header h3 {
-        font-family: 'Red Hat Display', sans-serif; font-size: 0.9rem;
-        font-weight: 700; color: rgba(0,0,0,0.85);
-    }
-    .metric-badge {
-        padding: 3px 10px; border-radius: 20px;
-        font-family: 'Red Hat Mono', monospace; font-size: 0.58rem;
-        font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
-    }
-    .metric-badge.baseline { background: rgba(0,102,204,0.1); color: #0052a3; border: 1px solid rgba(0,102,204,0.15); }
-    .metric-badge.speed { background: rgba(240,171,0,0.1); color: #b37a00; border: 1px solid rgba(240,171,0,0.15); }
-    .metric-badge.best { background: rgba(123,45,142,0.1); color: #7B2D8E; border: 1px solid rgba(123,45,142,0.15); }
-    .metric-hero {
-        display: flex; justify-content: space-around; margin-bottom: 14px; padding: 10px 0;
-    }
-    .hero-stat { text-align: center; }
-    .hero-value {
-        display: block; font-family: 'Red Hat Display', sans-serif;
-        font-size: 2.2rem; font-weight: 900; line-height: 1; margin-bottom: 4px;
-        background: linear-gradient(180deg, #1a1a1a 0%, rgba(0,0,0,0.65) 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .hero-unit {
-        font-family: 'Red Hat Mono', monospace; font-size: 0.6rem;
-        color: rgba(0,0,0,0.35); text-transform: uppercase; letter-spacing: 1px;
-    }
-    .metric-row {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 7px 0; border-bottom: 1px solid rgba(0,0,0,0.04);
-    }
-    .metric-row:last-child { border-bottom: none; }
-    .metric-row.highlight { padding-top: 10px; margin-top: 2px; border-top: 1px solid rgba(0,0,0,0.08); }
-    .metric-label { color: rgba(0,0,0,0.4); font-size: 0.75rem; font-weight: 500; }
-    .metric-value {
-        color: rgba(0,0,0,0.8); font-family: 'Red Hat Mono', monospace;
-        font-weight: 700; font-size: 0.75rem;
-    }
-
-    /* Challenge Panel */
-    .challenge-panel {
-        background: rgba(255,255,255,0.75); backdrop-filter: blur(24px);
-        border: 1px solid rgba(238,0,0,0.12); box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-        border-radius: 16px; padding: 24px; margin-bottom: 20px;
-        position: relative; overflow: hidden;
-    }
-    .challenge-panel::after {
-        content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-        background: linear-gradient(90deg, #cc0000, #0a7e3e, #7B2D8E);
-    }
-    .challenge-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 16px; padding-bottom: 12px;
-        border-bottom: 1px solid rgba(0,0,0,0.06);
-    }
-    .challenge-header h2 {
-        font-family: 'Red Hat Display', sans-serif; font-size: 1rem;
-        font-weight: 700; color: rgba(0,0,0,0.85);
-    }
-    .challenge-controls { display: flex; gap: 6px; }
-    .challenge-btn {
-        background: rgba(0,0,0,0.03); color: rgba(0,0,0,0.5);
-        border: 1px solid rgba(0,0,0,0.06); padding: 6px 14px; border-radius: 8px;
-        cursor: pointer; font-family: 'Red Hat Text', sans-serif;
-        font-size: 0.72rem; font-weight: 600; transition: all 0.2s ease;
-    }
-    .challenge-btn:hover { background: rgba(238,0,0,0.06); color: #cc0000; }
-    .challenge-btn.active { background: rgba(238,0,0,0.1); color: #cc0000; border-color: rgba(238,0,0,0.2); }
-    .challenge-prompt-text {
-        font-family: 'Red Hat Mono', monospace; font-size: 0.78rem;
-        color: rgba(0,0,0,0.6); padding: 10px 14px;
-        background: rgba(0,0,0,0.025); border-radius: 8px;
-        border: 1px solid rgba(0,0,0,0.04); margin-bottom: 16px; line-height: 1.5;
-    }
-    .challenge-responses { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-    .challenge-col {
-        background: rgba(0,0,0,0.015); border-radius: 12px; padding: 14px;
-        border: 1px solid rgba(0,0,0,0.05); min-height: 180px;
-        transition: border-color 0.3s ease;
-    }
-    .challenge-col.pass { border-color: rgba(10,126,62,0.3); }
-    .challenge-col.fail { border-color: rgba(204,0,0,0.3); background: rgba(204,0,0,0.02); }
-    .challenge-col-header {
-        font-family: 'Red Hat Display', sans-serif; font-size: 0.8rem; font-weight: 700;
-        margin-bottom: 10px; padding-bottom: 8px;
-        border-bottom: 1px solid rgba(0,0,0,0.06);
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .challenge-col[data-model="FP16"] .challenge-col-header { color: #cc0000; }
-    .challenge-col[data-model="INT4"] .challenge-col-header { color: #0a7e3e; }
-    .challenge-col[data-model="SPEC_DECODE"] .challenge-col-header { color: #7B2D8E; }
-    .typing-speed { font-family: 'Red Hat Mono', monospace; font-size: 0.65rem; font-weight: 500; opacity: 0.5; }
-    .challenge-output {
-        font-family: 'Red Hat Mono', monospace; font-size: 0.68rem;
-        color: rgba(0,0,0,0.65); line-height: 1.6;
-        white-space: pre-wrap; word-wrap: break-word;
-        max-height: 250px; overflow-y: auto;
-    }
-    .challenge-output::-webkit-scrollbar { width: 3px; }
-    .challenge-output::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
-    .typing-cursor {
-        display: inline-block; width: 2px; height: 1em; background: currentColor;
-        animation: cursorBlink 0.6s step-end infinite;
-        vertical-align: text-bottom; margin-left: 1px;
-    }
-    @keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-    .challenge-verdict-bar {
-        margin-top: 10px; padding: 6px 10px; border-radius: 6px;
-        font-family: 'Red Hat Display', sans-serif; font-size: 0.72rem;
-        font-weight: 700; text-align: center;
-        opacity: 0; transition: opacity 0.4s ease;
-    }
-    .challenge-verdict-bar.show { opacity: 1; }
-    .challenge-verdict-bar.pass-bar { background: rgba(10,126,62,0.1); color: #0a7e3e; }
-    .challenge-verdict-bar.fail-bar { background: rgba(204,0,0,0.1); color: #cc0000; }
-
-    /* Summary */
-    .summary-stats {
-        display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px;
-    }
-    .summary-card {
-        background: rgba(255,255,255,0.7); backdrop-filter: blur(24px);
-        border-radius: 14px; padding: 22px; text-align: center;
-        border: 1px solid rgba(0,0,0,0.08);
-    }
-    .summary-value {
-        font-family: 'Red Hat Display', sans-serif; font-size: 2.4rem;
-        font-weight: 900; margin-bottom: 6px;
-        background: linear-gradient(152deg, #ee0000 0%, #cc0000 47%, #8b0000 100%);
-        background-size: 200% 200%;
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        background-clip: text; animation: gradSweep 8s ease infinite;
-    }
-    .summary-label { color: rgba(0,0,0,0.4); font-size: 0.8rem; font-weight: 500; }
-
-    footer {
-        text-align: center; padding: 12px 0; color: rgba(0,0,0,0.25);
-        font-size: 0.7rem; font-family: 'Red Hat Mono', monospace;
-    }
-
-    @media (max-width: 768px) {
-        .presenter-header { flex-direction: column; gap: 14px; }
-        .metrics-grid.three-col { grid-template-columns: 1fr; }
-        .challenge-responses { grid-template-columns: 1fr; }
-    }
-    </style>
+    <title>Quantization Showdown · Presenter</title>
+    <link rel="preload" href="/static/fonts/RedHatDisplay-VF.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/fonts/RedHatText-VF.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/fonts/RedHatMono-VF.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/presenter.css">
 </head>
-<body class="presenter-view">
-    <canvas id="bgParticles"></canvas>
-    <img src="/static/images/redhat-logo.png" alt="Red Hat" class="fixed-logo">
+<body class="presenter">
+<div id="stage" class="stage">
 
-    <div class="presenter-container">
-        <header class="presenter-header">
-            <div class="header-left">
+    <header class="top">
+        <div class="brand">
+            <img src="/static/images/redhat-logo.png" alt="Red Hat" class="logo">
+            <div class="brand-text">
                 <h1>Quantization Showdown</h1>
-                <p class="header-subtitle">PyTorch Inference Optimization</p>
-            </div>
-            <div class="header-controls">
-                <button id="startStopBtn" class="control-btn start-btn">Start Demo</button>
-                <button id="resetBtn" class="control-btn">Reset</button>
-                <button id="challengeBtn" class="control-btn challenge-btn-style">Prompt Challenge</button>
-            </div>
-        </header>
-
-        <div class="game-arena" id="gameArena">
-            <div class="game-header">
-                <h2>Quantization Runner</h2>
-                <span class="game-hint"><kbd>SPACE</kbd> to jump &middot; INT4 can't clear hard tasks</span>
-            </div>
-            <canvas id="gameCanvas"></canvas>
-            <div class="game-scoreboard">
-                <div class="game-score">
-                    <div class="game-score-label fp16">FP16</div>
-                    <div class="game-score-val" id="scoreFP16">0</div>
-                    <div class="game-score-crashes" id="crashesFP16"></div>
-                </div>
-                <div class="game-score">
-                    <div class="game-score-label int4">INT4</div>
-                    <div class="game-score-val" id="scoreINT4">0</div>
-                    <div class="game-score-crashes" id="crashesINT4"></div>
-                </div>
-                <div class="game-score">
-                    <div class="game-score-label spec">SPEC DECODE</div>
-                    <div class="game-score-val" id="scoreSPEC">0</div>
-                    <div class="game-score-crashes" id="crashesSPEC"></div>
-                </div>
+                <p id="subtitle">Llama 3.1 70B Instruct on vLLM · NVIDIA H200</p>
             </div>
         </div>
 
-        <div class="metrics-grid three-col">
-            <div class="metric-card" data-model="FP16">
-                <div class="metric-header">
-                    <h3>FP16</h3>
-                    <span class="metric-badge baseline">Quality Baseline</span>
-                </div>
-                <div class="metric-hero">
-                    <div class="hero-stat">
-                        <span class="hero-value" data-metric="latency">0</span>
-                        <span class="hero-unit">ms latency</span>
-                    </div>
-                    <div class="hero-stat">
-                        <span class="hero-value" data-metric="memory">0</span>
-                        <span class="hero-unit">GB GPU</span>
-                    </div>
-                </div>
-                <div class="metric-stats">
-                    <div class="metric-row"><span class="metric-label">Throughput</span><span class="metric-value" data-metric="rps">0.0 req/s</span></div>
-                    <div class="metric-row"><span class="metric-label">P95 Latency</span><span class="metric-value" data-metric="p95">0 ms</span></div>
-                    <div class="metric-row"><span class="metric-label">Tokens/sec</span><span class="metric-value" data-metric="tps">0.0</span></div>
-                    <div class="metric-row"><span class="metric-label">Cost/req</span><span class="metric-value" data-metric="cost">$0.0000</span></div>
-                    <div class="metric-row highlight"><span class="metric-label">Total Requests</span><span class="metric-value" data-metric="total">0</span></div>
-                </div>
+        <nav class="tabs" role="tablist" aria-label="Scenes">
+            <button class="tab is-active" role="tab" data-scene="arena"><kbd>1</kbd>Arena</button>
+            <button class="tab" role="tab" data-scene="numbers"><kbd>2</kbd>Numbers</button>
+            <button class="tab" role="tab" data-scene="quality"><kbd>3</kbd>Quality</button>
+        </nav>
+
+        <div class="controls">
+            <span class="mode" id="modeBadge"><i></i><span>Connecting</span></span>
+            <span class="people" title="Phones connected">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-8 1a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm8 1c-2.7 0-8 1.3-8 4v3h16v-3c0-2.7-5.3-4-8-4Zm-8 0c-.3 0-.7 0-1.1.1A4.7 4.7 0 0 1 9 17v3H1v-3c0-2.4 4.7-4 7-4Z"/></svg>
+                <b id="participants" class="num">0</b>
+            </span>
+            <button class="btn btn-primary" id="startStopBtn">Start traffic</button>
+            <button class="btn btn-ghost" id="resetBtn">Reset</button>
+        </div>
+    </header>
+
+    <!-- ============================== ARENA ============================== -->
+    <section class="scene is-active" id="scene-arena" data-scene="arena">
+        <div class="arena-main">
+            <div class="canvas-card">
+                <canvas id="arenaCanvas" aria-label="Quantization Arena: birds flown by neural networks at different precisions"></canvas>
+                <div class="canvas-loading" id="arenaLoading">Loading the flock…</div>
+                <ol class="feed" id="feed" aria-live="polite"></ol>
             </div>
-            <div class="metric-card" data-model="INT4">
-                <div class="metric-header">
-                    <h3>INT4</h3>
-                    <span class="metric-badge speed">Best Value</span>
-                </div>
-                <div class="metric-hero">
-                    <div class="hero-stat">
-                        <span class="hero-value" data-metric="latency">0</span>
-                        <span class="hero-unit">ms latency</span>
-                    </div>
-                    <div class="hero-stat">
-                        <span class="hero-value" data-metric="memory">0</span>
-                        <span class="hero-unit">GB GPU</span>
-                    </div>
-                </div>
-                <div class="metric-stats">
-                    <div class="metric-row"><span class="metric-label">Throughput</span><span class="metric-value" data-metric="rps">0.0 req/s</span></div>
-                    <div class="metric-row"><span class="metric-label">P95 Latency</span><span class="metric-value" data-metric="p95">0 ms</span></div>
-                    <div class="metric-row"><span class="metric-label">Tokens/sec</span><span class="metric-value" data-metric="tps">0.0</span></div>
-                    <div class="metric-row"><span class="metric-label">Cost/req</span><span class="metric-value" data-metric="cost">$0.0000</span></div>
-                    <div class="metric-row highlight"><span class="metric-label">Total Requests</span><span class="metric-value" data-metric="total">0</span></div>
-                </div>
-            </div>
-            <div class="metric-card" data-model="SPEC_DECODE">
-                <div class="metric-header">
-                    <h3>Spec Decode</h3>
-                    <span class="metric-badge best">Draft + Verify</span>
-                </div>
-                <div class="metric-hero">
-                    <div class="hero-stat">
-                        <span class="hero-value" data-metric="latency">0</span>
-                        <span class="hero-unit">ms latency</span>
-                    </div>
-                    <div class="hero-stat">
-                        <span class="hero-value" data-metric="memory">0</span>
-                        <span class="hero-unit">GB GPU</span>
-                    </div>
-                </div>
-                <div class="metric-stats">
-                    <div class="metric-row"><span class="metric-label">Throughput</span><span class="metric-value" data-metric="rps">0.0 req/s</span></div>
-                    <div class="metric-row"><span class="metric-label">P95 Latency</span><span class="metric-value" data-metric="p95">0 ms</span></div>
-                    <div class="metric-row"><span class="metric-label">Tokens/sec</span><span class="metric-value" data-metric="tps">0.0</span></div>
-                    <div class="metric-row"><span class="metric-label">Cost/req</span><span class="metric-value" data-metric="cost">$0.0000</span></div>
-                    <div class="metric-row highlight"><span class="metric-label">Total Requests</span><span class="metric-value" data-metric="total">0</span></div>
-                </div>
+            <div class="caption">
+                <p>
+                    Every bird is flown by the same <b id="paramCount">4,673</b>-parameter network I trained in PyTorch,
+                    and the only thing that changes between them is how its weights are stored.
+                    Red gaps are hard prompts, <b>112 px</b> wide instead of <b>170</b>, so a tiny rounding error in the
+                    weights decides whether a bird makes it through.
+                </p>
+                <ul class="keys">
+                    <li><kbd>Space</kbd>fly one yourself</li>
+                    <li><kbd>H</kbd>throw a hard prompt</li>
+                    <li><kbd>P</kbd>pause</li>
+                    <li><kbd>R</kbd>new course</li>
+                    <li><kbd>T</kbd>theme</li>
+                </ul>
             </div>
         </div>
 
-        <div class="challenge-panel" id="challengePanel" style="display: none;">
-            <div class="challenge-header">
-                <h2>Prompt Challenge</h2>
-                <div class="challenge-controls">
-                    <button class="challenge-btn" data-challenge="complex_reasoning">Reasoning</button>
-                    <button class="challenge-btn" data-challenge="code_generation">Code Gen</button>
-                    <button class="challenge-btn" data-challenge="summarization">Summary</button>
+        <aside class="arena-side">
+            <div class="card flock">
+                <div class="card-head">
+                    <h2>Hard gaps cleared</h2>
+                    <span class="hint">click to hide a bird</span>
+                </div>
+                <ol class="rows" id="flockRows"></ol>
+            </div>
+
+            <div class="card spec-card">
+                <div class="card-head">
+                    <h2><span class="glyph" style="--c: var(--v-spec)"></span>Spec decode, live</h2>
+                    <span class="hint" id="specK">draft guesses 4 moves</span>
+                </div>
+                <div class="spec-stats">
+                    <div><b id="specAccept" class="num">–</b><span>draft moves accepted</span></div>
+                    <div><b id="specFpp" class="num">–</b><span>moves per target pass</span></div>
+                    <div><b id="specDiff" class="num">–</b><span>off the BF16 path</span></div>
+                </div>
+                <div class="strips" id="specStrips" aria-label="Last speculation passes"></div>
+                <p class="strip-key"><i class="ok"></i>draft move the target agreed with <i class="fix"></i>target's own move</p>
+            </div>
+
+            <div class="card join">
+                <img id="qr" class="qr" alt="QR code to join" src="/qr.svg">
+                <div class="join-text">
+                    <h2>Throw hard prompts at them</h2>
+                    <p>Scan with your phone, back a bird, and send a hard prompt. It lands on this course as a red gap.</p>
+                    <code id="joinUrl"></code>
                 </div>
             </div>
-            <div class="challenge-prompt-text" id="challengePromptText">Pick a challenge above to fire the same prompt at all three models</div>
-            <div class="challenge-responses">
-                <div class="challenge-col" data-model="FP16">
-                    <div class="challenge-col-header">FP16 <span class="typing-speed">47 tps</span></div>
-                    <div class="challenge-output" id="outputFP16"></div>
-                    <div class="challenge-verdict-bar" id="verdictFP16"></div>
-                </div>
-                <div class="challenge-col" data-model="INT4">
-                    <div class="challenge-col-header">INT4 <span class="typing-speed">44 tps</span></div>
-                    <div class="challenge-output" id="outputINT4"></div>
-                    <div class="challenge-verdict-bar" id="verdictINT4"></div>
-                </div>
-                <div class="challenge-col" data-model="SPEC_DECODE">
-                    <div class="challenge-col-header">SPEC DECODE <span class="typing-speed">40 tps</span></div>
-                    <div class="challenge-output" id="outputSPEC"></div>
-                    <div class="challenge-verdict-bar" id="verdictSPEC"></div>
-                </div>
+        </aside>
+    </section>
+
+    <!-- ============================== NUMBERS ============================== -->
+    <section class="scene" id="scene-numbers" data-scene="numbers">
+        <div class="numbers-head">
+            <div>
+                <h2 class="scene-title">What the real 70B deployments measured</h2>
+                <p class="scene-sub" id="benchNote">Loading benchmark details…</p>
+            </div>
+            <div class="legend-basis">
+                <span class="basis basis-bench">Benchmark</span>
+                <span class="basis basis-live">Live</span>
+                <span class="basis basis-sim">Simulated from benchmark</span>
             </div>
         </div>
-
-        <div class="summary-stats">
-            <div class="summary-card">
-                <div class="summary-value" id="totalParticipants">0</div>
-                <div class="summary-label">Active Participants</div>
+        <div class="variant-grid" id="variantGrid"></div>
+        <div class="numbers-bottom">
+            <div class="card per-gpu">
+                <div class="card-head">
+                    <h2>Tokens per second, per GPU</h2>
+                    <span class="hint">one stream · higher is better</span>
+                </div>
+                <div class="bars" id="perGpuBars"></div>
             </div>
-            <div class="summary-card">
-                <div class="summary-value" id="totalDemoRequests">0</div>
-                <div class="summary-label">Total Requests</div>
+            <div class="card load" id="loadCard">
+                <div class="card-head">
+                    <h2>Under load</h2>
+                    <span class="hint" id="loadHint">output tokens/s per GPU vs. concurrent requests</span>
+                </div>
+                <div id="loadBody"></div>
             </div>
         </div>
+    </section>
 
-        <footer>
-            <p>Ctrl+Shift+S start/stop &middot; Ctrl+Shift+Q prompt challenge &middot; SPACE jump &middot; PyTorch Conference 2026</p>
-        </footer>
-    </div>
+    <!-- ============================== QUALITY ============================== -->
+    <section class="scene" id="scene-quality" data-scene="quality">
+        <div class="numbers-head">
+            <div>
+                <h2 class="scene-title">Same prompt, every variant</h2>
+                <p class="scene-sub" id="qualitySource">Pick a prompt to send it to every variant.</p>
+            </div>
+            <div class="seg" id="qualityPick">
+                <button data-scenario="complex_reasoning">Reasoning</button>
+                <button data-scenario="code_generation">Code</button>
+                <button data-scenario="summarization">Summary</button>
+            </div>
+        </div>
+        <div class="prompt-box" id="qualityPrompt"></div>
+        <div class="quality-grid" id="qualityGrid"></div>
+    </section>
 
-    <!-- Full-screen wave mesh particles -->
-    <script>
-    (function() {
-        const c = document.getElementById('bgParticles');
-        const ctx = c.getContext('2d');
-        let w, h, particles = [];
-        const COLS = 14, ROWS = 10;
-        const CONNECT = 130;
-        let mouseX = -9999, mouseY = -9999;
-        let time = 0;
+    <footer class="bottom">
+        <span id="footLeft">PyTorch Conference North America 2026 · San Jose</span>
+        <span id="footRight"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> scenes · <kbd>F</kbd> full screen · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>S</kbd> start or stop traffic</span>
+    </footer>
+</div>
 
-        function resize() {
-            w = c.width = window.innerWidth;
-            h = c.height = window.innerHeight;
-            buildGrid();
-        }
-
-        function buildGrid() {
-            particles = [];
-            const spacingX = w / (COLS + 1);
-            const spacingY = h / (ROWS + 1);
-            for (let r = 0; r < ROWS; r++) {
-                for (let col = 0; col < COLS; col++) {
-                    particles.push({
-                        homeX: spacingX * (col + 1) + (Math.random() - 0.5) * spacingX * 0.4,
-                        homeY: spacingY * (r + 1) + (Math.random() - 0.5) * spacingY * 0.4,
-                        x: 0, y: 0,
-                        vx: 0, vy: 0,
-                        phase: Math.random() * Math.PI * 2,
-                        speed: 0.2 + Math.random() * 0.3,
-                        r: 1.5 + Math.random() * 2,
-                    });
-                }
-            }
-            particles.forEach(p => { p.x = p.homeX; p.y = p.homeY; });
-        }
-
-        function draw() {
-            time += 0.012;
-            ctx.clearRect(0, 0, w, h);
-
-            particles.forEach(p => {
-                const wave = Math.sin(time * p.speed + p.phase + p.homeX * 0.003) * 12;
-                const wave2 = Math.cos(time * p.speed * 0.7 + p.phase + p.homeY * 0.004) * 8;
-                const tx = p.homeX + wave2;
-                const ty = p.homeY + wave;
-
-                const dx = mouseX - p.x, dy = mouseY - p.y;
-                const md = Math.sqrt(dx * dx + dy * dy);
-                if (md < 160) {
-                    const f = (160 - md) / 160 * 3;
-                    p.vx -= (dx / md) * f;
-                    p.vy -= (dy / md) * f;
-                }
-
-                p.vx += (tx - p.x) * 0.025;
-                p.vy += (ty - p.y) * 0.025;
-                p.vx *= 0.9;
-                p.vy *= 0.9;
-                p.x += p.vx;
-                p.y += p.vy;
-            });
-
-            for (let i = 0; i < particles.length; i++) {
-                for (let j = i + 1; j < particles.length; j++) {
-                    const a = particles[i], b = particles[j];
-                    const dx = a.x - b.x, dy = a.y - b.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < CONNECT) {
-                        ctx.beginPath();
-                        ctx.moveTo(a.x, a.y);
-                        ctx.lineTo(b.x, b.y);
-                        ctx.strokeStyle = `rgba(238, 0, 0, ${0.06 * (1 - dist / CONNECT)})`;
-                        ctx.lineWidth = 0.6;
-                        ctx.stroke();
-                    }
-                }
-            }
-
-            particles.forEach(p => {
-                const pulse = (Math.sin(time * 2 + p.phase) + 1) / 2;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r + pulse * 0.8, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(238, 0, 0, ${0.08 + pulse * 0.07})`;
-                ctx.fill();
-            });
-
-            requestAnimationFrame(draw);
-        }
-
-        document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
-        document.addEventListener('mouseleave', () => { mouseX = -9999; mouseY = -9999; });
-        window.addEventListener('resize', resize);
-        resize();
-        draw();
-    })();
-    </script>
-
-    <!-- Quantization Runner game -->
-    <script>
-    (function() {
-        const gc = document.getElementById('gameCanvas');
-        const g = gc.getContext('2d');
-        let gW, gH;
-        let gameActive = false;
-        let gameSpeed = 3;
-        let obstacles = [];
-        let crashFx = [];
-        let spawnTimer = 0;
-        let frameCount = 0;
-
-        const GROUND_Y_RATIO = 0.82;
-        const RUNNER_W = 36;
-        const RUNNER_H = 32;
-        const GRAVITY = 0.55;
-        const JUMP_VEL = -10;
-        const INT4_JUMP_VEL = -7.5;
-
-        const TASK_LABELS = ['Easy', 'Code', 'Math', 'Logic', 'Reason'];
-        const HARD_TASKS = ['Math', 'Logic', 'Reason'];
-
-        const runners = [
-            { key: 'FP16', label: 'FP16', color: '#cc0000', y: 0, vy: 0, onGround: true, lane: 0, score: 0, crashes: 0, dead: false },
-            { key: 'INT4', label: 'INT4', color: '#0a7e3e', y: 0, vy: 0, onGround: true, lane: 1, score: 0, crashes: 0, dead: false },
-            { key: 'SPEC', label: 'SPEC', color: '#7B2D8E', y: 0, vy: 0, onGround: true, lane: 2, score: 0, crashes: 0, dead: false },
-        ];
-
-        function gResize() {
-            const rect = gc.getBoundingClientRect();
-            gc.width = rect.width * 2;
-            gc.height = 260 * 2;
-            gW = gc.width / 2;
-            gH = gc.height / 2;
-            g.setTransform(2, 0, 0, 2, 0, 0);
-        }
-
-        function laneGroundY(lane) {
-            const spacing = gH * 0.25;
-            return 40 + lane * spacing + spacing * GROUND_Y_RATIO;
-        }
-
-        function jump() {
-            runners.forEach(r => {
-                if (r.onGround && !r.dead) {
-                    r.onGround = false;
-                    r.vy = (r.key === 'INT4') ? INT4_JUMP_VEL : JUMP_VEL;
-                }
-            });
-        }
-
-        function spawnObstacle() {
-            const taskIdx = Math.floor(Math.random() * TASK_LABELS.length);
-            const label = TASK_LABELS[taskIdx];
-            const isHard = HARD_TASKS.includes(label);
-            const h = isHard ? 38 : 22;
-            const obstW = 28;
-
-            obstacles.push({
-                x: gW + 20,
-                w: obstW,
-                h: h,
-                label: label,
-                isHard: isHard,
-                scored: [false, false, false],
-                color: isHard ? 'rgba(204,0,0,0.7)' : 'rgba(0,0,0,0.25)',
-            });
-        }
-
-        function spawnCrashFx(x, y, color) {
-            for (let i = 0; i < 18; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const spd = 2 + Math.random() * 5;
-                crashFx.push({
-                    x, y,
-                    vx: Math.cos(angle) * spd,
-                    vy: Math.sin(angle) * spd - 2,
-                    life: 1, r: 2 + Math.random() * 3, color
-                });
-            }
-        }
-
-        function update() {
-            if (!gameActive) return;
-
-            frameCount++;
-            gameSpeed = 3 + Math.min(frameCount / 800, 4);
-
-            spawnTimer -= 1;
-            if (spawnTimer <= 0) {
-                spawnObstacle();
-                spawnTimer = 70 + Math.random() * 60 - Math.min(frameCount / 200, 30);
-            }
-
-            const runnerX = 70;
-
-            runners.forEach((r, lane) => {
-                const groundY = laneGroundY(lane);
-                if (!r.onGround) {
-                    r.vy += GRAVITY;
-                    r.y += r.vy;
-                    if (r.y >= groundY - RUNNER_H) {
-                        r.y = groundY - RUNNER_H;
-                        r.vy = 0;
-                        r.onGround = true;
-                    }
-                } else {
-                    r.y = groundY - RUNNER_H;
-                }
-            });
-
-            obstacles.forEach(ob => {
-                ob.x -= gameSpeed;
-
-                runners.forEach((r, lane) => {
-                    if (r.dead || ob.scored[lane]) return;
-                    const groundY = laneGroundY(lane);
-                    const obY = groundY - ob.h;
-
-                    const overlap = (
-                        runnerX + RUNNER_W > ob.x &&
-                        runnerX < ob.x + ob.w &&
-                        r.y + RUNNER_H > obY
-                    );
-
-                    if (overlap && r.key === 'INT4' && ob.isHard) {
-                        r.crashes++;
-                        ob.scored[lane] = true;
-                        spawnCrashFx(runnerX + RUNNER_W / 2, r.y + RUNNER_H / 2, r.color);
-                        document.getElementById('crashes' + r.key).textContent = r.crashes + ' crashes';
-                    }
-
-                    if (ob.x + ob.w < runnerX && !ob.scored[lane]) {
-                        ob.scored[lane] = true;
-                        r.score++;
-                        document.getElementById('score' + r.key).textContent = r.score;
-                    }
-                });
-            });
-
-            obstacles = obstacles.filter(ob => ob.x + ob.w > -20);
-
-            crashFx.forEach(p => {
-                p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 0.025;
-            });
-            crashFx = crashFx.filter(p => p.life > 0);
-        }
-
-        function render() {
-            g.clearRect(0, 0, gW, gH);
-
-            const runnerX = 70;
-
-            runners.forEach((r, lane) => {
-                const groundY = laneGroundY(lane);
-
-                g.strokeStyle = 'rgba(0,0,0,0.06)';
-                g.lineWidth = 1;
-                g.beginPath();
-                g.moveTo(40, groundY);
-                g.lineTo(gW - 20, groundY);
-                g.stroke();
-
-                g.fillStyle = r.color;
-                g.globalAlpha = 0.12;
-                g.font = '600 10px "Red Hat Mono"';
-                g.textAlign = 'left';
-                g.textBaseline = 'bottom';
-                g.fillText(r.label + ' (' + r.speed_label + ')', 6, groundY - 2);
-                g.globalAlpha = 1;
-            });
-
-            obstacles.forEach(ob => {
-                runners.forEach((r, lane) => {
-                    const groundY = laneGroundY(lane);
-                    const obY = groundY - ob.h;
-
-                    g.fillStyle = ob.color;
-                    g.fillRect(ob.x, obY, ob.w, ob.h);
-
-                    if (ob.isHard) {
-                        g.fillStyle = 'rgba(204,0,0,0.15)';
-                        g.fillRect(ob.x, obY, ob.w, ob.h);
-                    }
-
-                    g.fillStyle = ob.isHard ? 'rgba(204,0,0,0.8)' : 'rgba(0,0,0,0.35)';
-                    g.font = '600 7px "Red Hat Mono"';
-                    g.textAlign = 'center';
-                    g.textBaseline = 'bottom';
-                    g.fillText(ob.label, ob.x + ob.w / 2, obY - 3);
-                });
-            });
-
-            runners.forEach((r, lane) => {
-                const x = runnerX;
-
-                g.fillStyle = r.color;
-                const radius = 6;
-                g.beginPath();
-                g.moveTo(x + radius, r.y);
-                g.lineTo(x + RUNNER_W - radius, r.y);
-                g.quadraticCurveTo(x + RUNNER_W, r.y, x + RUNNER_W, r.y + radius);
-                g.lineTo(x + RUNNER_W, r.y + RUNNER_H - radius);
-                g.quadraticCurveTo(x + RUNNER_W, r.y + RUNNER_H, x + RUNNER_W - radius, r.y + RUNNER_H);
-                g.lineTo(x + radius, r.y + RUNNER_H);
-                g.quadraticCurveTo(x, r.y + RUNNER_H, x, r.y + RUNNER_H - radius);
-                g.lineTo(x, r.y + radius);
-                g.quadraticCurveTo(x, r.y, x + radius, r.y);
-                g.fill();
-
-                g.fillStyle = '#fff';
-                g.font = '700 9px "Red Hat Display"';
-                g.textAlign = 'center';
-                g.textBaseline = 'middle';
-                g.fillText(r.label, x + RUNNER_W / 2, r.y + RUNNER_H / 2);
-
-                if (!r.onGround) {
-                    g.fillStyle = r.color;
-                    g.globalAlpha = 0.15;
-                    g.beginPath();
-                    const groundY = laneGroundY(lane);
-                    const shadowW = RUNNER_W * 0.6;
-                    g.ellipse(x + RUNNER_W / 2, groundY - 1, shadowW / 2, 3, 0, 0, Math.PI * 2);
-                    g.fill();
-                    g.globalAlpha = 1;
-                }
-            });
-
-            crashFx.forEach(p => {
-                g.beginPath();
-                g.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-                g.fillStyle = p.color;
-                g.globalAlpha = p.life * 0.7;
-                g.fill();
-                g.globalAlpha = 1;
-            });
-
-            if (!gameActive) {
-                g.fillStyle = 'rgba(0,0,0,0.12)';
-                g.font = '600 14px "Red Hat Display"';
-                g.textAlign = 'center';
-                g.textBaseline = 'middle';
-                g.fillText('Press Start Demo, then SPACE to jump', gW / 2, gH / 2);
-            }
-        }
-
-        runners[0].speed_label = '47 tps';
-        runners[1].speed_label = '44 tps';
-        runners[2].speed_label = '40 tps';
-
-        function gameLoop() {
-            update();
-            render();
-            requestAnimationFrame(gameLoop);
-        }
-
-        document.addEventListener('keydown', e => {
-            if (e.code === 'Space' && gameActive) {
-                e.preventDefault();
-                jump();
-            }
-        });
-
-        gc.addEventListener('click', () => {
-            if (gameActive) jump();
-        });
-
-        window.addEventListener('resize', gResize);
-        gResize();
-        gameLoop();
-
-        window.gameStart = function() {
-            gameActive = true;
-            gameSpeed = 3;
-            frameCount = 0;
-            spawnTimer = 30;
-            obstacles = [];
-            crashFx = [];
-            runners.forEach(r => {
-                r.score = 0; r.crashes = 0; r.dead = false;
-                r.onGround = true; r.vy = 0;
-            });
-            ['FP16','INT4','SPEC'].forEach(k => {
-                document.getElementById('score' + k).textContent = '0';
-                document.getElementById('crashes' + k).textContent = '';
-            });
-        };
-
-        window.gameStop = function() {
-            gameActive = false;
-        };
-
-        window.gameReset = function() {
-            gameActive = false;
-            obstacles = [];
-            crashFx = [];
-            runners.forEach(r => {
-                r.score = 0; r.crashes = 0; r.dead = false;
-                r.onGround = true; r.vy = 0;
-            });
-            ['FP16','INT4','SPEC'].forEach(k => {
-                document.getElementById('score' + k).textContent = '0';
-                document.getElementById('crashes' + k).textContent = '';
-            });
-        };
-    })();
-    </script>
-
-    <script src="/static/js/presenter.js?v=4"></script>
+<script src="/static/js/arena-core.js"></script>
+<script src="/static/js/arena.js"></script>
+<script src="/static/js/presenter.js"></script>
 </body>
 </html>

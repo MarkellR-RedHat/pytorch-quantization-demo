@@ -1,0 +1,118 @@
+/* Shared tokens for the presenter stage and the audience phone view.
+   Fonts are bundled (static/fonts, SIL OFL 1.1) so nothing depends on conference wifi. */
+
+@font-face { font-family: 'Red Hat Display'; src: url('/static/fonts/RedHatDisplay-VF.woff2') format('woff2'); font-weight: 300 900; font-display: block; }
+@font-face { font-family: 'Red Hat Text'; src: url('/static/fonts/RedHatText-VF.woff2') format('woff2'); font-weight: 300 700; font-display: block; }
+@font-face { font-family: 'Red Hat Mono'; src: url('/static/fonts/RedHatMono-VF.woff2') format('woff2'); font-weight: 300 700; font-display: block; }
+
+:root {
+    color-scheme: light;
+    --page: #f2f2f2;
+    --surface: #ffffff;
+    --surface-2: #f7f7f7;
+    --surface-3: #ececec;
+    --ink: #151515;
+    --ink-2: #4d4d4d;
+    --ink-3: #6a6e73;
+    --line: #e0e0e0;
+    --line-strong: #c7c7c7;
+    --brand: #ee0000;
+    --brand-ink: #a60000;
+    --brand-wash: #fce3e3;
+    --brand-solid: #ee0000;
+    --brand-solid-hover: #be0000;
+    --good: #3e8635;
+    --good-wash: #e9f4e6;
+    --shadow: 0 1px 2px rgba(21, 21, 21, 0.06), 0 8px 24px rgba(21, 21, 21, 0.06);
+
+    /* Variant identity (validated for CVD separation and 3:1 contrast on white) */
+    --v-bf16: #2a78d6;
+    --v-fp8: #0f9a6a;
+    --v-int4: #e0602c;
+    --v-spec: #4a3aa7;
+    --v-you: #151515;
+
+    /* Arena scene */
+    --sky-top: #ffffff;
+    --sky-bottom: #f3f5f8;
+    --grid: rgba(21, 21, 21, 0.045);
+    --pipe: #292929;
+    --pipe-edge: #151515;
+    --pipe-hard: #ee0000;
+    --pipe-hard-edge: #a60000;
+    --ground: #e4e4e4;
+    --ground-tick: #c7c7c7;
+
+    --display: 'Red Hat Display', system-ui, sans-serif;
+    --text: 'Red Hat Text', system-ui, sans-serif;
+    --mono: 'Red Hat Mono', ui-monospace, monospace;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0f0f0f;
+    --surface: #1b1b1b;
+    --surface-2: #222222;
+    --surface-3: #2c2c2c;
+    --ink: #f5f5f5;
+    --ink-2: #c7c7c7;
+    --ink-3: #9a9ea3;
+    --line: #333333;
+    --line-strong: #4a4a4a;
+    --brand: #f56e6e;
+    --brand-ink: #ff9b9b;
+    --brand-wash: #3a1616;
+    --brand-solid: #c90000;
+    --brand-solid-hover: #a60000;
+    --good: #7cc674;
+    --good-wash: #1b2d18;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+
+    --v-bf16: #4d94e8;
+    --v-fp8: #2cb582;
+    --v-int4: #f07a45;
+    --v-spec: #9085e9;
+    --v-you: #f5f5f5;
+
+    --sky-top: #1d1f23;
+    --sky-bottom: #15171a;
+    --grid: rgba(255, 255, 255, 0.04);
+    --pipe: #d8d8d8;
+    --pipe-edge: #f5f5f5;
+    --pipe-hard: #f56e6e;
+    --pipe-hard-edge: #ff9b9b;
+    --ground: #26282c;
+    --ground-tick: #3a3d42;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+button { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Bird glyph used in legends and scoreboards: same shape as the canvas sprite */
+.glyph {
+    display: inline-block; flex: none;
+    width: 22px; height: 17px; border-radius: 50% 55% 45% 50%;
+    background: var(--c); border: 2.5px solid var(--c);
+    position: relative;
+}
+.glyph::after {
+    content: ''; position: absolute; right: 3px; top: 3px;
+    width: 4px; height: 4px; border-radius: 50%; background: var(--surface);
+}
+.glyph.hollow { background: var(--surface); }
+.glyph.hollow::after { background: var(--c); }
+
+.badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    border-radius: 999px; white-space: nowrap;
+}
