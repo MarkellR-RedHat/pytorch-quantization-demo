@@ -471,6 +471,7 @@ h1, h2 { word-spacing: .08em; }
 .wrap-link { margin-top: 34px; display: flex; align-items: center; gap: 16px; font-size: 24px; color: var(--ink-2); padding: 18px 24px; border: 1.5px dashed #c9ccd1; border-radius: 16px; }
 .wrap-link .mono { font-size: 21px; color: var(--ink); white-space: nowrap; }
 .wrap-link b { font-family: var(--display); color: var(--ink); }
+.caveat { display: block; margin-top: 8px; font: italic 400 19px/1.4 var(--text); color: var(--ink-3); }
 </style>
 </head>
 <body>
@@ -608,15 +609,15 @@ h1, h2 { word-spacing: .08em; }
       <h3><span class="emo">🟡</span> INT4 AWQ</h3><div class="sub">4-BIT WEIGHTS</div>
       <div class="chips-row"><div class="gchip">H200</div><span class="gcount">1 H200</span></div>
       <div class="kv-rows">
-        <div class="kv2"><span>Buys you</span><b>Half the GPUs, at about the same speed</b></div>
-        <div class="kv2"><span>Best for</span><b>High-volume chat and easy questions</b></div>
+        <div class="kv2"><span>Buys you</span><b>Half the GPUs, at about the same speed for one request at a time</b></div>
+        <div class="kv2"><span>Best for</span><b>Everyday chat and easy questions</b></div>
       </div>
     </div>
     <div class="vcard step" style="--c:var(--spec); --ct:var(--spec-tx); --tint:var(--spec-tint)">
       <h3><span class="emo">🟣</span> Speculative decode</h3><div class="sub">70B + SMALL 8B DRAFT</div>
       <div class="chips-row"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s, same as BF16</span></div>
       <div class="kv-rows">
-        <div class="kv2 pending" data-pending="T3: CONFIRM WITH SPEC-DECODE TEAM"><span>Buys you</span><b>The 70B's exact answer, sooner</b></div>
+        <div class="kv2"><span>Buys you</span><b>Built for faster answers, with BF16 quality</b><em class="caveat">Came out slower in this run with CUDA graphs off, so it's being rerun</em></div>
         <div class="kv2"><span>Best for</span><b>Latency-sensitive, low-traffic work</b></div>
       </div>
     </div>
@@ -646,7 +647,7 @@ h1, h2 { word-spacing: .08em; }
     <div class="rcol">
       <div class="dest rise" style="--d:6; --c:var(--int4); --ct:var(--int4-tx)"><h3>INT4</h3><p>1 GPU per replica</p></div>
       <div class="dest rise" style="--d:7; --c:var(--bf16); --ct:var(--bf16-tx)"><h3>BF16</h3><p>2 GPUs, full precision</p></div>
-      <div class="dest rise" style="--d:8; --c:var(--spec); --ct:var(--spec-tx)"><h3>Spec decode</h3><p>2 GPUs, faster answers</p></div>
+      <div class="dest rise" style="--d:8; --c:var(--spec); --ct:var(--spec-tx)"><h3>Spec decode</h3><p>2 GPUs, after the rerun</p></div>
     </div>
   </div>
   <div class="plugs step"><span class="lab"><span class="emo">🔌</span> Also plugs into the same router</span><span class="chipset"><span>FP8</span><span>INT8 (W8A8)</span><span>GPTQ</span><span>EAGLE-3 speculators</span><span>A smaller 8B for easy questions</span></span></div>
@@ -661,8 +662,8 @@ h1, h2 { word-spacing: .08em; }
     <div class="rise" style="--d:2">
       <h3>The points we made</h3>
       <ol class="pts">
-        <li class="step"><span><b>INT4 is a cost tool.</b> It served the 70B on half the GPUs at about the same speed per request.</span></li>
-        <li class="step"><span><b>Spec decode is a latency tool.</b> Same GPUs, same answers, delivered sooner.</span></li>
+        <li class="step"><span><b>INT4 is a cost tool.</b> It served the 70B on half the GPUs at about the same speed, one request at a time.</span></li>
+        <li class="step"><span><b>Spec decode is a latency tool.</b> Same GPUs and BF16 quality, built to answer sooner, and this run gets redone with CUDA graphs on.</span></li>
         <li class="step"><span><b>Quality depends on the workload,</b> so test on your own prompts.</span></li>
         <li class="step"><span><b>A router</b> lets each one run where it's best, once your traffic is big and mixed enough to run more than one.</span></li>
       </ol>
@@ -945,19 +946,19 @@ Priya's a little naive, so she grabs the first fix everyone reaches for and quan
 Then Marcus files this. Let the room read it. The model used to nail his analysis questions, and now it's returning wrong answers. [Click] Quick show of hands, who has quantized a model and then just hoped the quality was fine? Yeah. Priya was in that club too, so she stopped grabbing the first fix and started comparing her options.
 
 [6 The options | 2:45 to 3:45]
-So Priya started investigating less naive ways to improve inference, and here are her three options, apples to apples. [Click] BF16 is two H200s and the reference answer. [Click] INT4 is one H200, so half the GPUs at about the same speed, and it's the fit for high-volume chat and easy questions. [Click] Speculative decoding is the one people ask about, because it still needs the same two H200s as BF16. What it buys you is speed on the same hardware. A smaller, cheaper 8B model drafts a few tokens ahead, and the 70B checks them in one pass and keeps the ones it agrees with, so it doesn't have to generate every token itself, and you still get the 70B's exact answer. Quick vote before the demo, hands up if you think BF16 is fastest. INT4? Spec decode? Let's find out.
+So Priya started investigating less naive ways to improve inference, and here are her three options, apples to apples. [Click] BF16 is two H200s and the reference answer. [Click] INT4 is one H200, so half the GPUs at about the same speed when requests come one at a time, and it's the fit for everyday chat and easy questions. Under heavy batching, Red Hat's own study found 8-bit pulls ahead of 4-bit, so this is a light-traffic win. [Click] Speculative decoding is the one people ask about, because it still needs the same two H200s as BF16. What it buys you is speed on the same hardware. A smaller, cheaper 8B model drafts a few tokens ahead, and the 70B checks them in one pass and keeps the ones it agrees with, so it doesn't have to generate every token itself, and because the 70B checks every token you keep BF16 quality. Be upfront that it came out slower in this run. CUDA graphs were off, and at temperature 0.7 vLLM 0.18's draft guesses land less often, so it's being rerun. Quick vote before the demo, hands up if you think BF16 is fastest. INT4? Spec decode? Let's find out.
 
 [7 Let's find out | 3:45 to 7:00]
 Call out a question and I'll send it to all three setups at once. Switch to the dashboard.
 Scene 1, Ask. Type the question from the room, or use a preset (Sheep riddle, Python function, Three bullet summary) if it's quiet. Point at each column: time to first token, tokens per second, tokens in the answer, total time, and who finished first. Call out the tokens-in-answer number, because a setup can look faster just by writing a shorter answer. Read the router line out loud, where it says which setup a router would send this question to and why. Do two or three questions.
 Scene 2, Under load. Say what the run was: 1, 8, 32, then 64 questions at once. Press Space to play it and watch tokens per second per GPU climb for each setup, then read the one-line result.
-Scene 3, Numbers, the money slide. For each setup: speed for one request, tokens per second per GPU, accuracy, and best for. INT4 gets about 1.9 times the tokens per GPU of BF16, because it runs at 94% of the speed on half the GPUs. Spec decode gives the same output as BF16 on the same two GPUs, and this run had CUDA graphs off, which is why it isn't faster here.
+Scene 3, Numbers, the money slide. For each setup: speed for one request, tokens per second per GPU, accuracy, and best for. INT4 gets about 1.9 times the tokens per GPU of BF16, because it runs at 94% of the speed on half the GPUs. Spec decode runs on the same two GPUs and the 70B checks every token, and this run had CUDA graphs off, which is why it isn't faster here.
 
 [8 Priya adds a router | 7:00 to 7:50]
-So there wasn't one winner, and Priya added a router. Easy questions go to INT4, Marcus's analysis stays on BF16, and latency-critical work can use spec decode. It started as one BF16 replica, got popular, and every new replica cost two more H200s. [Click] And these three aren't the only options. FP8, INT8, GPTQ, EAGLE-style speculators, or a smaller 8B for the easy questions all plug into the same router, I just didn't have time for all of them today. [Click] Only the hard questions go to BF16 now, so she needs far fewer GPUs overall. Marcus closes his ticket, and Dana sends another party emoji.
+So there wasn't one winner, and Priya added a router. Easy questions go to INT4, Marcus's analysis stays on BF16, and latency-critical work can use spec decode once the rerun backs it up. It started as one BF16 replica, got popular, and every new replica cost two more H200s. [Click] And these three aren't the only options. FP8, INT8, GPTQ, EAGLE-style speculators, or a smaller 8B for the easy questions all plug into the same router, I just didn't have time for all of them today. [Click] Only the hard questions go to BF16 now, so she needs far fewer GPUs overall. Marcus closes his ticket, and Dana sends another party emoji.
 
 [9 Wrap-up | 7:50 to 9:25]
-Four points to take home, one click each. INT4 is a cost tool. Spec decode is a latency tool. Quality depends on the workload, so test on your own prompts. And a router lets each one run where it's best, once your traffic is big and mixed enough. If you're small, three pools of GPUs is overkill, so pick the one that fits most of your questions. A few things to think about are how much of your traffic really needs full precision, whether your target is cost per token or time to answer, and whether you have an eval set built from real prompts. If technical questions come up and we're short on time, point to the link at the bottom, where the repo answers them. FP8 fits on one H200 and keeps 99.9% of the score on Red Hat's build. The spec decode run had enforce_eager on, which in vLLM 0.18 turns off torch.compile and CUDA graphs. Smaller models lose more under quantization, which is 97.4% kept for the 70B vs 96.1% for the 8B in Red Hat's study. GPTQ was slightly ahead of AWQ there too. If asked why vLLM 0.18, it's the Red Hat AI build the cluster runs.
+Four points to take home, one click each. INT4 is a cost tool. Spec decode is a latency tool, and this run gets redone with CUDA graphs on. Quality depends on the workload, so test on your own prompts. And a router lets each one run where it's best, once your traffic is big and mixed enough. If you're small, three pools of GPUs is overkill, so pick the one that fits most of your questions. A few things to think about are how much of your traffic really needs full precision, whether your target is cost per token or time to answer, and whether you have an eval set built from real prompts. If technical questions come up and we're short on time, point to the link at the bottom, where the repo answers them. FP8 fits on one H200 and keeps 99.9% of the score on Red Hat's build. The spec decode run had enforce_eager on, which in vLLM 0.18 turns off torch.compile and CUDA graphs. Smaller models lose more under quantization, which is 97.4% kept for the 70B vs 96.1% for the 8B in Red Hat's study. GPTQ was slightly ahead of AWQ there too. If asked why vLLM 0.18, it's the Red Hat AI build the cluster runs.
 
 [10 Close | 9:25 to 10:00]
 Here's all the source code I used. If you want to see how I did this, it's all in the repo. Thank you.
