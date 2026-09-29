@@ -10,6 +10,7 @@
             gets: 'Full quality, the answer every other setup is measured against',
             best: 'Questions where a wrong answer is expensive',
             trade: 'Two GPUs for every replica, so every new replica doubles the bill',
+            watch: 'Two GPUs per replica, so scaling out gets expensive fast',
             route: 'A wrong answer is expensive',
             acc: '100%', accNote: 'the baseline',
         },
@@ -19,16 +20,18 @@
             best: 'High-volume chat and easy questions',
             trade: 'Small accuracy loss that shows up on hard reasoning, so test it on your own prompts',
             route: 'Easy questions',
-            acc: '≈99%', accNote: 'of BF16 accuracy*',
+            acc: '≈99%', accNote: '97% on harder tests*',
+            watch: 'Slips first on hard reasoning, and its edge is expected to shrink under heavy traffic',
         },
         SPEC_DECODE: {
             color: '--v-spec', role: 'Same GPUs, built for lower latency',
-            gets: 'Can answer faster on the same GPUs once CUDA graphs are on, with the same output as BF16',
+            gets: 'Can answer faster on the same GPUs once CUDA graphs are on',
             best: 'Latency-sensitive, low-traffic work',
             trade: 'A draft model to host next to the big one, and the gain shrinks as traffic grows',
             note: 'This run had CUDA graphs turned off (enforce_eager), which slows speculative decoding the most. The rerun without it is next.',
             route: 'Latency-sensitive, low traffic',
             acc: '100%', accNote: 'same output as BF16',
+            watch: 'Needs a second model on the GPUs, and this run hasn\'t shown a speedup yet',
         },
         FP8: {
             color: '--v-fp8', role: 'One GPU, near-lossless',
@@ -103,6 +106,7 @@
     function chips(key) { const n = gpus(key); return `<span class="gpu-chips">${'<i></i>'.repeat(n)}${n} × H200</span>`; }
     function glyph(key) { return `<span class="glyph" style="--c: var(${color(key)})"></span>`; }
     function markdownToText(t) { return t.replace(/^```[a-z]*\n?/gim, '').replace(/\*\*(.+?)\*\*/g, '$1'); }
+    const one = x => (Math.round(x * 10 + 1e-6) / 10).toFixed(1);
     const secs = ms => `${(ms / 1000).toFixed(ms < 10000 ? 2 : 1)} s`;
 
     // ------------------------------------------------------------ example router
@@ -264,18 +268,19 @@
                 <div class="mhead"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
                 <p class="gets">${esc(s.gets || '')}</p>
                 <div class="nums three">
-                    <div><b class="num">${tps != null ? tps.toFixed(1) : '–'}</b><span>tokens/s, one request</span></div>
-                    <div><b class="num">${tpg != null ? tpg.toFixed(1) : '–'}</b><span>tokens/s per GPU</span></div>
+                    <div><b class="num">${tps != null ? one(tps) : '–'}</b><span>tokens/s, one request</span></div>
+                    <div><b class="num">${tpg != null ? one(tpg) : '–'}</b><span>tokens/s per GPU</span></div>
                     <div><b class="num">${esc(s.acc || '–')}</b><span>${esc(s.accNote || 'accuracy')}</span></div>
                 </div>
-                <dl><div><dt>Best for</dt><dd>${esc(s.best || '')}</dd></div></dl>`;
+                <dl><div><dt>Best for</dt><dd>${esc(s.best || '')}</dd></div>${s.watch ? `<div><dt>Watch out for</dt><dd>${esc(s.watch)}</dd></div>` : ''}</dl>`;
             grid.appendChild(card);
         }
         const bf = bench('FP16'), q = bench('INT4');
         if (bf && q && bf.throughput_tps && q.throughput_tps) {
             const perGpu = (q.throughput_tps / gpus('INT4')) / (bf.throughput_tps / gpus('FP16'));
             const speed = q.throughput_tps / bf.throughput_tps;
-            $('#takeaway').innerHTML = `${esc(label('INT4'))} gets <b>${perGpu.toFixed(1)}× the tokens per GPU</b> of ${esc(label('FP16'))}, because it runs at ${Math.round(100 * speed)}% of the speed on half the GPUs.`;
+            $('#takeaway').innerHTML = `One request at a time, ${esc(label('INT4'))} gets <b>${one(perGpu)}× the tokens per GPU</b> of ${esc(label('FP16'))}, because it runs at ${Math.round(100 * speed)}% of the speed on half the GPUs.`
+                + (loadData().keys.length ? '' : ' <span class="pending-note">Under heavy traffic that gap is expected to shrink, and the load test will show by how much.</span>');
         }
         const strip = $('#routerStrip');
         strip.className = 'card router-strip';
@@ -283,7 +288,7 @@
             `<div class="route">${esc(SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k))}</b></div>`).join('');
         const bm = (config && config.benchmark) || {};
         const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-        $('#numbersFoot').textContent = '* Red Hat\'s published INT4 build of Llama 3.1 70B keeps about 99% of BF16 on the OpenLLM v1 benchmarks; the AWQ build measured here still needs its own eval. Spec decode ran with CUDA graphs off (enforce_eager), which slows it the most, so it gets rerun.';
+        $('#numbersFoot').textContent = '* Red Hat\'s published INT4 (GPTQ) build of Llama 3.1 70B keeps 99.4% of BF16 on the OpenLLM v1 benchmarks and 97.4% on the harder, reasoning-heavy v2 set. The AWQ build measured here still needs its own eval. Spec decode ran with CUDA graphs off (enforce_eager), which slows it the most, so it gets rerun.';
         $('#routerNote').textContent = 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions.';
         $('#benchNote').textContent = `Llama 3.1 70B Instruct, measured ${when} on NVIDIA H200 with vLLM ${bm.vllm_version || ''}, one request at a time.`
             + (keys.includes('FP8') ? '' : ' FP8 fits on one H200 and is near-lossless in Red Hat\'s own tests, so it\'s the next setup worth measuring.');
