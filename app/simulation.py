@@ -33,9 +33,9 @@ class Simulator:
     def __init__(self):
         self.config = SimulationConfig(enabled=False)
         self.baseline_metrics = {
-            "FP16": {"latency": 95, "throughput": 18, "memory": 40, "cost": 0.0015},
-            "INT4": {"latency": 45, "throughput": 35, "memory": 10, "cost": 0.0005},
-            "SPEC_DECODE": {"latency": 55, "throughput": 30, "memory": 25, "cost": 0.0007},
+            "FP16": {"latency": 21, "throughput": 47, "memory": 130, "cost": 0.0012},
+            "INT4": {"latency": 23, "throughput": 44, "memory": 38, "cost": 0.0004},
+            "SPEC_DECODE": {"latency": 25, "throughput": 40, "memory": 130, "cost": 0.0010},
         }
 
     def enable(self, request_rate: float = 10.0, synthetic_users: int = 75):

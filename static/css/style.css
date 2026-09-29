@@ -4,11 +4,11 @@
     --success-color: #3E8635;
     --warning-color: #F0AB00;
     --spec-color: #7B2D8E;
-    --dark-bg: #0A0A0A;
-    --card-bg: #1A1A1A;
-    --border-color: #2A2A2A;
-    --text-primary: #F0F0F0;
-    --text-secondary: #999;
+    --dark-bg: #ffffff;
+    --card-bg: rgba(255, 255, 255, 0.7);
+    --border-color: rgba(0, 0, 0, 0.08);
+    --text-primary: #1a1a1a;
+    --text-secondary: rgba(0, 0, 0, 0.45);
 }
 
 * {
@@ -19,7 +19,7 @@
 
 body {
     font-family: 'Red Hat Display', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #f8f0f0 30%, #fff5f5 60%, #ffffff 100%);
     color: #151515;
     min-height: 100vh;
 }
@@ -223,7 +223,7 @@ footer {
 }
 
 .presenter-header h1 {
-    color: white;
+    color: #1a1a1a;
     font-size: 1.75rem;
     margin-bottom: 4px;
 }
@@ -240,8 +240,8 @@ footer {
 }
 
 .mode-indicator {
-    background: var(--success-color);
-    color: white;
+    background: rgba(62, 134, 53, 0.1);
+    color: #2d6a27;
     padding: 8px 16px;
     border-radius: 6px;
     font-weight: bold;
@@ -250,14 +250,14 @@ footer {
 }
 
 .mode-indicator.simulation {
-    background: var(--warning-color);
-    color: #151515;
+    background: rgba(240, 171, 0, 0.1);
+    color: #b37a00;
 }
 
 .control-btn {
-    background: var(--border-color);
-    color: white;
-    border: none;
+    background: rgba(0, 0, 0, 0.04);
+    color: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
@@ -266,15 +266,16 @@ footer {
 }
 
 .control-btn:hover {
-    background: #444;
+    background: rgba(0, 0, 0, 0.08);
 }
 
 .control-btn.quality-btn {
-    background: var(--spec-color);
+    background: rgba(123, 45, 142, 0.08);
+    color: #7B2D8E;
 }
 
 .control-btn.quality-btn:hover {
-    background: #9B4DBE;
+    background: rgba(123, 45, 142, 0.15);
 }
 
 /* 3-column metrics grid */
@@ -294,7 +295,7 @@ footer {
 }
 
 .metric-card:hover {
-    border-color: #444;
+    border-color: rgba(238, 0, 0, 0.15);
 }
 
 .spec-decode-card {
@@ -312,7 +313,7 @@ footer {
 
 .metric-header h3 {
     font-size: 1rem;
-    color: white;
+    color: rgba(0, 0, 0, 0.85);
 }
 
 .metric-badge {
@@ -325,18 +326,18 @@ footer {
 }
 
 .metric-badge.baseline {
-    background: var(--secondary-color);
-    color: white;
+    background: rgba(0, 102, 204, 0.1);
+    color: #0052a3;
 }
 
 .metric-badge.speed {
-    background: var(--warning-color);
-    color: #151515;
+    background: rgba(240, 171, 0, 0.1);
+    color: #b37a00;
 }
 
 .metric-badge.best {
-    background: var(--spec-color);
-    color: white;
+    background: rgba(123, 45, 142, 0.1);
+    color: #7B2D8E;
 }
 
 .metric-hero {
@@ -354,7 +355,7 @@ footer {
     display: block;
     font-size: 2.5rem;
     font-weight: bold;
-    color: white;
+    color: #1a1a1a;
     line-height: 1;
     margin-bottom: 4px;
 }
@@ -376,7 +377,7 @@ footer {
     display: flex;
     justify-content: space-between;
     padding: 10px 0;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .metric-row:last-child {
@@ -394,7 +395,7 @@ footer {
 }
 
 .metric-value {
-    color: white;
+    color: rgba(0, 0, 0, 0.8);
     font-weight: bold;
     font-size: 0.85rem;
 }
@@ -419,7 +420,7 @@ footer {
 
 .quality-header h2 {
     font-size: 1.1rem;
-    color: white;
+    color: rgba(0, 0, 0, 0.85);
 }
 
 .quality-controls {
@@ -428,9 +429,9 @@ footer {
 }
 
 .scenario-btn {
-    background: var(--border-color);
-    color: var(--text-secondary);
-    border: none;
+    background: rgba(0, 0, 0, 0.03);
+    color: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.06);
     padding: 6px 14px;
     border-radius: 6px;
     cursor: pointer;
@@ -439,17 +440,17 @@ footer {
 }
 
 .scenario-btn.active {
-    background: var(--spec-color);
-    color: white;
+    background: rgba(123, 45, 142, 0.1);
+    color: #7B2D8E;
 }
 
 .scenario-btn:hover {
-    background: #444;
-    color: white;
+    background: rgba(0, 0, 0, 0.06);
+    color: rgba(0, 0, 0, 0.8);
 }
 
 .quality-prompt {
-    background: #111;
+    background: rgba(0, 0, 0, 0.03);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 16px;
@@ -467,14 +468,14 @@ footer {
 }
 
 .quality-card {
-    background: #111;
+    background: rgba(0, 0, 0, 0.02);
     border-radius: 8px;
     padding: 16px;
     border: 1px solid var(--border-color);
 }
 
 .quality-card h4 {
-    color: white;
+    color: rgba(0, 0, 0, 0.8);
     font-size: 0.85rem;
     margin-bottom: 12px;
     padding-bottom: 8px;
@@ -486,11 +487,11 @@ footer {
 }
 
 .quality-card[data-quality-model="SPEC_DECODE"] h4 {
-    color: #C77DFF;
+    color: #7B2D8E;
 }
 
 .quality-response {
-    color: #CCC;
+    color: rgba(0, 0, 0, 0.6);
     font-size: 0.75rem;
     line-height: 1.6;
     white-space: pre-wrap;

@@ -1,0 +1,47 @@
+{
+  "cluster": "api.ocp.cloud.rhai-tmm.dev",
+  "gpu": "NVIDIA H200 (143,771 MiB)",
+  "vllm_version": "0.18.0+rhaiv.14",
+  "model": "meta-llama/Meta-Llama-3.1-70B-Instruct",
+  "date": "2026-09-29",
+  "variants": {
+    "INT4": {
+      "quantization": "awq_marlin",
+      "gpus": 1,
+      "avg_latency_ms": 5072.5,
+      "p95_latency_ms": 5836.0,
+      "throughput_tps": 44.3,
+      "avg_tokens_per_request": 224.5,
+      "gpu_memory_gib": 38,
+      "total_requests": 20,
+      "errors": 0
+    },
+    "FP16": {
+      "quantization": null,
+      "tensor_parallel_size": 2,
+      "gpus": 2,
+      "avg_latency_ms": 4958.7,
+      "p95_latency_ms": 5527.6,
+      "throughput_tps": 47.3,
+      "avg_tokens_per_request": 232.5,
+      "gpu_memory_gib_per_gpu": 130,
+      "total_requests": 20,
+      "errors": 0
+    },
+    "SPEC_DECODE": {
+      "target_model": "meta-llama/Meta-Llama-3.1-70B-Instruct",
+      "draft_model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+      "num_speculative_tokens": 5,
+      "tensor_parallel_size": 2,
+      "gpus": 2,
+      "enforce_eager": true,
+      "avg_latency_ms": 5543.9,
+      "p95_latency_ms": 8646.0,
+      "throughput_tps": 40.0,
+      "avg_tokens_per_request": 221.7,
+      "gpu_memory_gib_per_gpu": 130,
+      "total_requests": 20,
+      "errors": 0
+    }
+  }
+}
