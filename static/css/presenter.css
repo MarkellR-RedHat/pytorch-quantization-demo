@@ -373,3 +373,5 @@ kbd {
 .mcard .nums.three b { font-size: 46px; }
 .numbers-foot { margin: -10px 4px 0; font-size: 14.5px; color: var(--ink-3); line-height: 1.45; }
 .lcard .mhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.astats b.na { font-family: var(--text); font-size: 16px; font-weight: 600; color: var(--ink-3); line-height: 29px; }
+.tab[hidden] { display: none; }

@@ -65,6 +65,18 @@
     }
     try { const t = localStorage.getItem('qs-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) { /* ignore */ }
 
+    let order = ['ask', 'load', 'numbers'];
+
+    function setOrder() {
+        order = loadData().keys.length ? ['ask', 'load', 'numbers'] : ['ask', 'numbers'];
+        $$('.tab').forEach(t => {
+            const i = order.indexOf(t.dataset.scene);
+            t.hidden = i < 0;
+            if (i >= 0) $('kbd', t).textContent = String(i + 1);
+        });
+        $('#footKeys').innerHTML = order.map((_, i) => `<kbd>${i + 1}</kbd>`).join('');
+    }
+
     function show(name) {
         $$('.scene').forEach(s => s.classList.toggle('is-active', s.dataset.scene === name));
         $$('.tab').forEach(t => t.classList.toggle('is-active', t.dataset.scene === name));
@@ -98,8 +110,14 @@
     // A deliberately simple, visible rule that shows where a router fits. It isn't a trained classifier.
     function route(q) {
         const t = q.toLowerCase();
-        if (/\b(why|prove|step by step|how many|calculate|debug|code|function|python|sql|legal|contract|diagnos\w*|analy[sz]e|compare)\b/.test(t)) {
+        if (/\b(legal|contract|diagnos\w*|analy[sz]e|compliance|medical|financial)\b/.test(t)) {
             return { key: 'FP16', why: 'a wrong answer here is expensive' };
+        }
+        if (/\b(debug|code|function|python|sql|regex|script)\b/.test(t)) {
+            return { key: 'FP16', why: 'it\'s code, where one wrong token breaks the answer' };
+        }
+        if (/\b(why|prove|step by step|how many|calculate|compare|reason\w*|riddle|puzzle)\b/.test(t)) {
+            return { key: 'FP16', why: 'it\'s a multi-step reasoning question, and that\'s where 4-bit models slip first' };
         }
         if (/\b(write|draft|explain|describe|story|essay|report)\b/.test(t) && t.length > 60) {
             return { key: 'SPEC_DECODE', why: 'it\'s a long answer and someone is waiting on it' };
@@ -190,7 +208,10 @@
                         out.scrollTop = out.scrollHeight;
                     } else if (ev.t === 'done') {
                         clearInterval(tick);
-                        $('.s-ttft', col).textContent = ev.ttft_ms != null ? secs(ev.ttft_ms) : '–';
+                        // The Sep 29 benchmark measured whole requests, not time to first token, so replay can't show it.
+                        const ttft = $('.s-ttft', col);
+                        ttft.classList.toggle('na', ev.ttft_ms == null);
+                        ttft.textContent = ev.ttft_ms != null ? secs(ev.ttft_ms) : 'live only';
                         $('.s-tps', col).textContent = ev.tokens_per_second != null ? ev.tokens_per_second.toFixed(0) : '–';
                         $('.s-total', col).textContent = secs(ev.total_ms);
                         $('.s-len', col).textContent = ev.completion_tokens != null ? ev.completion_tokens : '–';
@@ -290,7 +311,7 @@
         if (!keys.length) {
             play.hidden = true;
             $('#loadSetup').textContent = 'A replay of the load test, one setup at a time, as more and more questions arrive at once.';
-            stage.innerHTML = '<div class="load-empty"><p>The load run hasn\'t been recorded yet.<br>Run the <b>vllm bench serve</b> sweep and save it to <b>bench/&lt;setup&gt;/c&lt;N&gt;.json</b>, and this scene plays it back.</p></div>';
+            stage.innerHTML = '<div class="load-empty"><p>Coming soon: how each setup holds up when 1, 8, 32, then 64 questions arrive at once.</p></div>';
             return;
         }
         play.hidden = false;
@@ -409,6 +430,7 @@
         buildAsk();
         buildLoad();
         buildNumbers();
+        setOrder();
     }
 
     document.addEventListener('keydown', e => {
@@ -416,9 +438,11 @@
         if (e.key === 'Escape' && typing) { e.target.blur(); return; }
         if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
         switch (e.code) {
-            case 'Digit1': show('ask'); break;
-            case 'Digit2': show('load'); break;
-            case 'Digit3': show('numbers'); break;
+            case 'Digit1': case 'Digit2': case 'Digit3': {
+                const scene = order[Number(e.code.slice(5)) - 1];
+                if (scene) show(scene);
+                break;
+            }
             case 'Space': if ($('#scene-load').classList.contains('is-active')) { e.preventDefault(); playLoad(); } break;
             case 'Slash': e.preventDefault(); show('ask'); $('#askInput').focus(); break;
             case 'KeyT': setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); break;
