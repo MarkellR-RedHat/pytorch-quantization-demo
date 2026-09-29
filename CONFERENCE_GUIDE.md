@@ -38,25 +38,11 @@ To force replay mode while presenting, open `/presenter?mode=sim`.
 
 ## The Plan
 
-### GPU Booking
+### GPUs per setup
 
-| Dates | GPUs | Purpose |
-|-------|------|---------|
-| Sep 29-30 | 5x H200 Full | Test run, end-to-end validation, record backup video |
-| Oct 18-21 | 5x H200 Full | Pre-deploy (Oct 18), final testing (Oct 19), live conference (Oct 20-21) |
-
-GPU breakdown per variant:
-- FP16 Llama 70B: 2x H200 (tensor parallel)
-- INT4 Llama 70B: 1x H200
-- Speculative Decode (Llama 3.1 70B BF16 target + Llama 3.1 8B draft, both tensor parallel 2): 2x H200
-
-### Timeline
-
-1. **Sep 29-30:** Test run on H200s. Deploy all three model variants, run through the full demo flow, record backup video.
-2. **Oct 18:** Pre-deploy the demo app and models to OpenShift AI.
-3. **Oct 19:** Final testing on production URL. Upload slides to Sessionize (deadline).
-4. **Oct 20:** Demo day. 4:10 PM PDT, Demo Theater. Be set up and tested 30 minutes before.
-5. **Oct 21:** Conference day 2, booth availability.
+- BF16 Llama 3.1 70B: 2x H200 (tensor parallel)
+- INT4 Llama 3.1 70B: 1x H200
+- Speculative decoding (Llama 3.1 70B BF16 target + Llama 3.1 8B draft, both tensor parallel 2): 2x H200
 
 ### Pre-Demo Checklist (Day Before)
 
@@ -102,13 +88,7 @@ cd pytorch-quantization-demo
 ./scripts/run-local.sh
 ```
 
-Open http://localhost:8000/presenter for the presenter dashboard and http://localhost:8000 for the audience view.
-
-## Contacts
-
-- **Event logistics:** Juliana Furlow (jsweek@redhat.com)
-- **vLLM / llm-d:** Sasa
-- **Repo:** https://github.com/MarkellR-RedHat/pytorch-quantization-demo
+Open http://localhost:8000/presenter for the presenter dashboard.
 
 ## Author
 
