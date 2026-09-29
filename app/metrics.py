@@ -97,9 +97,9 @@ class MetricsCollector:
 
     def get_all_snapshots(self) -> Dict[str, MetricsSnapshot]:
         gpu_memory = {
-            "FP16": 40.0,
-            "INT4": 10.0,
-            "SPEC_DECODE": 25.0,
+            "FP16": 130.0,
+            "INT4": 38.0,
+            "SPEC_DECODE": 130.0,
         }
 
         return {

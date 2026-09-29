@@ -2,15 +2,13 @@
 
 import asyncio
 import logging
+import random
 from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import qrcode
-from io import BytesIO
-import base64
 
 from app.config import settings
 from app.models import InferenceRequest, InferenceResponse, DemoState, MetricsSnapshot
@@ -34,6 +32,39 @@ demo_state = DemoState(
 
 if settings.simulation_mode:
     simulator.enable()
+
+auto_traffic_handle: asyncio.Task | None = None
+
+TRAFFIC_PROMPTS = [
+    "Explain the trade-offs of model quantization for production LLM deployments.",
+    "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left?",
+    "Write a Python function that returns the second largest number in a list.",
+    "Compare microservices vs monolithic architecture for high-traffic web apps.",
+    "Summarize zero trust security in three bullet points.",
+]
+
+TRAFFIC_VARIANTS = ["FP16", "INT4", "SPEC_DECODE"]
+VARIANT_WEIGHTS = [0.3, 0.45, 0.25]
+
+
+async def auto_traffic_task():
+    """Self-driving traffic generator — fills the dashboard without audience participation."""
+    ramp_seconds = 8
+    start = asyncio.get_event_loop().time()
+
+    while demo_state.is_running and simulator.is_enabled():
+        elapsed = asyncio.get_event_loop().time() - start
+        ramp = min(elapsed / ramp_seconds, 1.0)
+        delay = 0.6 - (ramp * 0.4)
+
+        variant = random.choices(TRAFFIC_VARIANTS, weights=VARIANT_WEIGHTS, k=1)[0]
+        prompt = random.choice(TRAFFIC_PROMPTS)
+
+        _, latency_ms, tokens_per_sec, cost = await simulator.simulate_request(variant, prompt)
+        metrics_collector.record_request(variant, latency_ms, tokens_per_sec, cost)
+        demo_state.total_requests += 1
+
+        await asyncio.sleep(delay)
 
 
 async def metrics_broadcast_task():
@@ -103,26 +134,6 @@ async def presenter_view(request: Request, mode: str = None):
             "demo_state": demo_state.model_dump()
         }
     )
-
-
-@app.get("/qr")
-async def get_qr_code():
-    url = f"http://localhost:{settings.port}/"
-
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(url)
-    qr.make(fit=True)
-
-    img = qr.make_image(fill_color="black", back_color="white")
-
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    img_str = base64.b64encode(buffer.getvalue()).decode()
-
-    return JSONResponse({
-        "qr_code": f"data:image/png;base64,{img_str}",
-        "url": url
-    })
 
 
 @app.post("/request", response_model=InferenceResponse)
@@ -222,39 +233,61 @@ async def toggle_simulation():
 
 @app.post("/demo/start")
 async def start_demo():
+    global auto_traffic_handle
+
     demo_state.is_running = True
     demo_state.start_time = datetime.now()
     demo_state.total_requests = 0
     metrics_collector.reset()
 
-    logger.info("Demo started")
+    if simulator.is_enabled():
+        if auto_traffic_handle and not auto_traffic_handle.done():
+            auto_traffic_handle.cancel()
+        auto_traffic_handle = asyncio.create_task(auto_traffic_task())
+        logger.info("Demo started with auto-traffic")
+    else:
+        logger.info("Demo started (live mode)")
+
     state_dict = demo_state.model_dump()
     if state_dict.get('start_time'):
         state_dict['start_time'] = state_dict['start_time'].isoformat()
     await connection_manager.broadcast_state(state_dict)
 
-    return JSONResponse({"message": "Demo started"})
+    return JSONResponse({"message": "Demo started", "auto_traffic": simulator.is_enabled()})
 
 
 @app.post("/demo/stop")
 async def stop_demo():
+    global auto_traffic_handle
+
     demo_state.is_running = False
+    if auto_traffic_handle and not auto_traffic_handle.done():
+        auto_traffic_handle.cancel()
+        auto_traffic_handle = None
+
     logger.info("Demo stopped")
     await connection_manager.broadcast_state(demo_state.model_dump())
-    return JSONResponse({"message": "Demo stopped", "state": demo_state.model_dump()})
+    return JSONResponse({"message": "Demo stopped"})
 
 
 @app.post("/demo/reset")
 async def reset_demo():
+    global auto_traffic_handle
+
     demo_state.is_running = False
     demo_state.total_requests = 0
     demo_state.start_time = None
     demo_state.participant_count = 0
+
+    if auto_traffic_handle and not auto_traffic_handle.done():
+        auto_traffic_handle.cancel()
+        auto_traffic_handle = None
+
     metrics_collector.reset()
 
     logger.info("Demo reset")
     await connection_manager.broadcast_state(demo_state.model_dump())
-    return JSONResponse({"message": "Demo reset", "state": demo_state.model_dump()})
+    return JSONResponse({"message": "Demo reset"})
 
 
 @app.get("/metrics")
