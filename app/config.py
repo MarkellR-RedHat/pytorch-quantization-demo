@@ -1,7 +1,10 @@
 """Application configuration"""
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
@@ -10,50 +13,79 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        case_sensitive=False
+        case_sensitive=False,
+        extra="ignore",
+        protected_namespaces=("settings_",),
     )
 
-    # Server Configuration
+    # Server
     host: str = "0.0.0.0"
     port: int = 8000
     log_level: str = "INFO"
 
-    # OpenShift AI Configuration
-    openshift_ai_endpoint: str
-    openshift_ai_token: str
+    # OpenShift AI (live mode)
+    openshift_ai_endpoint: str = ""
+    openshift_ai_token: str = ""
 
-    # Model Endpoints (3 variants)
-    model_fp16_endpoint: str
-    model_int4_endpoint: str
-    model_spec_decode_endpoint: str
+    # Model endpoints, one vLLM OpenAI-compatible chat completions URL per variant
+    model_fp16_endpoint: str = ""
+    model_fp8_endpoint: str = ""
+    model_int4_endpoint: str = ""
+    model_spec_decode_endpoint: str = ""
 
-    # Demo Configuration
+    # Served model names (vLLM --served-model-name); empty means the variant key lowercased
+    model_fp16_name: str = ""
+    model_fp8_name: str = ""
+    model_int4_name: str = ""
+    model_spec_decode_name: str = ""
+
+    # Demo
     simulation_mode: bool = False
     enable_prometheus: bool = True
+    baseline_label: str = "BF16"
+    presenter_key: str = ""
+    public_url: str = ""
+    trust_proxy: bool = False
 
-    # Cost Configuration (per 1000 tokens)
-    cost_fp16_per_1k: float = 0.0015
-    cost_int4_per_1k: float = 0.0005
-    cost_spec_decode_per_1k: float = 0.0007
+    # Traffic and protection
+    auto_traffic: bool = True
+    auto_traffic_rps: float = 0.5
+    max_inflight_per_variant: int = 32
+    max_connections: int = 2000
 
-    @property
-    def model_endpoints(self) -> dict[str, str]:
-        return {
-            "FP16": self.model_fp16_endpoint,
-            "INT4": self.model_int4_endpoint,
-            "SPEC_DECODE": self.model_spec_decode_endpoint,
-        }
+    # Cost model: hourly price of one GPU. 0 hides cost everywhere.
+    gpu_hourly_usd: float = 0.0
 
-    @property
-    def cost_per_1k(self) -> dict[str, float]:
-        return {
-            "FP16": self.cost_fp16_per_1k,
-            "INT4": self.cost_int4_per_1k,
-            "SPEC_DECODE": self.cost_spec_decode_per_1k,
-        }
+    # Data files (relative paths resolve against the repo root)
+    benchmark_file: str = "benchmark_results.json"
+    bench_dir: str = "bench"
+    quality_dir: str = "quality"
+    sim_time_scale: float = 1.0
+
+    def resolve(self, path: str) -> Path:
+        p = Path(path)
+        return p if p.is_absolute() else REPO_ROOT / p
+
+    def endpoint_for(self, key: str) -> str:
+        return getattr(self, f"model_{key.lower()}_endpoint", "")
+
+    def served_name_for(self, key: str) -> str:
+        return getattr(self, f"model_{key.lower()}_name", "") or key.lower()
 
 
-MODEL_VARIANTS = ["FP16", "INT4", "SPEC_DECODE"]
+BASE_VARIANTS = ["FP16", "INT4", "SPEC_DECODE"]
+ALL_VARIANTS = ["FP16", "FP8", "INT4", "SPEC_DECODE"]
+# Kept for backwards compatibility with older imports
+MODEL_VARIANTS = BASE_VARIANTS
 
-# Global settings instance
 settings = Settings()
+
+
+def variant_label(key: str) -> str:
+    labels = {
+        "FP16": settings.baseline_label,
+        "FP8": "FP8",
+        "INT4": "INT4 AWQ",
+        "SPEC_DECODE": "Spec Decode",
+    }
+    return labels.get(key, key)

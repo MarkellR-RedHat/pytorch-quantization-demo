@@ -1,42 +1,59 @@
 """Pydantic models for request/response validation"""
 
-from pydantic import BaseModel, Field
-from typing import Optional, Literal
 from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict
+
+VariantKey = Literal["FP16", "FP8", "INT4", "SPEC_DECODE"]
+PromptId = Literal["chat", "reasoning", "code", "summary"]
+HardPromptKind = Literal["math", "logic", "code", "long_context"]
+ArenaVariant = Literal["BF16", "FP8", "INT4_RTN", "INT4_AWQ", "SPEC"]
 
 
 class InferenceRequest(BaseModel):
-    model_type: Literal["FP16", "INT4", "SPEC_DECODE"]
-    prompt: Optional[str] = "Hello, how are you?"
-    user_id: Optional[str] = None
+    """Audience request. Prompts are picked server-side from prompt_id; free text is never used."""
+
+    model_config = ConfigDict(extra="ignore", protected_namespaces=())
+
+    model_type: VariantKey
+    prompt_id: PromptId = "chat"
+    prompt: str | None = None  # legacy field, ignored
 
 
 class InferenceResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     model_type: str
+    source: Literal["simulated", "live"]
     response_text: str
     latency_ms: float
     tokens_per_second: float
-    cost_per_request: float
+    completion_tokens: int
+    cost_per_request: float | None
     timestamp: datetime
 
 
 class MetricsSnapshot(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     model_type: str
+    label: str
+    source: Literal["simulated", "live"]
+    basis: str
+    gpus: int
+    weights_gb: float | None
     requests_per_second: float
     avg_latency_ms: float
+    p50_latency_ms: float
     p95_latency_ms: float
-    gpu_memory_gb: float
     tokens_per_second: float
-    cost_per_request: float
-    queue_depth: int
-    active_requests: int
+    tokens_per_second_per_gpu: float
+    output_tokens_per_second: float
+    cost_per_request: float | None
+    in_flight: int
     total_requests: int
-
-
-class QualitySnapshot(BaseModel):
-    """Side-by-side quality comparison for the same prompt"""
-    prompt: str
-    responses: dict[str, str]
+    errors: int
 
 
 class DemoState(BaseModel):
@@ -44,12 +61,12 @@ class DemoState(BaseModel):
     simulation_mode: bool
     participant_count: int
     total_requests: int
-    start_time: Optional[datetime] = None
-    metrics: dict[str, MetricsSnapshot] = Field(default_factory=dict)
+    start_time: datetime | None = None
 
 
-class SimulationConfig(BaseModel):
-    enabled: bool
-    request_rate: float = 10.0
-    latency_variation: float = 0.2
-    synthetic_users: int = 75
+class HardPromptRequest(BaseModel):
+    kind: HardPromptKind
+
+
+class BackRequest(BaseModel):
+    variant: ArenaVariant

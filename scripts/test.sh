@@ -17,14 +17,14 @@ fi
 source venv/bin/activate
 
 # Install test dependencies if needed
-pip install -q pytest pytest-asyncio pytest-cov
+pip install -q -r requirements-dev.txt
 
 echo ""
 echo "Running tests with coverage..."
 echo ""
 
 # Run tests
-pytest tests/ --cov=app --cov-report=term-missing --cov-report=html -v
+pytest --cov=app --cov-report=term-missing --cov-report=html -v
 
 echo ""
 echo "✅ Tests complete!"

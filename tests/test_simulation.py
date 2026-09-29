@@ -1,75 +1,77 @@
-"""Tests for simulation mode"""
+"""Simulation mode must be grounded in benchmark_results.json, not invented numbers"""
+
+import json
+import random
+import statistics
 
 import pytest
+
+from app.benchmark import BenchmarkData, lognormal_sigma
+from app.config import REPO_ROOT
 from app.simulation import Simulator
+
+BENCH = json.loads((REPO_ROOT / "benchmark_results.json").read_text())
+
+
+@pytest.fixture
+def sim(tmp_path):
+    return Simulator(BenchmarkData(REPO_ROOT / "benchmark_results.json", tmp_path / "no-sweeps"))
 
 
 class TestSimulator:
 
-    def setup_method(self):
-        self.sim = Simulator()
+    def test_starts_disabled_and_toggles(self, sim):
+        assert sim.is_enabled() is False
+        sim.enable()
+        assert sim.is_enabled() is True
+        sim.disable()
+        assert sim.is_enabled() is False
 
-    def test_simulator_starts_disabled(self):
-        assert self.sim.is_enabled() is False
+    @pytest.mark.parametrize("variant", ["FP16", "INT4", "SPEC_DECODE"])
+    def test_samples_match_benchmark_mean_and_p95(self, sim, variant):
+        rng = random.Random(7)
+        latencies = sorted(sim.sample(variant, 1, rng)[0] for _ in range(20000))
+        expected = BENCH["variants"][variant]
+        assert statistics.mean(latencies) == pytest.approx(expected["avg_latency_ms"], rel=0.02)
+        assert latencies[int(0.95 * len(latencies))] == pytest.approx(expected["p95_latency_ms"], rel=0.03)
 
-    def test_enable_simulation(self):
-        self.sim.enable()
-        assert self.sim.is_enabled() is True
+    @pytest.mark.parametrize("variant", ["FP16", "INT4", "SPEC_DECODE"])
+    def test_tokens_track_benchmark(self, sim, variant):
+        rng = random.Random(3)
+        avg = BENCH["variants"][variant]["avg_tokens_per_request"]
+        tokens = [sim.sample(variant, 1, rng)[1] for _ in range(2000)]
+        assert min(tokens) >= int(avg * 0.9) and max(tokens) <= round(avg * 1.1)
 
-    def test_disable_simulation(self):
-        self.sim.enable()
-        self.sim.disable()
-        assert self.sim.is_enabled() is False
+    async def test_simulate_request_returns_consistent_tps(self, sim):
+        text, latency_ms, tps, tokens = await sim.simulate_request("INT4")
+        assert text.startswith("[simulated]")
+        assert tps == pytest.approx(tokens / (latency_ms / 1000))
 
-    @pytest.mark.asyncio
-    async def test_simulate_request_fp16(self):
-        self.sim.enable()
-        response_text, latency_ms, tps, cost = await self.sim.simulate_request("FP16")
-        assert isinstance(response_text, str)
-        assert latency_ms > 0
-        assert tps > 0
-        assert cost > 0
+    def test_basis_is_single_stream_without_sweeps(self, sim):
+        assert sim.sample("FP16", 5)[2] == "benchmark · 1 stream"
 
-    @pytest.mark.asyncio
-    async def test_simulate_request_int4(self):
-        self.sim.enable()
-        response_text, latency_ms, tps, cost = await self.sim.simulate_request("INT4")
-        assert latency_ms > 0
-        assert cost > 0
+    def test_unknown_variant_raises(self, sim):
+        with pytest.raises(ValueError):
+            sim.sample("FP8")
 
-    @pytest.mark.asyncio
-    async def test_simulate_request_spec_decode(self):
-        self.sim.enable()
-        response_text, latency_ms, tps, cost = await self.sim.simulate_request("SPEC_DECODE")
-        assert latency_ms > 0
-        assert cost > 0
+    def test_sweep_scales_latency_with_concurrency(self, tmp_path):
+        folder = tmp_path / "bench" / "FP16"
+        folder.mkdir(parents=True)
+        (folder / "c1.json").write_text(json.dumps({"mean_e2el_ms": 5000.0}))
+        (folder / "c32.json").write_text(json.dumps({"median_e2el_ms": 9000.0}))
+        (folder / "notes.json").write_text("{}")
+        data = BenchmarkData(REPO_ROOT / "benchmark_results.json", tmp_path / "bench")
+        assert data.latency_model("FP16", 1)[0] == 5000.0
+        mean, _, basis = data.latency_model("FP16", 16)
+        assert 5000.0 < mean < 9000.0 and basis == "benchmark c≈16"
+        assert data.latency_model("FP16", 64)[0] == 9000.0
 
-    def test_get_synthetic_metrics_all_variants(self):
-        for variant in ["FP16", "INT4", "SPEC_DECODE"]:
-            metrics = self.sim.get_synthetic_metrics(variant, 50)
-            assert "requests_per_second" in metrics
-            assert "avg_latency_ms" in metrics
-            assert "gpu_memory_gb" in metrics
-            assert metrics["requests_per_second"] > 0
+    def test_lognormal_sigma_edge_cases(self):
+        assert lognormal_sigma(100, 90) == 0.05
+        assert lognormal_sigma(0, 10) == 0.05
+        assert 0 < lognormal_sigma(5000, 6000) < 1
 
-    def test_spec_decode_latency_between_fp16_and_int4(self):
-        baseline = self.sim.baseline_metrics
-        assert baseline["INT4"]["latency"] < baseline["SPEC_DECODE"]["latency"]
-        assert baseline["SPEC_DECODE"]["latency"] < baseline["FP16"]["latency"]
-
-    def test_spec_decode_memory_between_fp16_and_int4(self):
-        baseline = self.sim.baseline_metrics
-        assert baseline["INT4"]["memory"] < baseline["SPEC_DECODE"]["memory"]
-        assert baseline["SPEC_DECODE"]["memory"] < baseline["FP16"]["memory"]
-
-    def test_quality_comparison_returns_all_variants(self):
-        result = self.sim.get_quality_comparison("complex_reasoning")
-        assert "prompt" in result
-        assert "FP16" in result["responses"]
-        assert "INT4" in result["responses"]
-        assert "SPEC_DECODE" in result["responses"]
-
-    def test_quality_comparison_all_scenarios(self):
-        for scenario in ["complex_reasoning", "code_generation", "summarization"]:
-            result = self.sim.get_quality_comparison(scenario)
-            assert len(result["responses"]) == 3
+    def test_missing_benchmark_file_is_not_fatal(self, tmp_path):
+        data = BenchmarkData(tmp_path / "missing.json", tmp_path)
+        assert data.has("FP16") is False
+        assert data.gpus("FP16") == 2

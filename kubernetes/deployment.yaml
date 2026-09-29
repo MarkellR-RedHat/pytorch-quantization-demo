@@ -5,7 +5,9 @@ metadata:
   labels:
     app: pytorch-quantization-demo
 spec:
-  replicas: 2
+  # One replica on purpose: metrics, votes and websocket fan-out live in process memory,
+  # so a second replica would split the audience across two dashboards.
+  replicas: 1
   selector:
     matchLabels:
       app: pytorch-quantization-demo
@@ -33,26 +35,39 @@ spec:
             secretKeyRef:
               name: openshift-ai-config
               key: token
-        - name: MODEL_FP32_ENDPOINT
+        - name: PRESENTER_KEY
           valueFrom:
-            configMapKeyRef:
-              name: model-endpoints
-              key: fp32_endpoint
+            secretKeyRef:
+              name: openshift-ai-config
+              key: presenter_key
         - name: MODEL_FP16_ENDPOINT
           valueFrom:
             configMapKeyRef:
               name: model-endpoints
               key: fp16_endpoint
-        - name: MODEL_INT8_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: model-endpoints
-              key: int8_endpoint
         - name: MODEL_INT4_ENDPOINT
           valueFrom:
             configMapKeyRef:
               name: model-endpoints
               key: int4_endpoint
+        - name: MODEL_SPEC_DECODE_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: model-endpoints
+              key: spec_decode_endpoint
+        - name: MODEL_FP8_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: model-endpoints
+              key: fp8_endpoint
+              optional: true
+        - name: PUBLIC_URL
+          valueFrom:
+            configMapKeyRef:
+              name: model-endpoints
+              key: public_url
+        - name: TRUST_PROXY
+          value: "true"
         - name: SIMULATION_MODE
           value: "false"
         - name: LOG_LEVEL
@@ -63,7 +78,7 @@ spec:
             cpu: "250m"
           limits:
             memory: "512Mi"
-            cpu: "500m"
+            cpu: "1"
         livenessProbe:
           httpGet:
             path: /health

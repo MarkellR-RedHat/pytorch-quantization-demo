@@ -10,6 +10,11 @@ echo "=========================================="
 # Check Python version
 echo "Checking Python version..."
 python3 --version
+if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)'; then
+    echo "Python 3.11 or newer is required (found $(python3 --version 2>&1))."
+    echo "On macOS: brew install python@3.12, then rerun this script."
+    exit 1
+fi
 
 # Create virtual environment
 echo "Creating virtual environment..."
