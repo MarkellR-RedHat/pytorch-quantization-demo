@@ -32,7 +32,7 @@ Three scenes, keys `1` `2` `3`: **Ask** streams a question (typed, or one of eig
 
 ## Deploy
 
-The vLLM deployments are KServe InferenceServices in `kubernetes/models/`, one per setup, as they ran. They use raw deployment mode (a plain Deployment behind a Service), and on our cluster GPUs are scheduled through a Kueue queue, which the files leave out. The two INT4 files reference a ServingRuntime on our cluster that isn't in the repo yet; use your cluster's vLLM runtime or the raw-container form of the other three. Every file uses `--max-model-len 131072`, the model's full context and what was measured; 32768 is plenty for a demo and leaves more room for KV cache.
+The vLLM deployments are KServe InferenceServices in `kubernetes/models/`, one per setup, as they ran. They use raw deployment mode (a plain Deployment behind a Service), and on our cluster GPUs are scheduled through a Kueue queue, which the files leave out. The two INT4 files use KServe's model/runtime form: `kubernetes/servingruntime-vllm.yaml` is the runtime they ran on (the same image, serving `/mnt/models`), and the `hf://` download needs a `storage-config` secret shaped like `kubernetes/storage-config.example.yaml`. Every file uses `--max-model-len 131072`, the model's full context and what was measured; 32768 is plenty for a demo and leaves more room for KV cache.
 
 Not every setup needs a full H200:
 

@@ -1,0 +1,10 @@
+# KServe reads hf:// storageUris with this secret. Create the real one instead of applying this file:
+#   oc create secret generic storage-config \
+#     --from-literal=hf-connection='{"type":"HuggingFace","access_token":"<hf token>"}'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: storage-config
+type: Opaque
+stringData:
+  hf-connection: '{"type": "HuggingFace", "access_token": "<hf token>"}'
