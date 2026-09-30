@@ -1,0 +1,21 @@
+{
+  "variant": "INT4_RH",
+  "model": "benchmark-int4-rh",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "**KV Cache Overview**\n=======================\n\nA KV (Key-Value) cache is a data storage system that stores data as a collection of key-value pairs. It's designed to provide fast access to frequently used data, reducing the load on underlying databases or storage systems.\n\n**How it Works**\n----------------\n\nHere's a high-level overview of how a KV cache operates:\n\n1.  **Data Ingestion**: Data is written to the cache with a unique key and a corresponding value.\n2.  **Data Retrieval**: When a request is made for a specific key, the cache checks if the key exists in its storage.\n3.  **Cache Hit**: If the key exists, the cache returns the associated value directly.\n4.  **Cache Miss**: If the key doesn't exist, the cache retrieves the data from the underlying storage system, stores it in the cache, and returns the value.\n\n**Benefits**\n------------\n\nUsing a KV cache offers several benefits:\n\n*   **Improved Performance**: By storing frequently accessed data in memory, KV caches reduce the latency associated with retrieving data from slower storage systems.\n*   **Reduced Load**: By serving data directly from the cache, the load on underlying databases or storage systems is decreased, improving overall system performance.\n*   **Scalability**: KV caches can be easily scaled horizontally by adding more nodes to the cluster, making them suitable for large-scale applications.\n\n**Common Use Cases**\n--------------------\n\nKV caches are commonly used in various scenarios, such as:\n\n*   **Session Stores**: Storing user session data to reduce database queries.\n*   **Leaderboards**: Caching leaderboard data to improve performance and reduce database load.\n*   **Real-time Analytics**: Storing and processing real-time analytics data.\n\n**Example Use Case**\n--------------------\n\nSuppose you're building a web application that displays a user's profile information. Instead of querying the database every time the user visits their profile page, you can store the profile data in a KV cache. When the user requests their profile page, the application checks the cache first. If the data exists, it's returned directly from the cache. If not, the data is retrieved from the database, stored in the cache, and returned to the user.\n\nBy using a KV cache, you can significantly improve the performance and scalability of your application.",
+  "usage": {
+    "prompt_tokens": 50,
+    "total_tokens": 521,
+    "completion_tokens": 471
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 346.4,
+  "total_ms": 10881.1,
+  "tokens_per_second": 43.3,
+  "captured_at": "2026-09-29T22:38:43-04:00"
+}

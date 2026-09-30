@@ -1,0 +1,48 @@
+Round 2 test results - Sep 29, 2026
+
+Phase A: BF16 (2x H200, TP2) + Community INT4 AWQ (1x H200)
+Phase B: Spec Decode (2x H200, TP2, 8B draft, 5 speculative tokens) + INT4_RH GPTQ (1x H200)
+
+All tests ran on the same cluster node.
+vLLM 0.18.0+rhaiv.14, PyTorch 2.10.0, NVIDIA H200, Driver 580.126.20
+
+What worked:
+- All 4 setups deployed successfully from canonical repo YAMLs
+- INT4_RH (RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16) deployed via model/runtime pattern
+  with storage-config secret - no gating issues
+- Zero failed requests across all load test levels for all 4 variants
+- All preset captures finished with "stop" (none hit the 1024 token cap)
+- All benchmarks ran inside pods via vllm bench serve (no port-forward latency)
+- lm_eval ran on the laptop via port-forward for accuracy tests
+
+Accuracy (GSM8K, 8-shot, full 1319 questions):
+  BF16:        94.77% (flexible-extract)
+  INT4 AWQ:    94.84% (100.1% recovery)
+  INT4_RH:     95.07% (100.3% recovery)
+
+Accuracy (MMLU-Pro, 5-shot, limit 20 per subject):
+  BF16:        66.79%
+  INT4 AWQ:    62.86% (94.1% recovery)
+  INT4_RH:     63.57% (95.2% recovery)
+
+Single-request throughput (ShareGPT, c=1, t=0):
+  BF16:        49.70 tok/s (2 GPUs)
+  INT4 AWQ:    47.69 tok/s (1 GPU) = 1.92x per GPU
+  INT4_RH:     44.05 tok/s (1 GPU) = 1.77x per GPU
+  Spec Decode: 62.21 tok/s (2 GPUs) = 1.25x BF16
+
+Spec decode acceptance (isolated by temperature):
+  t=0:   70.5% overall acceptance
+  t=0.7: 63.9% overall acceptance
+
+Flags/issues:
+- INT4 ShareGPT c=64 failed on first attempt (likely timeout), succeeded on retry
+- INT4_RH (GPTQ) is ~7% slower per-request than community AWQ at single request
+  (44 vs 47 tok/s). AWQ uses MacheteLinearKernel on Hopper; GPTQ kernel TBD from startup logs
+- Spec decode peak_output_token_throughput shows 15 tok/s at c=1 (misleading - this is the
+  per-step output, not the effective throughput which is 62 tok/s accounting for accepted tokens)
+- lm_eval needs HF_TOKEN set for the tokenizer (gated model)
+
+Setups by phase:
+  Phase A: benchmark-bf16 (2 GPU) + benchmark-int4 (1 GPU)
+  Phase B: benchmark-spec (2 GPU) + benchmark-int4-rh (1 GPU)

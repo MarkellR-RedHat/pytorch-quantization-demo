@@ -1,0 +1,21 @@
+{
+  "variant": "INT4",
+  "model": "benchmark-int4",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "**KV Cache Overview**\n=======================\n\nAs a new engineer, understanding the KV (Key-Value) cache is essential for optimizing system performance. In this explanation, we'll cover the basics of KV caching and its benefits.\n\n**What is a KV Cache?**\n------------------------\n\nA KV cache is a simple, in-memory data store that maps keys to values. It's designed to store small amounts of data that are frequently accessed, reducing the load on slower storage systems like databases or file systems.\n\n**How Does it Work?**\n----------------------\n\nHere's a step-by-step overview of the KV cache workflow:\n\n1.  **Key Generation**: When a request is made to retrieve data, a unique key is generated based on the request parameters.\n2.  **Cache Check**: The KV cache is checked to see if the key already exists. If it does, the corresponding value is returned immediately.\n3.  **Cache Miss**: If the key doesn't exist, the request is forwarded to the underlying storage system (e.g., database or file system).\n4.  **Data Retrieval**: The storage system retrieves the requested data and returns it to the KV cache.\n5.  **Cache Population**: The KV cache stores the retrieved data with the corresponding key, so it can be quickly retrieved on subsequent requests.\n\n**Benefits of KV Caching**\n---------------------------\n\n1.  **Improved Performance**: By storing frequently accessed data in memory, KV caching reduces the time it takes to retrieve data, resulting in faster system responses.\n2.  **Reduced Load**: By minimizing the number of requests made to slower storage systems, KV caching helps distribute the load more efficiently.\n3.  **Simplified Data Retrieval**: KV caching provides a simple, unified interface for retrieving data, making it easier to manage and maintain.\n\n**Example Use Cases**\n----------------------\n\n*   **User Session Data**: Store user session data, such as login information or preferences, in a KV cache to quickly retrieve and update it.\n*   **Frequently Accessed Data**: Cache frequently accessed data, like product information or news articles, to reduce the load on databases and improve page load times.\n\nBy understanding how KV caching works and its benefits, you can optimize system performance and improve the overall user experience.",
+  "usage": {
+    "prompt_tokens": 50,
+    "total_tokens": 505,
+    "completion_tokens": 455
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 299.4,
+  "total_ms": 9788.4,
+  "tokens_per_second": 46.5,
+  "captured_at": "2026-09-29T21:26:03-04:00"
+}

@@ -65,6 +65,13 @@ def active_variants() -> list[str]:
     return [k for k in ALL_VARIANTS if k != "FP8" or fp8]
 
 
+def bench_label(key: str) -> str:
+    """The benchmark's own label for a setup, which for INT4 follows the checkpoint that was measured."""
+    if key == "INT4" and "RedHatAI" in str(benchmark_data.variant(key).get("checkpoint") or ""):
+        return "INT4 (LLM Compressor)"
+    return benchmark_label(key)
+
+
 def current_mode() -> str:
     return "simulated" if simulator.is_enabled() else "live"
 
@@ -323,7 +330,7 @@ async def get_config(request: Request):
         ],
         "gpu_hourly_usd": settings.gpu_hourly_usd,
         "auto_traffic": settings.auto_traffic and settings.auto_traffic_rps > 0,
-        "benchmark": benchmark_data.meta(benchmark_label),
+        "benchmark": benchmark_data.meta(bench_label),
         "presets": preset_list(),
     }
 

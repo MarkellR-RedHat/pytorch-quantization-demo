@@ -39,6 +39,7 @@ def test_preset_streams_and_finishes_with_timing(client, no_captures):
     assert ev[-1]["t"] == "done"
     # replay reports only what was measured: the benchmark's first-token time and speed, no token count
     assert ev[-1]["ttft_ms"] == main.benchmark_data.variant("INT4")["ttft_ms_avg"]
+    assert ev[-1]["ttft_basis"] == "benchmark" and ev[-1]["tps_basis"] == "benchmark"
     assert ev[-1]["total_ms"] is None
     assert ev[-1]["completion_tokens"] is None
     assert ev[-1]["tokens_per_second"] == main.benchmark_data.variant("INT4")["throughput_tps"]
@@ -47,9 +48,30 @@ def test_preset_streams_and_finishes_with_timing(client, no_captures):
     assert "sheep" not in text
 
 
-def test_replay_has_no_first_token_time_where_none_was_measured(client):
+def test_replay_reports_the_recordings_own_timings(client):
+    """The round-2 recordings carry their own first-token time, speed and total, and replay says so."""
     ev = events(client.post("/ask/SPEC_DECODE", json={"preset": "reasoning"}))
-    assert ev[-1]["ttft_ms"] is None
+    rec = captured("SPEC_DECODE")
+    done = ev[-1]
+    assert done["ttft_ms"] == rec["ttft_ms"] and done["ttft_basis"] == "recorded"
+    assert done["tokens_per_second"] == round(rec["tokens_per_second"], 1) and done["tps_basis"] == "recorded"
+    assert done["total_ms"] == rec["total_ms"]
+
+
+def test_replay_falls_back_to_benchmark_timing_for_a_recording_without_any(client, monkeypatch, tmp_path):
+    from app.quality import PROMPTS
+
+    (tmp_path / "FP16").mkdir()
+    (tmp_path / "FP16" / "complex_reasoning.json").write_text(json.dumps({
+        "prompt": PROMPTS["complex_reasoning"], "response_text": "9 sheep.",
+        "usage": {"completion_tokens": 3},
+    }))
+    monkeypatch.setattr(settings, "quality_dir", str(tmp_path))
+    done = events(client.post("/ask/FP16", json={"preset": "reasoning"}))[-1]
+    bm = main.benchmark_data.variant("FP16")
+    assert done["tps_basis"] == "benchmark" and done["tokens_per_second"] == bm["throughput_tps"]
+    assert done["ttft_ms"] == bm["ttft_ms_avg"] and done["ttft_basis"] == "benchmark"
+    assert done["total_ms"] is None and done["completion_tokens"] == 3
 
 
 def test_replay_never_invents_a_quality_difference(client, no_captures):
@@ -91,8 +113,9 @@ def test_arena_booth_page_is_served(client):
 def test_load_points_report_median_and_request_sizes(tmp_path):
     from app.benchmark import BenchmarkData
 
-    (tmp_path / "INT4").mkdir()
-    (tmp_path / "INT4" / "c8.json").write_text(json.dumps({
+    folder = main.benchmark_data.variant("INT4").get("sweep_dir") or "INT4"
+    (tmp_path / folder).mkdir()
+    (tmp_path / folder / "c8.json").write_text(json.dumps({
         "output_throughput": 400.0, "mean_e2el_ms": 6000.0, "median_e2el_ms": 5500.0,
         "completed": 64, "total_input_tokens": 64 * 512, "total_output_tokens": 64 * 256,
     }))
@@ -104,12 +127,12 @@ def test_load_points_report_median_and_request_sizes(tmp_path):
 
 
 def test_replay_uses_each_setups_captured_answer(client):
-    """With the Sep 29 captures in quality/, replay shows each setup's own real answer."""
+    """With the round-2 captures in quality/, replay shows each setup's own real answer."""
     for key in ("FP16", "INT4", "SPEC_DECODE"):
         ev = events(client.post(f"/ask/{key}", json={"preset": "reasoning"}))
         assert ev[0]["text_source"] == "captured"
         text = "".join(e["text"] for e in ev if e["t"] == "delta")
-        path = settings.resolve(settings.quality_dir) / key / "complex_reasoning.json"
+        path = settings.resolve(settings.quality_dir) / settings.captures_for(key) / "complex_reasoning.json"
         captured = json.loads(path.read_text())
         assert text == captured["response_text"]
 
@@ -149,7 +172,8 @@ def sse(*words, stall_after=None, delay_first=0.0):
 
 
 def captured(key, scenario="complex_reasoning"):
-    return json.loads((settings.resolve(settings.quality_dir) / key / f"{scenario}.json").read_text())
+    folder = settings.resolve(settings.quality_dir) / settings.captures_for(key)
+    return json.loads((folder / f"{scenario}.json").read_text())
 
 
 def test_live_error_plays_the_recorded_answer_labeled_as_recorded(client, monkeypatch):
@@ -165,8 +189,8 @@ def test_live_error_plays_the_recorded_answer_labeled_as_recorded(client, monkey
     done = ev[-1]
     assert done["t"] == "done" and done["source"] == "recorded"
     assert done["completion_tokens"] == captured("FP16")["usage"]["completion_tokens"]
-    # the Sep 29 recordings carry no timings, so nothing is shown as if it had been measured
-    assert done["ttft_ms"] is None and done["total_ms"] is None and done["tps_basis"] == "benchmark"
+    # the recording's own timings are shown, labeled as recorded
+    assert done["ttft_ms"] == captured("FP16")["ttft_ms"] and done["tps_basis"] == "recorded"
 
 
 def test_a_stalled_stream_keeps_its_live_tokens_and_says_how_many(client, monkeypatch):
@@ -278,7 +302,9 @@ def test_the_int4_column_can_run_red_hats_build(client, monkeypatch, tmp_path):
     body = client.get("/api/config").json()
     int4 = next(v for v in body["variants"] if v["key"] == "INT4")
     assert int4["label"] == "INT4 (LLM Compressor)" and int4["build"] == "Red Hat LLM Compressor build"
-    # the Sep 29 numbers are still the AWQ build's, and stay labeled that way
-    assert body["benchmark"]["variants"]["INT4"]["label"] == "INT4 AWQ"
+    # the benchmark's INT4 numbers are Red Hat's build too, and the AWQ build sits under reference
+    bm = body["benchmark"]["variants"]["INT4"]
+    assert bm["label"] == "INT4 (LLM Compressor)" and "RedHatAI" in bm["checkpoint"]
+    assert bm["reference"]["checkpoint"].startswith("hugging-quants/")
     ev = events(client.post("/ask/INT4", json={"preset": "reasoning"}))
     assert "".join(e["text"] for e in ev if e["t"] == "delta") == "Red Hat build: 9 sheep."

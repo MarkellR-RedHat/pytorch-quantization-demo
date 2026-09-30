@@ -42,7 +42,7 @@ class TestBasics:
         assert body["variants"][0]["gpus"] == 2
         # weights per GPU come through from the startup-log figures, not null
         weights = {v["key"]: v["weights_gib_per_gpu"] for v in body["variants"]}
-        assert weights == {"FP16": 65.74, "INT4": 37.87, "SPEC_DECODE": 73.24}
+        assert weights == {"FP16": 65.74, "INT4": 37.11, "SPEC_DECODE": 73.24}  # INT4 is Red Hat's build
         assert body["gpu_hourly_usd"] == 0
         bench = body["benchmark"]
         assert "rhai-tmm" not in json.dumps(bench) and "TMM" not in json.dumps(bench)
@@ -69,9 +69,9 @@ class TestBasics:
     def test_metrics_shape(self, client):
         infer("INT4")
         snap = client.get("/metrics").json()["INT4"]
-        assert snap["label"] == "INT4 AWQ"
+        assert snap["label"] == "INT4 (LLM Compressor)"
         assert snap["source"] == "simulated"
-        assert snap["basis"] == "benchmark · 1 stream"
+        assert snap["basis"].startswith("benchmark")  # with a sweep on disk, the basis is "benchmark c≈1"
         assert snap["gpus"] == 1
         assert snap["total_requests"] == 1
         assert snap["cost_per_request"] is None

@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     # Which folder under quality/ holds the INT4 column's recordings: INT4 for the community AWQ
     # build, INT4_RH for Red Hat's LLM Compressor build. It also names the build on screen.
-    model_int4_captures: str = "INT4"
+    model_int4_captures: str = "INT4_RH"
 
     # Demo
     simulation_mode: bool = False

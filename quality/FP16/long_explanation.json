@@ -1,0 +1,21 @@
+{
+  "variant": "FP16",
+  "model": "benchmark-bf16",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "**KV Cache Overview**\n=======================\n\nAs a new engineer, understanding the KV (Key-Value) cache is essential for optimizing application performance. In this explanation, we'll cover the basics of KV caching and its benefits.\n\n**What is a KV Cache?**\n------------------------\n\nA KV cache is a data storage system that stores data as a collection of key-value pairs. It's designed to provide fast access to frequently used data, reducing the need to query a slower, more persistent data store.\n\n**How Does it Work?**\n----------------------\n\nHere's a step-by-step overview of the KV cache workflow:\n\n1.  **Cache Miss**: When an application requests data, it first checks the KV cache. If the data is not found (a cache miss), the request is forwarded to the underlying data store.\n2.  **Data Retrieval**: The data store retrieves the requested data and returns it to the application.\n3.  **Cache Population**: The retrieved data is stored in the KV cache with a unique key, so it can be quickly accessed in the future.\n4.  **Cache Hit**: On subsequent requests for the same data, the KV cache returns the cached data directly, reducing the need to query the data store.\n\n**Benefits of KV Caching**\n---------------------------\n\n1.  **Improved Performance**: KV caching reduces the latency associated with querying a slower data store, resulting in faster application response times.\n2.  **Increased Throughput**: By reducing the number of requests to the data store, KV caching can increase the overall throughput of an application.\n3.  **Reduced Load**: KV caching can help reduce the load on the data store, making it more scalable and reliable.\n\n**Example Use Case**\n---------------------\n\nSuppose we're building an e-commerce application that displays product information. We can use a KV cache to store frequently accessed product data, such as product names, descriptions, and prices. When a user requests product information, the application checks the KV cache first. If the data is cached, it's returned immediately. If not, the application queries the database, caches the result, and returns the data to the user.\n\nBy using a KV cache, we can significantly improve the performance and responsiveness of our e-commerce application.",
+  "usage": {
+    "prompt_tokens": 50,
+    "total_tokens": 503,
+    "completion_tokens": 453
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 399.1,
+  "total_ms": 9451.7,
+  "tokens_per_second": 47.9,
+  "captured_at": "2026-09-29T21:25:03-04:00"
+}

@@ -1,0 +1,21 @@
+{
+  "variant": "SPEC_DECODE",
+  "model": "benchmark-spec",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "**KV Cache Overview**\n=======================\n\nAs a new engineer, understanding the KV (Key-Value) cache is essential for optimizing application performance. In this explanation, we'll cover the basics of KV caching and its benefits.\n\n**What is a KV Cache?**\n------------------------\n\nA KV cache is a data storage system that stores data as a collection of key-value pairs. It's designed to provide fast access to frequently used data, reducing the need to query a slower, more persistent data store.\n\n**How Does it Work?**\n----------------------\n\nHere's a step-by-step overview of the KV cache workflow:\n\n1.  **Cache Miss**: When an application requests data, it first checks the KV cache. If the data is not found (a cache miss), the request is forwarded to the underlying data store.\n2.  **Data Retrieval**: The data store retrieves the requested data and returns it to the application.\n3.  **Cache Population**: The retrieved data is stored in the KV cache with a unique key, so it can be quickly accessed in the future.\n4.  **Cache Hit**: When the application requests the same data again, the KV cache checks if the data is available (a cache hit). If it is, the data is returned directly from the cache, bypassing the slower data store.\n\n**Benefits of KV Caching**\n---------------------------\n\n1.  **Improved Performance**: By storing frequently accessed data in a fast, in-memory cache, applications can reduce latency and improve overall performance.\n2.  **Reduced Load**: By minimizing the number of requests to the underlying data store, KV caching can help reduce the load on the system and prevent bottlenecks.\n3.  **Scalability**: KV caching can help applications scale more efficiently, as it reduces the need for expensive hardware upgrades or complex data replication strategies.\n\n**Example Use Cases**\n----------------------\n\n1.  **Session Management**: KV caching can be used to store user session data, reducing the need for database queries and improving application responsiveness.\n2.  **Content Delivery**: KV caching can be used to store frequently accessed content, such as images or videos, reducing the load on the content delivery network (CDN).\n\nIn summary, the KV cache is a powerful tool for optimizing application performance by providing fast access to frequently used data. By understanding how KV caching works and its benefits, you can design more efficient and scalable systems.",
+  "usage": {
+    "prompt_tokens": 50,
+    "total_tokens": 536,
+    "completion_tokens": 486
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 399.6,
+  "total_ms": 8466.2,
+  "tokens_per_second": 57.4,
+  "captured_at": "2026-09-29T22:37:44-04:00"
+}

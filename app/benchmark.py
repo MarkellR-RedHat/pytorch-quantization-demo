@@ -84,8 +84,12 @@ class BenchmarkData:
         self.variants: dict[str, dict] = variants if isinstance(variants, dict) else {}
         self.sweeps = {key: self._load_sweep(key) for key in DEFAULT_GPUS}
 
+    def sweep_folder(self, key: str) -> Path:
+        # a column can point at another folder's sweep (the INT4 column shows Red Hat's build)
+        return self.bench_dir / (self.variant(key).get("sweep_dir") or key)
+
     def _load_sweep(self, key: str) -> list[tuple[int, float]]:
-        folder = self.bench_dir / key
+        folder = self.sweep_folder(key)
         points = []
         if not folder.is_dir():
             return points
@@ -114,7 +118,7 @@ class BenchmarkData:
 
     def load_points(self, key: str) -> list[dict]:
         """Concurrency sweep for the dashboard: output tokens/s (total and per GPU) and median latency."""
-        folder = self.bench_dir / key
+        folder = self.sweep_folder(key)
         if not folder.is_dir():
             return []
         gpus = self.gpus(key)
@@ -141,6 +145,7 @@ class BenchmarkData:
                 "output_tokens_per_second_per_gpu": round(float(tput) / gpus, 1),
                 "latency_ms": round(float(latency), 1) if latency else None,
                 "latency_kind": "median" if isinstance(data.get("median_e2el_ms"), int | float) else "mean",
+                "latency_p95_ms": _round(data.get("p95_e2el_ms")),
                 "avg_input_tokens": _per_request(data, "total_input_tokens", done),
                 "avg_output_tokens": _per_request(data, "total_output_tokens", done),
                 "tpot_median_ms": _round(data.get("median_tpot_ms")),
@@ -163,6 +168,34 @@ class BenchmarkData:
             "avg_tokens_per_request": v.get("avg_tokens_per_request"),
             "weights_gib_per_gpu": self.weights_gib_per_gpu(key),
             "mean_acceptance_length": v.get("mean_acceptance_length"),
+            # round-2 fields, passed through as they are so every number on screen traces to the file
+            "ttft_ms_avg": v.get("ttft_ms_avg"),
+            "speed_vs_baseline": v.get("speed_vs_baseline"),
+            "speed_vs_baseline_t0_7": v.get("speed_vs_baseline_t0_7"),
+            "throughput_tps_t0_7": (v.get("at_temperature_0_7") or {}).get("throughput_tps"),
+            "prompts": v.get("prompts"),
+            "checkpoint": v.get("checkpoint"),
+            "build": v.get("build"),
+            "kernel": v.get("kernel"),
+            "accuracy": v.get("accuracy"),
+            "acceptance": v.get("acceptance"),
+            "reference": self._reference(v.get("reference")),
+        }
+
+    @staticmethod
+    def _reference(ref: dict | None) -> dict | None:
+        """The naive pick's numbers, shown as one line under the setup that replaced it."""
+        if not ref:
+            return None
+        acc = ref.get("accuracy") or {}
+        return {
+            "build": ref.get("build"),
+            "checkpoint": ref.get("checkpoint"),
+            "kernel": ref.get("kernel"),
+            "throughput_tps": ref.get("throughput_tps"),
+            "speed_vs_baseline": ref.get("speed_vs_baseline"),
+            "gsm8k": (acc.get("gsm8k") or {}).get("score"),
+            "mmlu_pro": (acc.get("mmlu_pro") or {}).get("score"),
         }
 
     def has(self, key: str) -> bool:
@@ -183,12 +216,20 @@ class BenchmarkData:
         """(mean latency ms, lognormal sigma, basis label) for a variant at the given concurrency."""
         v = self.variant(key)
         mean = float(v.get("avg_latency_ms") or 0.0)
-        sigma = lognormal_sigma(mean, float(v.get("p95_latency_ms") or 0.0))
         sweep = self.sweeps.get(key)
         n = max(1, int(concurrency))
         if sweep:
-            return _interp(sweep, n), sigma, f"benchmark c≈{n}"
-        return mean, sigma, "benchmark · 1 stream"
+            # the sweep's fixed-length prompts give the request-to-request jitter; the single-stream
+            # p95 spans ShareGPT prompts of very different lengths, which isn't jitter
+            return _interp(sweep, n), self.sweep_sigma(key), f"benchmark c≈{n}"
+        return mean, lognormal_sigma(mean, float(v.get("p95_latency_ms") or 0.0)), "benchmark · 1 stream"
+
+    def sweep_sigma(self, key: str) -> float:
+        points = self.load_points(key)
+        first = points[0] if points else None
+        if not first or not first.get("latency_ms") or not first.get("latency_p95_ms"):
+            return 0.05
+        return min(max(lognormal_sigma(first["latency_ms"], first["latency_p95_ms"]), 0.02), 0.35)
 
 
 benchmark_data = BenchmarkData(

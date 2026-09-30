@@ -19,7 +19,7 @@ from datetime import datetime
 
 from app.config import settings
 from app.openshift import openshift_client
-from app.quality import PROMPTS, get_comparison, recorded_answer
+from app.quality import PROMPTS, recorded_answer
 
 logger = logging.getLogger(__name__)
 
@@ -67,16 +67,15 @@ def preset_list() -> list[dict]:
     return [{"key": key, "label": label, "prompt": PROMPTS[sc]} for key, (sc, label) in PRESETS.items()]
 
 
-def replay_text(variant: str, preset: str | None) -> tuple[str, str, int | None]:
-    """(text, where it came from, completion tokens if known): "captured" model output or a replay "note"."""
+def replay_text(variant: str, preset: str | None) -> tuple[str, str, dict | None]:
+    """(text, where it came from, the recording): "captured" model output or a replay "note"."""
     scenario = scenario_for(preset)
     if not scenario:
         return REPLAY_NOTE, "note", None
-    captures = settings.captures_for(variant)
-    found = get_comparison(scenario, [captures])["responses"].get(captures)
+    found = recorded_answer(settings.captures_for(variant), scenario)
     if not found:
         return NOT_CAPTURED_NOTE, "note", None
-    return found["text"], "captured", (found.get("usage") or {}).get("completion_tokens")
+    return found["text"], "captured", found
 
 
 def preset_prompt(preset: str | None) -> str | None:
@@ -102,18 +101,37 @@ async def paced(text: str, tps: float) -> AsyncIterator[bytes]:
         yield event("delta", text=buf)
 
 
+def timing(found: dict | None, variant: str, benchmark) -> dict:
+    """What a replayed or recorded answer reports: the recording's own timings when it has them (the
+    round-2 captures do), otherwise the benchmark's speed and first-token time with nothing invented."""
+    bm = benchmark.variant(variant)
+    if found and found.get("tokens_per_second"):
+        return {
+            "tps": float(found["tokens_per_second"]), "tps_basis": "recorded",
+            "ttft_ms": found.get("ttft_ms"), "ttft_basis": "recorded" if found.get("ttft_ms") else None,
+            "total_ms": found.get("total_ms"), "completion_tokens": found.get("completion_tokens"),
+        }
+    return {
+        "tps": float(bm.get("throughput_tps") or 40.0), "tps_basis": "benchmark",
+        "ttft_ms": bm.get("ttft_ms_avg"), "ttft_basis": "benchmark" if bm.get("ttft_ms_avg") else None,
+        "total_ms": None, "completion_tokens": (found or {}).get("completion_tokens"),
+    }
+
+
+def done_event(source: str, t: dict) -> bytes:
+    return event("done", source=source, ttft_ms=t["ttft_ms"], ttft_basis=t["ttft_basis"],
+                 total_ms=t["total_ms"],
+                 completion_tokens=t["completion_tokens"], tokens_per_second=round(t["tps"], 1),
+                 tps_basis=t["tps_basis"])
+
+
 async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIterator[bytes]:
-    text, text_source, captured_tokens = replay_text(variant, preset)
-    tps = float(benchmark.variant(variant).get("throughput_tps") or 40.0)
+    text, text_source, found = replay_text(variant, preset)
+    t = timing(found, variant, benchmark)
     yield event("start", source="replay", text_source=text_source)
-    async for chunk in paced(text, tps):
+    async for chunk in paced(text, t["tps"]):
         yield chunk
-    # Replay only paces the text at the measured speed. It reports the benchmark's measured speed and
-    # first-token time (BF16 and INT4 only; spec decode's wasn't measured), plus a captured answer's
-    # real token count. Total time wasn't measured for this text, so it stays "live only".
-    ttft = benchmark.variant(variant).get("ttft_ms_avg")
-    yield event("done", source="replay", ttft_ms=ttft, total_ms=None,
-                completion_tokens=captured_tokens, tokens_per_second=round(tps, 1))
+    yield done_event("replay", t)
 
 
 def recorded_label(captured_at: str | None, live_tokens: int, failed: bool = True) -> str:
@@ -139,15 +157,10 @@ async def recorded_stream(
         yield event("error", detail=NO_RECORDING_PRESET if scenario else NO_RECORDING_TYPED)
         return
     yield event("fallback", label=recorded_label(found["captured_at"], live_tokens), live_tokens=live_tokens)
-    measured_tps = found["tokens_per_second"]
-    tps = float(measured_tps or benchmark.variant(variant).get("throughput_tps") or 40.0)
-    async for chunk in paced(found["text"], tps):
+    t = timing(found, variant, benchmark)
+    async for chunk in paced(found["text"], t["tps"]):
         yield chunk
-    # Every number here was measured when the answer was recorded. Older recordings have no timings,
-    # so their speed is the benchmark's, and the done event says which one it is.
-    yield event("done", source="recorded", ttft_ms=found["ttft_ms"], total_ms=found["total_ms"],
-                completion_tokens=found["completion_tokens"], tokens_per_second=round(tps, 1),
-                tps_basis="recorded" if measured_tps else "benchmark")
+    yield done_event("recorded", t)
 
 
 async def planned_recorded_stream(variant: str, preset: str | None, benchmark) -> AsyncIterator[bytes]:
@@ -162,15 +175,12 @@ async def planned_recorded_stream(variant: str, preset: str | None, benchmark) -
                     tokens_per_second=None, note=True)
         return
     yield event("recorded", label=recorded_label(found["captured_at"], 0, failed=False))
-    if found["ttft_ms"]:
-        await _sleep(found["ttft_ms"] / 1000)
-    measured_tps = found["tokens_per_second"]
-    tps = float(measured_tps or benchmark.variant(variant).get("throughput_tps") or 40.0)
-    async for chunk in paced(found["text"], tps):
+    t = timing(found, variant, benchmark)
+    if t["ttft_basis"] == "recorded":
+        await _sleep(t["ttft_ms"] / 1000)
+    async for chunk in paced(found["text"], t["tps"]):
         yield chunk
-    yield event("done", source="recorded", ttft_ms=found["ttft_ms"], total_ms=found["total_ms"],
-                completion_tokens=found["completion_tokens"], tokens_per_second=round(tps, 1),
-                tps_basis="recorded" if measured_tps else "benchmark")
+    yield done_event("recorded", t)
 
 
 async def _next_line(lines, timeout: float) -> str:

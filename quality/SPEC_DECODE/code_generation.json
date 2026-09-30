@@ -1,51 +1,21 @@
 {
   "variant": "SPEC_DECODE",
+  "model": "benchmark-spec",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
   "scenario": "code_generation",
   "prompt": "Write a Python function that returns the second largest number in a list. Handle edge cases.",
   "temperature": 0,
-  "model": "benchmark-spec",
-  "response_text": "**Second Largest Number in a List**\n=====================================\n\nHere's a Python function that returns the second largest number in a list. It handles edge cases such as an empty list, a list with a single element, and a list with duplicate elements.\n\n```python\ndef second_largest(numbers):\n    \"\"\"\n    Returns the second largest number in a list.\n\n    Args:\n        numbers (list): A list of numbers.\n\n    Returns:\n        int or float: The second largest number in the list.\n\n    Raises:\n        ValueError: If the list is empty or has less than two unique elements.\n    \"\"\"\n    if len(numbers) < 2:\n        raise ValueError(\"List must have at least two elements\")\n\n    # Remove duplicates and sort the list in descending order\n    unique_numbers = sorted(set(numbers), reverse=True)\n\n    if len(unique_numbers) < 2:\n        raise ValueError(\"List must have at least two unique elements\")\n\n    return unique_numbers[1]\n```\n\n**Example Use Cases**\n--------------------\n\n```python\n# Test with a list of integers\nnumbers = [4, 2, 9, 6, 5, 1, 8, 3, 7]\nprint(second_largest(numbers))  # Output: 8\n\n# Test with a list of floats\nnumbers = [4.5, 2.2, 9.9, 6.6, 5.5, 1.1, 8.8, 3.3, 7.7]\nprint(second_largest(numbers))  # Output: 8.8\n\n# Test with an empty list\nnumbers = []\ntry:\n    print(second_largest(numbers))\nexcept ValueError as e:\n    print(e)  # Output: List must have at least two elements\n\n# Test with a list of duplicate elements\nnumbers = [1, 1, 1, 1, 1]\ntry:\n    print(second_largest(numbers))\nexcept ValueError as e:\n    print(e)  # Output: List must have at least two unique elements\n```\n\nThis function first checks if the list has at least two elements. If not, it raises a `ValueError`. Then, it removes duplicates from the list by converting it to a set and sorts the unique elements in descending order. If the list has less than two unique elements, it raises another `ValueError`. Finally, it returns the second largest number, which is the second element in the sorted list of unique numbers.",
+  "response_text": "**Second Largest Number in a List**\n=====================================\n\nHere's a Python function that returns the second largest number in a list. It handles edge cases such as empty lists, lists with a single element, and lists with duplicate elements.\n\n```python\ndef second_largest(numbers):\n    \"\"\"\n    Returns the second largest number in a list.\n\n    Args:\n        numbers (list): A list of numbers.\n\n    Returns:\n        int or float: The second largest number in the list.\n\n    Raises:\n        ValueError: If the list has less than two unique elements.\n    \"\"\"\n    # Check if the list is empty\n    if not numbers:\n        raise ValueError(\"List is empty\")\n\n    # Remove duplicates and sort the list in descending order\n    unique_numbers = sorted(set(numbers), reverse=True)\n\n    # Check if the list has less than two unique elements\n    if len(unique_numbers) < 2:\n        raise ValueError(\"List has less than two unique elements\")\n\n    # Return the second largest number\n    return unique_numbers[1]\n```\n\n**Example Use Cases**\n--------------------\n\n```python\n# Test with a list of integers\nnumbers = [4, 2, 9, 6, 5, 1, 8, 3, 7]\nprint(second_largest(numbers))  # Output: 8\n\n# Test with a list of floats\nnumbers = [4.5, 2.2, 9.9, 6.6, 5.5, 1.1, 8.8, 3.3, 7.7]\nprint(second_largest(numbers))  # Output: 8.8\n\n# Test with an empty list\nnumbers = []\ntry:\n    print(second_largest(numbers))\nexcept ValueError as e:\n    print(e)  # Output: List is empty\n\n# Test with a list of a single element\nnumbers = [5]\ntry:\n    print(second_largest(numbers))\nexcept ValueError as e:\n    print(e)  # Output: List has less than two unique elements\n\n# Test with a list of duplicate elements\nnumbers = [5, 5, 5, 5]\ntry:\n    print(second_largest(numbers))\nexcept ValueError as e:\n    print(e)  # Output: List has less than two unique elements\n```\n\nThis function uses the `set` data structure to remove duplicates from the list and the `sorted` function to sort the list in descending order. It then checks if the list has less than two unique elements and raises a `ValueError` if necessary. Finally, it returns the second largest number in the list.",
   "usage": {
     "prompt_tokens": 53,
-    "total_tokens": 565,
-    "completion_tokens": 512,
-    "prompt_tokens_details": null
+    "total_tokens": 595,
+    "completion_tokens": 542
   },
-  "captured_at": "2026-09-29T19:46:09-0400",
-  "raw": {
-    "id": "chatcmpl-9cb8bf082dceaf07",
-    "object": "chat.completion",
-    "created": 1790725562,
-    "model": "benchmark-spec",
-    "choices": [
-      {
-        "index": 0,
-        "message": {
-          "role": "assistant",
-          "content": "**Second Largest Number in a List**\n=====================================\n\nHere's a Python function that returns the second largest number in a list. It handles edge cases such as an empty list, a list with a single element, and a list with duplicate elements.\n\n```python\ndef second_largest(numbers):\n    \"\"\"\n    Returns the second largest number in a list.\n\n    Args:\n        numbers (list): A list of numbers.\n\n    Returns:\n        int or float: The second largest number in the list.\n\n    Raises:\n        ValueError: If the list is empty or has less than two unique elements.\n    \"\"\"\n    if len(numbers) < 2:\n        raise ValueError(\"List must have at least two elements\")\n\n    # Remove duplicates and sort the list in descending order\n    unique_numbers = sorted(set(numbers), reverse=True)\n\n    if len(unique_numbers) < 2:\n        raise ValueError(\"List must have at least two unique elements\")\n\n    return unique_numbers[1]\n```\n\n**Example Use Cases**\n--------------------\n\n```python\n# Test with a list of integers\nnumbers = [4, 2, 9, 6, 5, 1, 8, 3, 7]\nprint(second_largest(numbers))  # Output: 8\n\n# Test with a list of floats\nnumbers = [4.5, 2.2, 9.9, 6.6, 5.5, 1.1, 8.8, 3.3, 7.7]\nprint(second_largest(numbers))  # Output: 8.8\n\n# Test with an empty list\nnumbers = []\ntry:\n    print(second_largest(numbers))\nexcept ValueError as e:\n    print(e)  # Output: List must have at least two elements\n\n# Test with a list of duplicate elements\nnumbers = [1, 1, 1, 1, 1]\ntry:\n    print(second_largest(numbers))\nexcept ValueError as e:\n    print(e)  # Output: List must have at least two unique elements\n```\n\nThis function first checks if the list has at least two elements. If not, it raises a `ValueError`. Then, it removes duplicates from the list by converting it to a set and sorts the unique elements in descending order. If the list has less than two unique elements, it raises another `ValueError`. Finally, it returns the second largest number, which is the second element in the sorted list of unique numbers.",
-          "refusal": null,
-          "annotations": null,
-          "audio": null,
-          "function_call": null,
-          "tool_calls": [],
-          "reasoning": null
-        },
-        "logprobs": null,
-        "finish_reason": "stop",
-        "stop_reason": null,
-        "token_ids": null
-      }
-    ],
-    "service_tier": null,
-    "system_fingerprint": null,
-    "usage": {
-      "prompt_tokens": 53,
-      "total_tokens": 565,
-      "completion_tokens": 512,
-      "prompt_tokens_details": null
-    },
-    "prompt_logprobs": null,
-    "prompt_token_ids": null,
-    "kv_transfer_params": null
-  }
+  "finish_reason": "stop",
+  "ttft_ms": 446.4,
+  "total_ms": 7263.2,
+  "tokens_per_second": 74.6,
+  "captured_at": "2026-09-29T22:37:24-04:00"
 }

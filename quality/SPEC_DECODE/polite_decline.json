@@ -1,0 +1,21 @@
+{
+  "variant": "SPEC_DECODE",
+  "model": "benchmark-spec",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "polite_decline",
+  "prompt": "Write a short, polite reply declining a meeting on Friday at 3pm, and suggest next week instead.",
+  "temperature": 0,
+  "response_text": "Here's a short, polite reply declining a meeting on Friday at 3pm and suggesting next week instead:\n\n\"Dear [Name],\n\nThank you for inviting me to meet on Friday at 3pm. Unfortunately, I won't be able to make it at that time. Would it be possible to schedule an alternative meeting for next week? I'd be happy to discuss a time that suits you.\n\nBest regards,\n[Your Name]\"",
+  "usage": {
+    "prompt_tokens": 57,
+    "total_tokens": 145,
+    "completion_tokens": 88
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 512.0,
+  "total_ms": 1801.5,
+  "tokens_per_second": 48.8,
+  "captured_at": "2026-09-29T22:37:31-04:00"
+}

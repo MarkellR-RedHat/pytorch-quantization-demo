@@ -22,11 +22,14 @@ def sweep(folder, points, tail="p99"):
 
 @pytest.fixture
 def bench(tmp_path, monkeypatch):
+    bench = BenchmarkData(settings.resolve(settings.benchmark_file), tmp_path)
     sweep(tmp_path / "FP16", {1: (45, 21, 24), 16: (600, 26, 31), 64: (1700, 37, 48)})
-    sweep(tmp_path / "INT4", {1: (44, 22, 25), 16: (470, 33, 40), 64: (950, 65, 88)})
+    # the INT4 column reads the folder its benchmark entry points at (Red Hat's build)
+    int4_dir = bench.variant("INT4").get("sweep_dir") or "INT4"
+    sweep(tmp_path / int4_dir, {1: (44, 22, 25), 16: (470, 33, 40), 64: (950, 65, 88)})
     sweep(tmp_path / "SPEC_DECODE", {1: (65, 15, 19), 16: (620, 25, 34), 64: (1200, 52, 71)}, tail="p95")
     monkeypatch.setattr(settings, "tpot_target_ms", 50.0)
-    return BenchmarkData(settings.resolve(settings.benchmark_file), tmp_path)
+    return bench
 
 
 def test_points_carry_median_and_tail_time_per_token(bench):

@@ -7,9 +7,9 @@
 
 ## What This Demo Does
 
-Llama 3.1 70B Instruct runs on vLLM in three setups on NVIDIA H200s: BF16 on two GPUs, INT4 AWQ on one, and speculative decoding with an 8B draft model on two. During the demo Markell types a question from the room, it goes to all three at once, and the answers stream side by side with their timing and GPU count. The Numbers scene then shows what each setup gets you and when a router earns its keep.
+Llama 3.1 70B Instruct runs on vLLM in three setups on NVIDIA H200s: BF16 on two GPUs, INT4 (Red Hat's LLM Compressor build) on one, and speculative decoding with an 8B draft model on two. During the demo Markell types a question from the room, it goes to all three at once, and the answers stream side by side with their timing and GPU count. The Numbers scene then shows what each setup gets you and when a router earns its keep.
 
-What the audience sees, backed by data: one request at a time, INT4 runs at 97% of BF16's speed on half the GPUs, and speculative decoding runs about 1.4× faster than BF16 on the same two GPUs. All three answered the sheep riddle correctly 20 out of 20 times.
+What the audience sees, backed by data: one request at a time, INT4 runs at 89% of BF16's speed on half the GPUs and serves about the same output per GPU under load, and speculative decoding runs about 1.25× faster than BF16 on the same two GPUs (with a first token about 3× slower, and about half of BF16's tokens per GPU under load). GSM8K shows no loss for INT4 on 1,319 questions; on MMLU-Pro it scored 3 to 4 points lower on 280 questions, which is too few to call it, so the hard questions stay on BF16 until it's tested further.
 
 ## How It Works Under the Hood
 
