@@ -5,10 +5,8 @@
 You need Python 3.11 or newer. Node is optional, and the arena parity tests use it when it's installed.
 
 ```bash
-./scripts/setup.sh          # creates venv/ and installs requirements.txt
-source venv/bin/activate
-pip install -r requirements-dev.txt
-./scripts/run-local.sh      # simulated mode on http://localhost:8000
+make setup    # creates venv/, installs requirements-dev.txt, copies .env.example to .env
+make run      # replay mode on http://localhost:8000
 ```
 
 No `.env` file is needed for simulated mode. Every setting has a default, and `.env.example` lists all of them with a comment each.
@@ -17,10 +15,10 @@ No `.env` file is needed for simulated mode. Every setting has a default, and `.
 
 The backend is one FastAPI process (`app/main.py`) that keeps all state in memory, which is why the OpenShift deployment runs a single replica.
 
-- `app/benchmark.py` loads `benchmark_results.json` and any `bench/<VARIANT>/c<N>.json` sweeps from `vllm bench serve`. In simulated mode, each request's latency is sampled from a lognormal fitted to the measured mean and p95, and it's scaled by the in-flight concurrency once sweep files exist.
+- `app/benchmark.py` loads `benchmark_results.json` and the `vllm bench serve` sweeps under `bench/raw/2026-09-29-r2/sweeps/<VARIANT>/`. In simulated mode, each request's latency is sampled from a lognormal fitted to the measured mean and p95, and it's scaled by the in-flight concurrency once sweep files exist.
 - `app/simulation.py` replays those timings, sleeping for the real latency so concurrency builds up the way it would against real GPUs.
 - `app/openshift.py` is the live client for vLLM's OpenAI-compatible chat completions API. It runs at temperature 0 and computes tokens per second from `completion_tokens`.
-- `app/ask.py` streams the Ask scene: one question to every variant, with time to first token, tokens per second, and total time measured per variant. In replay mode it plays back the measured speed, using captured outputs from `quality/<VARIANT>/<scenario>.json` for the presets when they exist and the baseline's text otherwise.
+- `app/ask.py` streams the Ask scene: one question to every variant, with time to first token, tokens per second, and total time measured per variant. In replay mode it plays back the measured speed, using the recordings in `quality/<VARIANT>/<scenario>.json` for the presets, with their own timings.
 
 The booth arena (`/arena`) runs entirely in the browser. `static/js/arena-core.js` is the physics and the network forward pass (no DOM, so Node can run it in tests), `static/js/arena.js` is the game loop and renderer, and `static/arena/policy.json` holds the weights exported by `arena/train_policy.py`.
 
@@ -42,12 +40,7 @@ The presenter page is a fixed 1920 by 1080 stage scaled to the window, so check 
 
 ## Tests and lint
 
-```bash
-pytest
-ruff check app tests scripts
-```
-
-CI runs both on Python 3.11 and 3.12, builds the container, and checks `/health`.
+`make test` runs ruff and pytest. CI runs both on Python 3.11 and 3.12 and builds the container.
 
 ## Troubleshooting
 
