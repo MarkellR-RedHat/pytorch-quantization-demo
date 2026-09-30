@@ -1,4 +1,4 @@
-# PyTorch Conference NA 2026: Quantization Showdown
+# PyTorch Conference NA 2026: Not Every Question Needs Two GPUs
 
 **Conference:** PyTorch Conference North America 2026, San Jose  
 **Session:** Demo Theater, Tuesday October 20, 4:10 PM PDT  
@@ -9,7 +9,7 @@
 
 Llama 3.1 70B Instruct runs on vLLM in three setups on NVIDIA H200s: BF16 on two GPUs, INT4 AWQ on one, and speculative decoding with an 8B draft model on two. During the demo Markell types a question from the room, it goes to all three at once, and the answers stream side by side with their timing and GPU count. The Numbers scene then shows what each setup gets you and when a router earns its keep.
 
-What the audience sees, backed by data: on our benchmark prompt, INT4 runs at 97% of BF16's speed on half the GPUs, and speculative decoding runs about 1.4× faster than BF16 on the same two GPUs. All three answered the sheep riddle correctly 20 out of 20 times.
+What the audience sees, backed by data: one request at a time, INT4 runs at 97% of BF16's speed on half the GPUs, and speculative decoding runs about 1.4× faster than BF16 on the same two GPUs. All three answered the sheep riddle correctly 20 out of 20 times.
 
 ## How It Works Under the Hood
 
@@ -21,13 +21,13 @@ The full method, the numbers, and the technical questions are in the README.
 
 <!-- TALK FLOW: owned by the slides session; keep in sync with the speaker notes in slides.html -->
 
-The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`. Then press `2` for Under load and `Space` to play the load run, and finish on `3`, Numbers, the money slide.
+The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`. Then finish on Numbers, the money slide: press `2` while the load test hasn't been recorded (Under load stays out of the numbered flow until `bench/<VARIANT>/c<N>.json` exists). Once it has, press `2` for Under load and `Space` to play the load run, then `3` for Numbers.
 
 ## Presenter Shortcuts
 
 | Key | What it does |
 |---|---|
-| `1` `2` `3` | Ask, Under load, Numbers |
+| `1` `2` `3` | Ask, Under load, Numbers (`1` `2` are Ask and Numbers until the load test is recorded) |
 | `Space` | Play the load run (on Under load) |
 | `/` | Jump to the question box |
 | `Enter` | Send the question to every setup |

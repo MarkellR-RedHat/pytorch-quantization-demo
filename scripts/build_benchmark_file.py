@@ -79,12 +79,12 @@ def main(raw_dir: Path) -> dict:
         "cluster": "Red Hat internal H200 cluster",
         "source": f"built by scripts/build_benchmark_file.py from {raw_dir.relative_to(ROOT)}",
         "notes": (
-            "Single stream: 5 requests per setup, one at a time, same prompt, temperature 0, "
+            "Single stream: 5 requests per setup, one at a time, temperature 0, "
             "256 output tokens each, all with enforce_eager off and CUDA graphs on. Measured through a "
             "port-forward from a laptop, so latencies include that network hop. throughput_tps is the mean "
             "of per-run output tokens per second over the whole request. Spec Decode's first run was cold "
             "(49.6 tok/s). Acceptance counters are cumulative since pod start and include the temperature "
-            "0.7 quality runs."
+            "0.7 quality runs. The raw files don't record the prompt, endpoint, or client settings."
         ),
         "variants": variants,
         "history": {

@@ -1,8 +1,8 @@
 """Ask scene: one question streamed to every variant at once, with timing measured per variant.
 
 Live mode streams from the vLLM endpoints. Replay mode (no models connected) streams text at the
-speed measured for that variant in the benchmark, using captured outputs for the preset questions
-when they exist and the baseline's text otherwise, so replay never invents a quality difference.
+speed measured for that variant in the benchmark, using that variant's captured output for the preset
+questions. A setup with no capture shows a note instead, so replay never shows an answer no model gave.
 """
 
 import asyncio
@@ -15,7 +15,7 @@ from collections.abc import AsyncIterator
 
 from app.config import settings
 from app.openshift import openshift_client
-from app.quality import ILLUSTRATIVE, get_comparison
+from app.quality import PROMPTS, get_comparison
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,10 @@ REPLAY_NOTE = (
     "this setup measured on the H200s without calling a model. Connect the vLLM endpoints to see "
     "real answers to your own questions."
 )
+NOT_CAPTURED_NOTE = (
+    "Replay mode: no answer to this question was captured for this setup, so this column plays back "
+    "the speed it measured on the H200s without calling a model."
+)
 MAX_TOKENS = 1024  # high enough that answer length differences between setups show up
 _sleep = asyncio.sleep  # indirection so tests can replay instantly
 
@@ -38,21 +42,19 @@ def event(kind: str, **data) -> bytes:
 
 
 def replay_text(variant: str, preset: str | None) -> tuple[str, str, int | None]:
-    """(text, where it came from, completion tokens if known): "captured" model output, a "scripted"
-    example, or the replay "note"."""
+    """(text, where it came from, completion tokens if known): "captured" model output or a replay "note"."""
     scenario = PRESETS.get(preset or "")
     if not scenario:
         return REPLAY_NOTE, "note", None
-    comparison = get_comparison(scenario, [variant, "FP16"])
-    if comparison["source"] == "captured" and variant in comparison["responses"]:
-        found = comparison["responses"][variant]
-        return found["text"], "captured", (found.get("usage") or {}).get("completion_tokens")
-    return ILLUSTRATIVE[scenario]["FP16"], "scripted", None
+    found = get_comparison(scenario, [variant])["responses"].get(variant)
+    if not found:
+        return NOT_CAPTURED_NOTE, "note", None
+    return found["text"], "captured", (found.get("usage") or {}).get("completion_tokens")
 
 
 def preset_prompt(preset: str | None) -> str | None:
     scenario = PRESETS.get(preset or "")
-    return ILLUSTRATIVE[scenario]["prompt"] if scenario else None
+    return PROMPTS[scenario] if scenario else None
 
 
 async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIterator[bytes]:
@@ -73,10 +75,11 @@ async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIte
     if buf:
         await _sleep(due)
         yield event("delta", text=buf)
-    # Replay only paces the text at the measured speed. It reports that measured speed and nothing
-    # else, since first-token time, token count, and total time weren't measured for this text.
-    # A captured answer's token count is real; everything else stays "live only".
-    yield event("done", source="replay", ttft_ms=None, total_ms=None,
+    # Replay only paces the text at the measured speed. It reports the benchmark's measured speed and
+    # first-token time (BF16 and INT4 only; spec decode's wasn't measured), plus a captured answer's
+    # real token count. Total time wasn't measured for this text, so it stays "live only".
+    ttft = benchmark.variant(variant).get("ttft_ms_avg")
+    yield event("done", source="replay", ttft_ms=ttft, total_ms=None,
                 completion_tokens=captured_tokens, tokens_per_second=round(tps, 1))
 
 

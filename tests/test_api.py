@@ -40,6 +40,9 @@ class TestBasics:
         assert [v["key"] for v in body["variants"]] == ["FP16", "INT4", "SPEC_DECODE"]
         assert body["variants"][0]["label"] == "BF16"
         assert body["variants"][0]["gpus"] == 2
+        # weights per GPU come through from the startup-log figures, not null
+        weights = {v["key"]: v["weights_gib_per_gpu"] for v in body["variants"]}
+        assert weights == {"FP16": 65.74, "INT4": 37.87, "SPEC_DECODE": 73.24}
         assert body["gpu_hourly_usd"] == 0
         bench = body["benchmark"]
         assert "rhai-tmm" not in json.dumps(bench) and "TMM" not in json.dumps(bench)
@@ -60,7 +63,7 @@ class TestBasics:
     def test_quality(self, client):
         assert client.get("/quality/nope").status_code == 404
         body = client.get("/quality/complex_reasoning").json()
-        assert body["source"] in {"illustrative", "captured"}
+        assert body["source"] in {"not_captured", "captured"}
         assert set(body["responses"]) <= {"FP16", "INT4", "SPEC_DECODE"}
 
     def test_metrics_shape(self, client):

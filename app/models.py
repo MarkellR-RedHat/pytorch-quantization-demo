@@ -30,7 +30,7 @@ class MetricsSnapshot(BaseModel):
     source: Literal["simulated", "live"]
     basis: str
     gpus: int
-    weights_gb: float | None
+    weights_gib_per_gpu: float | None
     requests_per_second: float
     avg_latency_ms: float
     p50_latency_ms: float

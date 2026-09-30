@@ -89,7 +89,7 @@ def snapshots() -> dict[str, MetricsSnapshot]:
             "source": current_mode(),
             "basis": basis,
             "gpus": benchmark_data.gpus(key),
-            "weights_gb": benchmark_data.weights_gb(key),
+            "weights_gib_per_gpu": benchmark_data.weights_gib_per_gpu(key),
             "include_cost": settings.gpu_hourly_usd > 0,
         }
     return metrics_collector.get_all_snapshots(variants)
@@ -315,7 +315,7 @@ async def get_config(request: Request):
                 "key": k,
                 "label": variant_label(k),
                 "gpus": benchmark_data.gpus(k),
-                "weights_gb": benchmark_data.weights_gb(k),
+                "weights_gib_per_gpu": benchmark_data.weights_gib_per_gpu(k),
             }
             for k in active_variants()
         ],

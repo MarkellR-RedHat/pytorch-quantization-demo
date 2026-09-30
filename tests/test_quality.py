@@ -1,10 +1,10 @@
-"""Quality panel: captured output wins over illustrative text, and the sheep checker is right"""
+"""Quality panel: only captured output is shown, and the sheep checker is right"""
 
 import json
 
 import pytest
 
-from app.quality import ILLUSTRATIVE, get_comparison, sheep_verdict
+from app.quality import PROMPTS, get_comparison, sheep_verdict
 
 VARIANTS = ["FP16", "INT4", "SPEC_DECODE"]
 
@@ -25,19 +25,21 @@ def test_sheep_verdict(text, expected):
     assert sheep_verdict(text) is expected
 
 
-def test_illustrative_when_nothing_captured(tmp_path):
-    result = get_comparison("complex_reasoning", VARIANTS, tmp_path)
-    assert result["source"] == "illustrative"
-    assert result["temperature"] == 0
-    verdicts = {k: v["verdict"] for k, v in result["responses"].items()}
-    assert verdicts == {"FP16": "pass", "INT4": "fail", "SPEC_DECODE": "pass"}
-    assert get_comparison("code_generation", VARIANTS, tmp_path)["responses"]["FP16"]["verdict"] is None
+def test_nothing_is_shown_when_nothing_was_captured(tmp_path):
+    for scenario in PROMPTS:
+        result = get_comparison(scenario, VARIANTS, tmp_path)
+        assert result["source"] == "not_captured"
+        assert result["responses"] == {}
+        assert result["prompt"] == PROMPTS[scenario]
 
 
-def test_spec_decode_illustration_matches_baseline():
-    # Greedy speculative decoding returns the target model's exact tokens.
-    for scenario in ILLUSTRATIVE.values():
-        assert scenario["SPEC_DECODE"] == scenario["FP16"]
+def test_prompts_match_the_captures():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "quality"
+    for variant in VARIANTS:
+        for scenario, prompt in PROMPTS.items():
+            assert json.loads((root / variant / f"{scenario}.json").read_text())["prompt"] == prompt
 
 
 def test_captured_output_is_used(tmp_path):

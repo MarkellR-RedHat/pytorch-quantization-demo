@@ -131,7 +131,7 @@ class BenchmarkData:
             "throughput_tps": tps,
             "tokens_per_second_per_gpu": round(tps / gpus, 2) if isinstance(tps, int | float) else None,
             "avg_tokens_per_request": v.get("avg_tokens_per_request"),
-            "weights_gb": self.weights_gb(key),
+            "weights_gib_per_gpu": self.weights_gib_per_gpu(key),
             "mean_acceptance_length": v.get("mean_acceptance_length"),
         }
 
@@ -144,8 +144,9 @@ class BenchmarkData:
     def gpus(self, key: str) -> int:
         return int(self.variant(key).get("gpus") or DEFAULT_GPUS.get(key, 1))
 
-    def weights_gb(self, key: str) -> float | None:
-        value = self.variant(key).get("weights_gb")
+    def weights_gib_per_gpu(self, key: str) -> float | None:
+        """Model weights per GPU rank in GiB, from the vLLM startup log ("Model loading took")."""
+        value = self.variant(key).get("weights_gib_per_gpu")
         return float(value) if isinstance(value, int | float) else None
 
     def latency_model(self, key: str, concurrency: int = 1) -> tuple[float, float, str]:

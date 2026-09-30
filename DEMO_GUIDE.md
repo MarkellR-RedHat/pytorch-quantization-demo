@@ -1,6 +1,6 @@
 # Demo Execution Guide
 
-Step-by-step guide for presenting "Quantization Showdown: PyTorch Inference Optimization" at PyTorch Conference 2026.
+Step-by-step guide for presenting "Not Every Question Needs Two GPUs" at PyTorch Conference 2026.
 
 **Session:** Demo Theater, Tuesday Oct 20 at 4:10 PM PDT (10 minutes)
 
@@ -26,13 +26,13 @@ Step-by-step guide for presenting "Quantization Showdown: PyTorch Inference Opti
 
 <!-- TALK FLOW: owned by the slides session; keep in sync with the speaker notes in slides.html -->
 
-The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`. Then press `2` for Under load and `Space` to play the load run, and finish on `3`, Numbers, the money slide.
+The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`. Then finish on Numbers, the money slide: press `2` while the load test hasn't been recorded (Under load stays out of the numbered flow until `bench/<VARIANT>/c<N>.json` exists). Once it has, press `2` for Under load and `Space` to play the load run, then `3` for Numbers.
 
 ## Presenter Shortcuts
 
 | Key | What it does |
 |---|---|
-| `1` `2` `3` | Ask, Under load, Numbers |
+| `1` `2` `3` | Ask, Under load, Numbers (`1` `2` are Ask and Numbers until the load test is recorded) |
 | `Space` | Play the load run (on Under load) |
 | `/` | Jump to the question box |
 | `Enter` | Send the question to every setup |

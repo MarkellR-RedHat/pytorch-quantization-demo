@@ -34,16 +34,22 @@ def test_preset_streams_and_finishes_with_timing(client, no_captures):
     r = client.post("/ask/INT4", json={"preset": "reasoning"})
     assert r.status_code == 200
     ev = events(r)
-    # with no captured outputs yet, replay says the preset text is a scripted example
-    assert ev[0] == {"t": "start", "source": "replay", "text_source": "scripted"}
+    # with no captured output, replay shows a note and never an answer no model gave
+    assert ev[0] == {"t": "start", "source": "replay", "text_source": "note"}
     assert ev[-1]["t"] == "done"
-    # replay never invents what it didn't measure: no first-token time, no token count
-    assert ev[-1]["ttft_ms"] is None
+    # replay reports only what was measured: the benchmark's first-token time and speed, no token count
+    assert ev[-1]["ttft_ms"] == main.benchmark_data.variant("INT4")["ttft_ms_avg"]
+    assert ev[-1]["total_ms"] is None
     assert ev[-1]["completion_tokens"] is None
-    # and the speed it plays back is the benchmark's single-stream number for that setup
     assert ev[-1]["tokens_per_second"] == main.benchmark_data.variant("INT4")["throughput_tps"]
     text = "".join(e["text"] for e in ev if e["t"] == "delta")
-    assert "9 sheep" in text
+    assert "no answer to this question was captured" in text
+    assert "sheep" not in text
+
+
+def test_replay_has_no_first_token_time_where_none_was_measured(client):
+    ev = events(client.post("/ask/SPEC_DECODE", json={"preset": "reasoning"}))
+    assert ev[-1]["ttft_ms"] is None
 
 
 def test_replay_never_invents_a_quality_difference(client, no_captures):

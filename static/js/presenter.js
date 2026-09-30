@@ -141,7 +141,7 @@
                 </div>
                 <pre class="answer idle">Waiting for a question.</pre>
                 <div class="astats">
-                    <div><b class="num s-ttft">–</b><span>first token</span></div>
+                    <div><b class="num s-ttft">–</b><span class="s-ttft-label">first token</span></div>
                     <div><b class="num s-tps">–</b><span class="s-tps-label">tokens/s</span></div>
                     <div><b class="num s-len">–</b><span>tokens in answer</span></div>
                     <div><b class="num s-total">–</b><span>total</span></div>
@@ -201,7 +201,7 @@
                     const ev = JSON.parse(line);
                     if (ev.t === 'start') {
                         const src = $('.src', col);
-                        const tag = ev.source === 'replay' ? { scripted: 'scripted example, not model output', captured: 'captured answer' }[ev.text_source] : '';
+                        const tag = ev.source === 'replay' ? { captured: 'captured answer' }[ev.text_source] : '';
                         src.hidden = !tag;
                         src.textContent = tag || '';
                     } else if (ev.t === 'delta') {
@@ -210,10 +210,11 @@
                         out.scrollTop = out.scrollHeight;
                     } else if (ev.t === 'done') {
                         clearInterval(tick);
-                        // The Sep 29 benchmark measured whole requests, not time to first token, so replay can't show it.
+                        // Replay shows the Sep 29 benchmark's average first-token time (BF16 and INT4 only).
                         const ttft = $('.s-ttft', col);
                         ttft.classList.toggle('na', ev.ttft_ms == null);
                         ttft.textContent = ev.ttft_ms != null ? secs(ev.ttft_ms) : 'live only';
+                        $('.s-ttft-label', col).textContent = ev.source === 'replay' && ev.ttft_ms != null ? 'benchmark TTFT' : 'first token';
                         $('.s-tps', col).textContent = ev.tokens_per_second != null ? ev.tokens_per_second.toFixed(0) : '–';
                         $('.s-tps-label', col).textContent = ev.source === 'replay' ? 'benchmark tok/s' : 'tokens/s';
                         const total = $('.s-total', col);
@@ -285,13 +286,13 @@
             const speed = q.throughput_tps / bf.throughput_tps;
             const sp = bench('SPEC_DECODE');
             const spTxt = sp && sp.throughput_tps ? `, and ${esc(label('SPEC_DECODE'))} runs <b>about ${one(sp.throughput_tps / bf.throughput_tps)}× faster</b> on the same GPUs` : '';
-            $('#takeaway').innerHTML = `On our benchmark prompt, ${esc(label('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(label('FP16'))}'s speed on half the GPUs</b>${spTxt}.`
+            $('#takeaway').innerHTML = `One request at a time, ${esc(label('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(label('FP16'))}'s speed on half the GPUs</b>${spTxt}.`
                 + (loadData().keys.length ? '' : ' <span class="pending-note">Under heavy batching on high-end GPUs, Red Hat\'s study found 8-bit (W8A8) more cost-efficient than 4-bit, and the load test shows where these three land.</span>');
         }
         const strip = $('#routerStrip');
         strip.className = 'card router-strip';
         strip.innerHTML = `<h3>Big, mixed traffic? Route it</h3>` + ['FP16', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k)).map(k =>
-            `<div class="route">${esc(SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k))}</b>${SETUPS[k].pending ? `<em class="pend">${esc(SETUPS[k].pending)}</em>` : ''}</div>`).join('');
+            `<div class="route">${esc(SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k))}</b></div>`).join('');
         const bm = (config && config.benchmark) || {};
         const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
         const sd = bench('SPEC_DECODE') || {};
@@ -299,8 +300,8 @@
         $('#numbersFoot').textContent = '* All three setups answered the sheep riddle correctly 20 out of 20 times at temperature 0.7, but the INT4 build here (hugging-quants AWQ, W4A16 on vLLM\'s Machete kernel) hasn\'t been run on a benchmark suite yet. Red Hat\'s published INT4 build of this model (GPTQ) recovers 99.4% of BF16 on OpenLLM v1 and 97.4% on the harder v2 set. Spec Decode used Llama 3.1 8B as the draft, proposing 5 tokens per step'
             + (mal ? `, and averaged ${one(mal)} tokens per 70B pass.` : '.');
         $('#routerNote').textContent = 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions.';
-        $('#benchNote').textContent = `Llama 3.1 70B Instruct on NVIDIA H200 with vLLM ${bm.vllm_version || ''}, measured ${when}: 5 runs per setup on one benchmark prompt, one request at a time, temperature 0, 256 output tokens, enforce_eager off everywhere. Spec Decode's average includes one cold run.`
-            + (keys.includes('FP8') ? '' : ' FP8 fits on one H200 and recovers 99.7% or more in Red Hat\'s published tests, so it\'s the next setup to measure.');
+        $('#benchNote').textContent = `Llama 3.1 70B Instruct on NVIDIA H200 with vLLM ${bm.vllm_version || ''}, measured ${when}: 5 runs per setup, one request at a time, temperature 0, 256 output tokens, enforce_eager off everywhere. Spec Decode's average includes one cold run.`
+            + (keys.includes('FP8') ? '' : ' FP8 fits on one H200 and recovers 99.9% of BF16 on OpenLLM v1 in Red Hat\'s published tests, so it\'s the next setup to measure.');
     }
 
     // ------------------------------------------------------------ under load (replay of the load test)

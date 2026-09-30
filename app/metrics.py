@@ -101,7 +101,7 @@ class MetricsCollector:
         source: str = "simulated",
         basis: str = "",
         gpus: int = 1,
-        weights_gb: float | None = None,
+        weights_gib_per_gpu: float | None = None,
         include_cost: bool = False,
     ) -> MetricsSnapshot:
         tps = self.get_avg_tokens_per_sec(model_type)
@@ -111,7 +111,7 @@ class MetricsCollector:
             source=source,
             basis=basis,
             gpus=gpus,
-            weights_gb=weights_gb,
+            weights_gib_per_gpu=weights_gib_per_gpu,
             requests_per_second=self.get_requests_per_second(model_type),
             avg_latency_ms=self.get_avg_latency(model_type),
             p50_latency_ms=self.get_p50_latency(model_type),
