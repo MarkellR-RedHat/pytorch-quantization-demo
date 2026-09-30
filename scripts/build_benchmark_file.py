@@ -61,10 +61,11 @@ def startup_log(raw: Path, pod: str) -> dict:
     [path] = raw.glob(f"logs/{pod}-predictor-*-startup.txt")
     text = path.read_text()
     find = lambda pattern: (m := re.search(pattern, text)) and m.group(1)  # noqa: E731
+    fa_version = find(r"Using FlashAttention version (\d)")
     info = {
         "weights_gib_per_gpu": float(find(r"Model loading took ([\d.]+) GiB")),
         "kv_cache_tokens": int(find(r"GPU KV cache size: ([\d,]+) tokens").replace(",", "")),
-        "attention": f"FlashAttention {find(r'Using FlashAttention version (\d)')}",
+        "attention": f"FlashAttention {fa_version}",
     }
     if kernel := find(r"Using (\w+LinearKernel) for"):
         info["kernel"] = kernel
