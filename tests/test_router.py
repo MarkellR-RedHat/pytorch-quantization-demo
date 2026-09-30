@@ -44,3 +44,26 @@ def test_every_preset_lands_on_its_lane():
     )
     out = subprocess.run([node, "-e", src], capture_output=True, text=True, timeout=60, check=True)
     assert json.loads(out.stdout) == LANES
+
+
+def js_function(name: str) -> str:
+    js = (ROOT / "static" / "js" / "presenter.js").read_text()
+    match = re.search(rf"\n    function {name}\(\w+\) \{{\n.*?\n    \}}\n", js, re.S)
+    assert match, f"{name}() not found in presenter.js"
+    return match.group(0)
+
+
+@pytest.mark.skipif(node is None, reason="node is not installed")
+def test_badge_names_live_and_recorded_setups():
+    def badge(cfg):
+        src = js_function("badgeState") + f"\nconsole.log(JSON.stringify(badgeState({json.dumps(cfg)})));"
+        out = subprocess.run([node, "-e", src], capture_output=True, text=True, check=True)
+        return json.loads(out.stdout)
+
+    three = [{"label": "BF16", "mode": "live"}, {"label": "INT4 (LLM Compressor)", "mode": "live"},
+             {"label": "Spec Decode", "mode": "live"}]
+    assert badge({"mode": "live", "variants": three}) == {"kind": "live", "text": "Live models"}
+    three[2]["mode"] = "recorded"
+    assert badge({"mode": "live", "variants": three}) == {
+        "kind": "mixed", "text": "Live: BF16, INT4 (LLM Compressor) · Recorded: Spec Decode"}
+    assert badge({"mode": "simulated", "variants": three}) == {"kind": "sim", "text": "Replay"}

@@ -84,6 +84,13 @@
         const have = new Set(config ? config.variants.map(v => v.key) : ['FP16', 'INT4', 'SPEC_DECODE']);
         return ORDER.filter(k => have.has(k));
     }
+
+    // Numbers and Under load describe the benchmark data, so they use the label it was measured under.
+    function benchLabel(key) {
+        const b = bench(key);
+        return (b && b.label) || label(key);
+    }
+
     function label(key) {
         const v = config && config.variants.find(x => x.key === key);
         return v ? v.label : ({ FP16: 'BF16', FP8: 'FP8', INT4: 'INT4 AWQ', SPEC_DECODE: 'Spec Decode' }[key] || key);
@@ -119,6 +126,12 @@
 
     // ------------------------------------------------------------ ask
 
+    function roleText(key) {
+        const v = config && config.variants.find(x => x.key === key);
+        const role = (SETUPS[key] || {}).role || '';
+        return v && v.build ? `${role}, ${v.build}` : role;
+    }
+
     function buildAsk() {
         const keys = variants();
         const grid = $('#askGrid');
@@ -132,7 +145,7 @@
             col.innerHTML = `
                 <div class="acol-head">
                     <div class="row1"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
-                    <p class="role">${esc((SETUPS[key] || {}).role || '')}<span class="src" hidden></span></p>
+                    <p class="role">${esc(roleText(key))}<span class="src" hidden></span></p>
                 </div>
                 <pre class="answer idle">Waiting for a question.</pre>
                 <div class="astats">
@@ -207,15 +220,19 @@
                         const tag = ev.source === 'replay' ? { captured: 'captured answer' }[ev.text_source] : '';
                         src.hidden = !tag;
                         src.textContent = tag || '';
-                        src.classList.remove('recorded');
-                    } else if (ev.t === 'fallback') {
+                        src.classList.remove('recorded', 'planned');
+                        out.classList.remove('planned');
+                    } else if (ev.t === 'fallback' || ev.t === 'recorded') {
+                        // 'fallback' = a live request failed; 'recorded' = this setup is recorded by plan today
                         live = raw;
                         raw = '';
                         recorded = ev.label;
+                        out.classList.toggle('planned', ev.t === 'recorded');
                         const src = $('.src', col);
                         src.hidden = false;
                         src.textContent = 'recorded';
-                        src.classList.add('recorded');
+                        src.classList.toggle('recorded', ev.t === 'fallback');
+                        src.classList.toggle('planned', ev.t === 'recorded');
                         render();
                     } else if (ev.t === 'delta') {
                         raw += ev.text;
@@ -223,6 +240,7 @@
                         out.scrollTop = out.scrollHeight;
                     } else if (ev.t === 'done') {
                         clearInterval(tick);
+                        if (ev.note) out.classList.add('idle');
                         // Replay shows the Sep 29 benchmark's average first-token time (BF16 and INT4 only). A live
                         // first token goes over the VPN or a port-forward, so it isn't comparable to the in-pod benchmark.
                         const missing = ev.source === 'recorded' ? 'not recorded' : 'live only';
@@ -314,7 +332,7 @@
             card.className = 'card mcard';
             card.style.setProperty('--c', `var(${color(key)})`);
             card.innerHTML = `
-                <div class="mhead"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
+                <div class="mhead"><h3>${glyph(key)}${esc(benchLabel(key))}</h3>${chips(key)}</div>
                 <p class="gets">${esc(s.gets || '')}</p>
                 <div class="nums three">
                     <div><b class="num">${tps != null ? one(tps) : '–'}</b><span>tokens/s, one request</span></div>
@@ -328,14 +346,17 @@
         if (bf && q && bf.throughput_tps && q.throughput_tps) {
             const speed = q.throughput_tps / bf.throughput_tps;
             const sp = bench('SPEC_DECODE');
-            const spTxt = sp && sp.throughput_tps ? `, and ${esc(label('SPEC_DECODE'))} runs <b>about ${one(sp.throughput_tps / bf.throughput_tps)}× faster</b> on the same GPUs` : '';
-            $('#takeaway').innerHTML = `One request at a time, ${esc(label('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(label('FP16'))}'s speed on half the GPUs</b>${spTxt}.`
+            const spTxt = sp && sp.throughput_tps ? `, and ${esc(benchLabel('SPEC_DECODE'))} runs <b>about ${one(sp.throughput_tps / bf.throughput_tps)}× faster</b> on the same GPUs` : '';
+            $('#takeaway').innerHTML = `One request at a time, ${esc(benchLabel('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(benchLabel('FP16'))}'s speed on half the GPUs</b>${spTxt}.`
                 + (loadData().keys.length ? '' : ' <span class="pending-note">Under heavy batching on high-end GPUs, Red Hat\'s study found 8-bit (W8A8) more cost-efficient than 4-bit, and the load test shows where these three land.</span>');
         }
         const strip = $('#routerStrip');
         strip.className = 'card router-strip';
         strip.innerHTML = `<h3>Big, mixed traffic? Route it</h3>` + ['FP16', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k)).map(k =>
-            `<div class="route">${esc(SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k))}</b></div>`).join('');
+            // the lane names the setup, not the checkpoint, so "INT4 (LLM Compressor)" shows as INT4 here
+            `<div class="route">${esc(SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k).replace(/ \(.*\)$/, ''))}</b></div>`).join('')
+            // the same lane idea combined, as on the router slide: not measured here
+            + '<div class="route untested"><b>INT4 + spec decode</b><em>untested</em></div>';
         const bm = (config && config.benchmark) || {};
         const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
         const sd = bench('SPEC_DECODE') || {};
@@ -384,7 +405,7 @@
             card.dataset.key = key;
             card.style.setProperty('--c', `var(${color(key)})`);
             card.innerHTML = `
-                <div class="mhead"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
+                <div class="mhead"><h3>${glyph(key)}${esc(benchLabel(key))}</h3>${chips(key)}</div>
                 <div class="big"><b class="num l-pergpu">–</b><span>output tokens/s per GPU</span></div>
                 <svg class="spark"></svg>
                 <div class="lstats">
@@ -451,14 +472,14 @@
         if (pair) {
             const perGpu = pair.c / gb;
             const r = pair.q.output_tokens_per_second_per_gpu / pair.bf.output_tokens_per_second_per_gpu;
-            parts.push(`At ${perGpu} requests per GPU, ${esc(label('INT4'))} serves <b>${one(r)}× the output tokens per GPU</b> of ${esc(label('FP16'))}`);
+            parts.push(`At ${perGpu} requests per GPU, ${esc(benchLabel('INT4'))} serves <b>${one(r)}× the output tokens per GPU</b> of ${esc(benchLabel('FP16'))}`);
         }
         const same = [...levels].reverse().map(c => ({ c, bf: pointAt(bfPts, c), sp: pointAt(spPts, c) })).find(o => o.bf && o.sp && o.bf.latency_ms && o.sp.latency_ms);
         if (same) {
             const r = same.sp.latency_ms / same.bf.latency_ms;
             const kind = same.bf.latency_kind === 'mean' ? 'mean' : 'median';
             const verdict = Math.abs(r - 1) < 0.03 ? 'about the same as' : r < 1 ? `<b>${Math.round(100 * (1 - r))}% lower</b> than` : `<b>${Math.round(100 * (r - 1))}% higher</b> than`;
-            parts.push(`at ${same.c} requests on the same 2 GPUs, ${esc(label('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(label('FP16'))}'s`);
+            parts.push(`at ${same.c} requests on the same 2 GPUs, ${esc(benchLabel('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(benchLabel('FP16'))}'s`);
         }
         $('#loadResult').innerHTML = parts.length ? parts.join(', and ') + '.' : '';
     }
@@ -481,6 +502,16 @@
 
     // ------------------------------------------------------------ boot
 
+    // The corner badge says exactly which setups are live and which are playing recordings.
+    function badgeState(cfg) {
+        if (cfg.mode !== 'live') return { kind: 'sim', text: 'Replay' };
+        const recorded = cfg.variants.filter(v => v.mode === 'recorded');
+        if (!recorded.length) return { kind: 'live', text: 'Live models' };
+        const names = list => list.map(v => v.label).join(', ');
+        const live = cfg.variants.filter(v => v.mode !== 'recorded');
+        return { kind: 'mixed', text: `${live.length ? `Live: ${names(live)} · ` : ''}Recorded: ${names(recorded)}` };
+    }
+
     async function loadConfig() {
         try {
             const res = await fetch('/api/config');
@@ -490,9 +521,10 @@
         const badge = $('#modeBadge');
         if (config) {
             const live = config.mode === 'live';
-            badge.className = `mode ${live ? 'live' : 'sim'}`;
-            $('span', badge).textContent = live ? 'Live models' : 'Replay';
-            badge.title = live ? 'Answers come from the vLLM deployments' : 'Models not connected, so each column replays the speed measured on the H200s';
+            const b = badgeState(config);
+            badge.className = `mode ${b.kind}`;
+            $('span', badge).textContent = b.text;
+            badge.title = live ? 'Answers come from the vLLM deployments, except any setup marked recorded' : 'Models not connected, so each column replays the speed measured on the H200s';
         } else {
             badge.className = 'mode';
             $('span', badge).textContent = 'Offline';

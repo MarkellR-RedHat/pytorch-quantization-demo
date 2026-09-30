@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     model_int4_name: str = ""
     model_spec_decode_name: str = ""
 
+    # Per-setup backup switch: "recorded" never calls that endpoint and plays the preset recordings
+    # instead, labeled as recorded. Use it when a setup's GPUs get pulled on the day.
+    model_fp16_mode: str = "live"
+    model_fp8_mode: str = "live"
+    model_int4_mode: str = "live"
+    model_spec_decode_mode: str = "live"
+
+    # Which folder under quality/ holds the INT4 column's recordings: INT4 for the community AWQ
+    # build, INT4_RH for Red Hat's LLM Compressor build. It also names the build on screen.
+    model_int4_captures: str = "INT4"
+
     # Demo
     simulation_mode: bool = False
     enable_prometheus: bool = True
@@ -70,6 +81,16 @@ class Settings(BaseSettings):
     def served_name_for(self, key: str) -> str:
         return getattr(self, f"model_{key.lower()}_name", "") or key.lower()
 
+    def mode_for(self, key: str) -> str:
+        mode = str(getattr(self, f"model_{key.lower()}_mode", "live")).strip().lower()
+        return "recorded" if mode == "recorded" else "live"
+
+    def captures_for(self, key: str) -> str:
+        """The quality/ folder holding this column's recordings."""
+        if key == "INT4":
+            return self.model_int4_captures.strip() or "INT4"
+        return key
+
 
 BASE_VARIANTS = ["FP16", "INT4", "SPEC_DECODE"]
 ALL_VARIANTS = ["FP16", "FP8", "INT4", "SPEC_DECODE"]
@@ -79,7 +100,29 @@ MODEL_VARIANTS = BASE_VARIANTS
 settings = Settings()
 
 
+INT4_BUILDS = {
+    "INT4": "hugging-quants AWQ build",
+    "INT4_RH": "Red Hat LLM Compressor build",
+}
+
+
+def build_note(key: str) -> str | None:
+    """Which checkpoint a column runs, when there's more than one it could be."""
+    if key != "INT4":
+        return None
+    return INT4_BUILDS.get(settings.captures_for(key), settings.captures_for(key))
+
+
 def variant_label(key: str) -> str:
+    """The label of a live (or recorded) column, which follows the INT4 build it runs."""
+    if key == "INT4" and settings.captures_for(key) == "INT4_RH":
+        return "INT4 (LLM Compressor)"
+    return benchmark_label(key)
+
+
+def benchmark_label(key: str) -> str:
+    """The label of a setup's benchmark numbers. The Sep 29 INT4 numbers are the AWQ build's,
+    whatever the INT4 column runs today."""
     labels = {
         "FP16": settings.baseline_label,
         "FP8": "FP8",

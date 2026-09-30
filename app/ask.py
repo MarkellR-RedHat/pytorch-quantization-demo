@@ -45,6 +45,8 @@ NOT_CAPTURED_NOTE = (
 )
 NO_RECORDING_TYPED = "Live request failed. No recording exists for a typed question."
 NO_RECORDING_PRESET = "Live request failed, and no answer to this question was recorded for this setup."
+NOT_LIVE_TODAY = "Not live today. Recorded answers cover the preset questions."
+NOT_RECORDED_YET = "Not live today, and no answer to this question was recorded for this setup yet."
 MAX_TOKENS = 1024  # high enough that answer length differences between setups show up
 # A healthy first token takes about 0.3 s, so 8 s only trips on a real failure.
 FIRST_TOKEN_TIMEOUT_S = 8.0
@@ -70,7 +72,8 @@ def replay_text(variant: str, preset: str | None) -> tuple[str, str, int | None]
     scenario = scenario_for(preset)
     if not scenario:
         return REPLAY_NOTE, "note", None
-    found = get_comparison(scenario, [variant])["responses"].get(variant)
+    captures = settings.captures_for(variant)
+    found = get_comparison(scenario, [captures])["responses"].get(captures)
     if not found:
         return NOT_CAPTURED_NOTE, "note", None
     return found["text"], "captured", (found.get("usage") or {}).get("completion_tokens")
@@ -113,15 +116,16 @@ async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIte
                 completion_tokens=captured_tokens, tokens_per_second=round(tps, 1))
 
 
-def recorded_label(captured_at: str | None, live_tokens: int) -> str:
+def recorded_label(captured_at: str | None, live_tokens: int, failed: bool = True) -> str:
     try:
         when = datetime.fromisoformat(captured_at).strftime("%b %-d") if captured_at else None
     except ValueError:
         when = None
     label = f"Recorded {when}" if when else "Recorded earlier"
-    label += " · live request failed"
-    if live_tokens:
-        label += f" after {live_tokens} tokens"
+    if failed:
+        label += " · live request failed"
+        if live_tokens:
+            label += f" after {live_tokens} tokens"
     return label
 
 
@@ -130,7 +134,7 @@ async def recorded_stream(
 ) -> AsyncIterator[bytes]:
     """After a live failure: that setup's recorded answer for the preset, labeled as recorded."""
     scenario = scenario_for(preset)
-    found = recorded_answer(variant, scenario) if scenario else None
+    found = recorded_answer(settings.captures_for(variant), scenario) if scenario else None
     if not found:
         yield event("error", detail=NO_RECORDING_PRESET if scenario else NO_RECORDING_TYPED)
         return
@@ -141,6 +145,29 @@ async def recorded_stream(
         yield chunk
     # Every number here was measured when the answer was recorded. Older recordings have no timings,
     # so their speed is the benchmark's, and the done event says which one it is.
+    yield event("done", source="recorded", ttft_ms=found["ttft_ms"], total_ms=found["total_ms"],
+                completion_tokens=found["completion_tokens"], tokens_per_second=round(tps, 1),
+                tps_basis="recorded" if measured_tps else "benchmark")
+
+
+async def planned_recorded_stream(variant: str, preset: str | None, benchmark) -> AsyncIterator[bytes]:
+    """A setup switched to recorded for the day: never calls its endpoint, plays the preset's recording
+    at the timing it was recorded with, and says it's recorded (not that anything failed)."""
+    yield event("start", source="recorded")
+    scenario = scenario_for(preset)
+    found = recorded_answer(settings.captures_for(variant), scenario) if scenario else None
+    if not found:
+        yield event("delta", text=NOT_LIVE_TODAY if not scenario else NOT_RECORDED_YET)
+        yield event("done", source="recorded", ttft_ms=None, total_ms=None, completion_tokens=None,
+                    tokens_per_second=None, note=True)
+        return
+    yield event("recorded", label=recorded_label(found["captured_at"], 0, failed=False))
+    if found["ttft_ms"]:
+        await _sleep(found["ttft_ms"] / 1000)
+    measured_tps = found["tokens_per_second"]
+    tps = float(measured_tps or benchmark.variant(variant).get("throughput_tps") or 40.0)
+    async for chunk in paced(found["text"], tps):
+        yield chunk
     yield event("done", source="recorded", ttft_ms=found["ttft_ms"], total_ms=found["total_ms"],
                 completion_tokens=found["completion_tokens"], tokens_per_second=round(tps, 1),
                 tps_basis="recorded" if measured_tps else "benchmark")
@@ -231,7 +258,10 @@ async def ask_stream(
     variant: str, prompt: str, preset: str | None, live: bool, benchmark
 ) -> AsyncIterator[bytes]:
     try:
-        if live:
+        if live and settings.mode_for(variant) == "recorded":
+            async for chunk in planned_recorded_stream(variant, preset, benchmark):
+                yield chunk
+        elif live:
             try:
                 async for chunk in live_stream(variant, prompt):
                     yield chunk

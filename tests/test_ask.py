@@ -230,3 +230,55 @@ def test_every_preset_is_offered_with_its_exact_prompt(client):
     for p in presets:
         assert p["prompt"] == PROMPTS[ask_module.PRESETS[p["key"]][0]]
         assert client.post("/ask/FP16", json={"preset": p["key"]}).status_code == 200
+
+
+# ---------------------------------------------------------------- a setup recorded by plan for the day
+
+
+def never_called(request):
+    raise AssertionError("a recorded setup must never call its endpoint")
+
+
+def test_a_recorded_setup_plays_its_recording_without_calling_the_endpoint(client, monkeypatch):
+    fake_vllm(monkeypatch, never_called)
+    monkeypatch.setattr(settings, "model_spec_decode_mode", "recorded")
+    ev = events(client.post("/ask/SPEC_DECODE", json={"preset": "reasoning"}))
+    assert ev[0] == {"t": "start", "source": "recorded"}
+    assert ev[1] == {"t": "recorded", "label": "Recorded Sep 29"}
+    assert "".join(e["text"] for e in ev if e["t"] == "delta") == captured("SPEC_DECODE")["response_text"]
+    assert ev[-1]["source"] == "recorded" and not any(e["t"] in ("error", "fallback") for e in ev)
+
+
+def test_a_typed_question_on_a_recorded_setup_explains_and_never_errors(client, monkeypatch):
+    fake_vllm(monkeypatch, never_called)
+    monkeypatch.setattr(settings, "model_fp16_mode", "recorded")
+    ev = events(client.post("/ask/FP16", json={"prompt": "What is the capital of France?"}))
+    assert [e["t"] for e in ev] == ["start", "delta", "done"]
+    assert ev[1]["text"] == ask_module.NOT_LIVE_TODAY
+    assert ev[-1]["note"] is True
+
+
+def test_config_reports_each_setups_mode(client, monkeypatch):
+    fake_vllm(monkeypatch, never_called)
+    monkeypatch.setattr(settings, "model_spec_decode_mode", "recorded")
+    modes = {v["key"]: v["mode"] for v in client.get("/api/config").json()["variants"]}
+    assert modes == {"FP16": "live", "INT4": "live", "SPEC_DECODE": "recorded"}
+
+
+def test_the_int4_column_can_run_red_hats_build(client, monkeypatch, tmp_path):
+    from app.quality import PROMPTS
+
+    (tmp_path / "INT4_RH").mkdir()
+    (tmp_path / "INT4_RH" / "complex_reasoning.json").write_text(json.dumps({
+        "prompt": PROMPTS["complex_reasoning"], "response_text": "Red Hat build: 9 sheep.",
+        "captured_at": "2026-09-30T10:00:00-04:00",
+    }))
+    monkeypatch.setattr(settings, "quality_dir", str(tmp_path))
+    monkeypatch.setattr(settings, "model_int4_captures", "INT4_RH")
+    body = client.get("/api/config").json()
+    int4 = next(v for v in body["variants"] if v["key"] == "INT4")
+    assert int4["label"] == "INT4 (LLM Compressor)" and int4["build"] == "Red Hat LLM Compressor build"
+    # the Sep 29 numbers are still the AWQ build's, and stay labeled that way
+    assert body["benchmark"]["variants"]["INT4"]["label"] == "INT4 AWQ"
+    ev = events(client.post("/ask/INT4", json={"preset": "reasoning"}))
+    assert "".join(e["text"] for e in ev if e["t"] == "delta") == "Red Hat build: 9 sheep."

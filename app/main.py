@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.ask import ask_stream, preset_list, preset_prompt
 from app.benchmark import benchmark_data
-from app.config import ALL_VARIANTS, REPO_ROOT, settings, variant_label
+from app.config import ALL_VARIANTS, REPO_ROOT, benchmark_label, build_note, settings, variant_label
 from app.metrics import metrics_collector
 from app.models import (
     AskRequest,
@@ -314,6 +314,8 @@ async def get_config(request: Request):
             {
                 "key": k,
                 "label": variant_label(k),
+                "build": build_note(k),
+                "mode": "recorded" if simulator.is_enabled() else settings.mode_for(k),
                 "gpus": benchmark_data.gpus(k),
                 "weights_gib_per_gpu": benchmark_data.weights_gib_per_gpu(k),
             }
@@ -321,7 +323,7 @@ async def get_config(request: Request):
         ],
         "gpu_hourly_usd": settings.gpu_hourly_usd,
         "auto_traffic": settings.auto_traffic and settings.auto_traffic_rps > 0,
-        "benchmark": benchmark_data.meta(variant_label),
+        "benchmark": benchmark_data.meta(benchmark_label),
         "presets": preset_list(),
     }
 

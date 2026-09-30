@@ -127,6 +127,9 @@ The verification step keeps the output distribution of the target model, so the 
 **Which INT4 checkpoint was this?**
 `hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4`, an AutoAWQ checkpoint: 4-bit weights, group size 128, FP16 activations. vLLM loads it through its `awq_marlin` path and, on Hopper GPUs, runs it with the Machete kernel. LLM Compressor writes the `compressed-tensors` format and supports AWQ through its `AWQModifier`, and Red Hat's published INT4 build of this model is a GPTQ checkpoint.
 
+**Can I route per request, and with what?**
+The router on screen is an example rule written for the demo, not a deployed gateway. To build one, [vLLM Semantic Router](https://github.com/vllm-project/semantic-router) classifies each request and picks the model, and [llm-d Router](https://github.com/llm-d/llm-d-router) (formerly the llm-d inference scheduler) picks the replica within each model's pool, preferring one that already has the prompt's prefix cached. INT4 plus spec decode, a draft model on an INT4 target, is the obvious combination to add as another lane, and we haven't tested it here.
+
 **Where's PyTorch in all this?**
 vLLM is a PyTorch Foundation project and compiles its models with torch.compile, LLM Compressor calibrates in PyTorch, and the arena's networks are trained and quantized in PyTorch.
 
@@ -204,6 +207,6 @@ tests/               API, Ask, simulation, metrics, quality, and arena tests
 
 ## Credits and license
 
-MIT. The arena's physics and game loop are adapted from [FlappyLearning](https://github.com/xviniette/FlappyLearning) by Vincent Bazia (MIT), and the Red Hat fonts are bundled under the SIL Open Font License. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. Built with Llama: the models served in this demo are Llama 3.1 70B Instruct and Llama 3.1 8B Instruct, and Llama 3.1 is licensed under the [Llama 3.1 Community License](https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/LICENSE), Copyright © Meta Platforms, Inc. All Rights Reserved. The recorded answers in `quality/` are Llama 3.1 outputs. The arena's physics and game loop are adapted from [FlappyLearning](https://github.com/xviniette/FlappyLearning) by Vincent Bazia (MIT), and the Red Hat fonts are bundled under the SIL Open Font License. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 **Markell Rawls**, AI Developer Advocate, Red Hat
