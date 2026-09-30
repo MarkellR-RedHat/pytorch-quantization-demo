@@ -39,7 +39,9 @@ def test_four_setups_with_devices(built):
     assert v["INT4"]["device"] == {"name": "35 GB slice", "count": 1, "per_h200": 3}
     assert v["INT4"]["gpus"] == 1
     assert out["vllm_version"] == "0.24.0+rhaiv.13" and out["transformers_version"] == "5.16.1"
-    assert out["thinking"] == "thinking: off"
+    assert out["thinking"].startswith("thinking: off; off server-side in every pod")
+    assert out["variants"]["FP8"]["thinking_in_server_args"] is False
+    assert "Thinking mode: thinking: off; off server-side" in out["notes"]
 
 
 def test_numbers_trace_to_the_files(built):
@@ -68,6 +70,12 @@ def test_per_h200_is_separate_and_labeled(built):
     assert v["INT4"]["per_h200"]["throughput_tps"] == round(3 * v["INT4"]["throughput_tps"], 1)
     assert "not a measurement" in v["INT4"]["per_h200"]["note"]
     assert "not a measurement" in out["per_h200_note"]
+    assert "measured" not in v["INT4"]["per_h200"]  # nothing ran two 35 GB slices together
+    # FP8 ran on two slices of one card at 32 each: that point is a measurement and is labeled so
+    m = v["FP8"]["per_h200"]["measured"]
+    assert m["concurrency_per_slice"] == 32 and m["slices_loaded"] == 2
+    assert m["output_tokens_per_second"] == round(2 * 950 * 0.93, 1) and "measured" in m["note"]
+    assert m["files"] == ["sweeps/FP8/c32-two-slices-a.json", "sweeps/FP8/c32-two-slices-b.json"]
     assert v["INT4"]["speed_vs_baseline"] == round(40.0 / 60.0, 3)  # per device, never the ×3 figure
 
 

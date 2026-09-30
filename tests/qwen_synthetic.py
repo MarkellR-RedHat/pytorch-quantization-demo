@@ -37,7 +37,8 @@ def bench_json(model: str, tput: float, tpot: float, n: int, c: int) -> dict:
 
 
 def startup_text(isvc: str, checkpoint: str, gib: float, kv: int, spec: bool) -> str:
-    args = {"port": 8080, "model": checkpoint, "max_model_len": 32768, "served_model_name": [isvc]}
+    args = {"port": 8080, "model": checkpoint, "max_model_len": 32768, "served_model_name": [isvc],
+            "default_chat_template_kwargs": {"enable_thinking": False}}
     if spec:
         args.update({"spec_method": "mtp", "spec_tokens": 4})
     kernel = "Selected CutlassFP8ScaledMMLinearKernel for CompressedTensorsW8A8Fp8" if "FP8" in checkpoint else (
@@ -78,6 +79,9 @@ def write(root: Path) -> Path:
                 continue
             (sweeps / f"c{c}.json").write_text(json.dumps(bench_json(isvc, tput, TPOT[c], n, c)))
             (sweeps / f"sharegpt-c{c}.json").write_text(json.dumps(bench_json(isvc, tput * 0.9, TPOT[c] - 2, n, c)))
+            if key == "FP8" and c == 32:  # two slices of one card loaded together: a measured per-H200 point
+                for side in ("a", "b"):
+                    (sweeps / f"c{c}-two-slices-{side}.json").write_text(json.dumps(bench_json(isvc, tput * 0.93, TPOT[c] + 3, n, c)))
         if key == "SPEC_DECODE":
             for k, rate in ((1, 0.90), (2, 0.82), (4, 0.72)):
                 for t in ("0", "0.7") if k == 4 else ("0",):

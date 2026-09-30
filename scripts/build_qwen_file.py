@@ -65,6 +65,11 @@ def startup_log(raw: Path, isvc: str) -> dict:
     }
     if m := re.search(r"speculative_config=SpeculativeConfig\(method='(\w+)'.*?num_spec_tokens=(\d+)", text):
         info["spec_method"], info["spec_tokens_from_log"] = m.group(1), int(m.group(2))
+    # thinking turned off server-side: --default-chat-template-kwargs={"enable_thinking": false} shows up in
+    # the non-default args as default_chat_template_kwargs; absent, the setting came per request or not at all
+    args = info["non_default_args"] or ""
+    if m := re.search(r"enable_thinking['\"]?\s*:\s*(True|False|true|false)", args):
+        info["thinking_in_server_args"] = m.group(1).lower() == "true"
     return info
 
 
@@ -224,8 +229,33 @@ def run_date(stamp: str | None) -> str | None:
     return stamp
 
 
-def finish(variants: list[dict], baseline: dict) -> None:
-    """Ratios from the unrounded single-stream numbers, and the labeled per-H200 arithmetic."""
+def two_slices(raw: Path, folder: str) -> dict | None:
+    """sweeps/<V>/c<N>-two-slices-{a,b}.json: the same setup on two slices of one card, loaded at the same
+    time. Their output throughputs added are a measured per-H200 number for that load, not arithmetic."""
+    pairs = {}
+    for path in (raw / "sweeps" / folder).glob("c*-two-slices-*.json"):
+        m = re.fullmatch(r"c(\d+)-two-slices-(\w+)\.json", path.name)
+        if m:
+            pairs.setdefault(int(m.group(1)), {})[m.group(2)] = load(path)
+    for c in sorted(pairs, reverse=True):
+        runs = pairs[c]
+        if len(runs) >= 2:
+            per_slice = {k: round(runs[k]["output_throughput"], 1) for k in sorted(runs)}
+            return {
+                "concurrency_per_slice": c,
+                "slices_loaded": len(runs),
+                "output_tokens_per_second": round(sum(r["output_throughput"] for r in runs.values()), 1),
+                "per_slice": per_slice,
+                "tpot_p95_ms": {k: runs[k].get("p95_tpot_ms") for k in sorted(runs)},
+                "files": [f"sweeps/{folder}/c{c}-two-slices-{k}.json" for k in sorted(runs)],
+                "note": f"{len(runs)} slices of one H200 loaded together at {c} requests each: measured",
+            }
+    return None
+
+
+def finish(raw: Path, variants: list[dict], baseline: dict) -> None:
+    """Ratios from the unrounded single-stream numbers, and the labeled per-H200 arithmetic (or the
+    two-slices measurement where the run made one)."""
     for v in variants:
         v["speed_vs_baseline"] = round(v["_tps"] / baseline["_tps"], 3)
         t07, base07 = v["at_temperature_0_7"]["_tps"], baseline["at_temperature_0_7"]["_tps"]
@@ -236,8 +266,28 @@ def finish(variants: list[dict], baseline: dict) -> None:
             "throughput_tps": round(v["_tps"] * n, 1),
             "note": PER_H200_NOTE if n > 1 else "one full H200, the measured number",
         }
+        if n > 1 and (measured := two_slices(raw, v["sweep_dir"])):
+            v["per_h200"]["measured"] = measured
     for v in variants:
         del v["_tps"], v["at_temperature_0_7"]["_tps"]
+
+
+def thinking_setting(raw: Path, variants: list[dict]) -> str | None:
+    """What the run says about Qwen's thinking mode: the notes.txt line, and whether the pods themselves
+    carried enable_thinking in their args (server-side, the same for every request)."""
+    notes = (raw / "notes.txt").read_text() if (raw / "notes.txt").is_file() else ""
+    line = next((ln.strip() for ln in notes.splitlines() if ln.lower().startswith("thinking")), None)
+    flags = {v.get("thinking_in_server_args") for v in variants}
+    if flags == {False}:
+        server = "off server-side in every pod (--default-chat-template-kwargs enable_thinking=false)"
+    elif flags == {True}:
+        server = "on server-side in every pod"
+    elif None in flags and len(flags) == 1:
+        server = "not set in the pods' args (per request, if at all)"
+    else:
+        server = "NOT THE SAME IN EVERY POD: " + ", ".join(
+            f"{v['checkpoint']}={v.get('thinking_in_server_args')}" for v in variants)
+    return f"{line}; {server}" if line else server
 
 
 def build(raw: Path) -> dict:
@@ -247,10 +297,10 @@ def build(raw: Path) -> dict:
         "the same checkpoint on a 71 GB slice, the profile FP8 ran on, so this line and FP8's get the same "
         "share of the GPU's compute; the card above is the 35 GB slice"
     )
-    finish(list(variants.values()) + [variants["INT4"]["int4_71"]], variants["BF16"])
+    everything = list(variants.values()) + [variants["INT4"]["int4_71"]]
+    finish(raw, everything, variants["BF16"])
     ver = variants["BF16"]["versions"]
-    notes = (raw / "notes.txt").read_text() if (raw / "notes.txt").is_file() else ""
-    thinking = next((ln.strip() for ln in notes.splitlines() if ln.lower().startswith("thinking")), None)
+    thinking = thinking_setting(raw, everything)
     where = raw.relative_to(ROOT) if raw.is_relative_to(ROOT) else raw
     return {
         "track": "qwen",
@@ -274,7 +324,8 @@ def build(raw: Path) -> dict:
             "against FP8. Every throughput is per device; per_h200 is that number times the slices per card, "
             "arithmetic and not a measurement. Accuracy is lm_eval: GSM8K (gsm8k_cot) on all questions and "
             "MMLU-Pro on the first 20 of each subject. Spec decode counters were read before and after each "
-            "single-stream run, per temperature and per number of speculative tokens (k)."
+            "single-stream run, per temperature and per number of speculative tokens (k). Thinking mode: "
+            f"{thinking}."
         ),
         "single_stream": {"dataset": "ShareGPT", "prompts": 30, "concurrency": 1, "where": "inside the pod"},
         "variants": variants,

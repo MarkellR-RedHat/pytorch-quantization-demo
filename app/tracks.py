@@ -130,7 +130,7 @@ QWEN_COPY = {
         "acc": "100%", "accNote": "the reference",
     },
     "INT4": {
-        "role": "A third of an H200",
+        "role": "A 35 GB slice, three per H200",
         "gets": "The smallest slice, three per H200, with 4-bit weights",
         "best": "When 71 GB is too much: the smallest slice that serves the model",
         "watch": "Speed here is the 35 GB slice's; accuracy is the checkpoint's, measured on a 71 GB slice "
@@ -145,7 +145,7 @@ QWEN_COPY = {
         "drafter": "MTP head", "pass": "27B pass", "drafterLong": "the model's own MTP head as the draft",
     },
     "FP8": {
-        "role": "Half an H200, 8-bit",
+        "role": "A 71 GB slice, two per H200",
         "gets": "8-bit weights and activations on a 71 GB slice, two per H200",
         "best": "Everyday chat and easy questions, on Ada, Hopper and newer",
         "watch": "Needs FP8 tensor cores (Ada, Hopper and newer; on A100 vLLM falls back to a slower "

@@ -502,7 +502,10 @@
             const tps = norm(t.best[k]);
             const price = usd > 0 ? ` ($${(usd / (tps * 3600) * 1e6).toFixed(2)} per 1M tokens)` : '';
             const per = sliced() && t.best[k].slices_per_h200 > 1 ? ` (${t.best[k].output_tokens_per_second_per_gpu.toFixed(0)} per slice × ${t.best[k].slices_per_h200})` : '';
-            return `${esc(shortLabel(k))} ${tps.toFixed(0)}${per}${price}`;
+            // where the run loaded two slices of one card together, that point is a measurement and says so
+            const b = bench(k), m = b && b.per_h200 && b.per_h200.measured;
+            const measured = m ? `, measured with ${m.slices_loaded} slices together at ${m.concurrency_per_slice} each: ${m.output_tokens_per_second.toFixed(0)}` : '';
+            return `${esc(shortLabel(k))} ${tps.toFixed(0)}${per}${measured}${price}`;
         });
         const assumed = usd > 0 ? `, at an assumed $${usd}/${sliced() ? 'H200' : 'GPU'}-hour` : '';
         return ` <span class="pending-note">Under load, output tokens/s ${normLabel()} while the ${t.kind || 'tail'} time per token stays under ${t.ms} ms${assumed}: ${items.join(' · ')}.</span>`;
