@@ -144,6 +144,8 @@ Copy `.env.example` to `.env`, set `SIMULATION_MODE=false`, and point the endpoi
 | `MODEL_SPEC_DECODE_ENDPOINT` | Speculative decoding deployment |
 | `MODEL_FP8_ENDPOINT` | Optional FP8 deployment, adds a fourth column |
 | `MODEL_<VARIANT>_NAME` | The `--served-model-name` for each deployment |
+| `MODEL_<VARIANT>_MODE` | `live` (default) or `recorded`, a backup switch that plays that setup's preset recordings instead of calling it |
+| `MODEL_INT4_CAPTURES` | Which recordings the INT4 column uses: `INT4` (community AWQ build) or `INT4_RH` (Red Hat's LLM Compressor build) |
 | `PRESENTER_KEY` | Protects the Ask box and the controls. Open `/presenter?key=<value>` once on the presenter laptop |
 | `MAX_INFLIGHT_PER_VARIANT` | Caps concurrent requests per deployment (default 32) |
 | `GPU_HOURLY_USD` | Shows cost per request when set, labeled as an assumption |

@@ -42,7 +42,7 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 ### GPUs per setup
 
 - BF16 Llama 3.1 70B: 2x H200 (tensor parallel)
-- INT4 Llama 3.1 70B: 1x H200
+- INT4 Llama 3.1 70B, Red Hat's LLM Compressor build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16`): 1x H200
 - Speculative decoding (Llama 3.1 70B BF16 target + Llama 3.1 8B draft, both tensor parallel 2): 2x H200
 
 ### Pre-Demo Checklist (Day Before)
@@ -56,9 +56,13 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 
 ### 30 Minutes Before
 
+- Run the preflight from the repo root, with the same `.env` as the app:
+  ```bash
+  python scripts/preflight.py
+  ```
+  For each setup it checks that `/v1/models` lists the served name, that a 1-token completion answers, sends 3 warm-up requests so the first live answer isn't cold, and confirms all eight presets have a recording to fall back on. It ends with what the corner badge will say and one PASS/FAIL table, and exits 1 if anything failed. It uses only the endpoints in `.env`, so it needs no cluster login.
 - Open the presenter dashboard full screen (`F`)
 - Check the badge in the top right says Live models
-- Ask one warm-up question so every model has served a request
 - Silence notifications and close other apps
 
 ## Backup Plans
@@ -66,6 +70,8 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 **If one model stops responding:** nothing to do for the presets. After 8 seconds with no first token, or 10 seconds of silence mid-answer, that column plays its recorded answer under a red line that says "Recorded <date> · live request failed", and its badge says RECORDED. Mention it when it happens.
 
 **If all the models stop responding:** press `R` (or open `/presenter?mode=sim`). The Numbers scene doesn't change, because it shows the measured benchmark. In Ask, a "Replay" badge appears and each column plays its recorded answer at the speed that setup measured. Press `R` again to go back to live.
+
+**If a setup's GPUs get pulled before the talk:** set `MODEL_<VARIANT>_MODE=recorded` for it (for example `MODEL_SPEC_DECODE_MODE=recorded`) and restart the app. That column never calls its endpoint, plays its recorded preset answers labeled "Recorded <date>", and the corner badge says which setups are live and which are recorded.
 
 **If the venue network is bad:** run the app on the demo laptop with `./scripts/run-local.sh`. Fonts and everything else are bundled, so the screen renders correctly with no network.
 
