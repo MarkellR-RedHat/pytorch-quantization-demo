@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: quay.io/<your-org>/pytorch-quantization-demo:latest
+          image: quay.io/markellr-redhat/pytorch-quantization-demo:2026.10
           ports:
             - name: http
               containerPort: 8000

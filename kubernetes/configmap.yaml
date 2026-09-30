@@ -1,4 +1,4 @@
-# The app reads these as environment variables (see .env.example for the full list).
+# The same variables as .env; the endpoints are the KServe predictor Services in the models' namespace.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,13 +6,12 @@ metadata:
 data:
   SIMULATION_MODE: "false"
   TRUST_PROXY: "true"
-  MODEL_BF16_ENDPOINT: https://benchmark-bf16.apps.your-cluster.com/v1/chat/completions
+  MODEL_BF16_ENDPOINT: http://benchmark-bf16-predictor.<namespace>.svc.cluster.local:8080/v1/chat/completions
   MODEL_BF16_NAME: benchmark-bf16
-  MODEL_SPEC_DECODE_ENDPOINT: https://benchmark-spec.apps.your-cluster.com/v1/chat/completions
+  MODEL_SPEC_DECODE_ENDPOINT: http://benchmark-spec-predictor.<namespace>.svc.cluster.local:8080/v1/chat/completions
   MODEL_SPEC_DECODE_NAME: benchmark-spec
-  MODEL_FP8_ENDPOINT: https://benchmark-fp8.apps.your-cluster.com/v1/chat/completions
+  MODEL_FP8_ENDPOINT: http://benchmark-fp8-predictor.<namespace>.svc.cluster.local:8080/v1/chat/completions
   MODEL_FP8_NAME: benchmark-fp8
-  # INT4 plays its recordings (quality/INT4_RH) instead of calling an endpoint; set an endpoint and
-  # MODEL_INT4_MODE=live to run it.
+  # INT4 plays its recordings (quality/INT4_RH) instead of calling an endpoint
   MODEL_INT4_MODE: recorded
   MODEL_INT4_CAPTURES: INT4_RH

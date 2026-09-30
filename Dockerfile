@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/python-311:latest
+FROM registry.access.redhat.com/ubi9/python-311@sha256:a0bdb55576fc5b8d6704279307817828ef027e1065533ceba133fe9516003a6c
 
 USER root
 
@@ -11,7 +11,6 @@ COPY app/ ./app/
 COPY static/ ./static/
 COPY templates/ ./templates/
 COPY benchmark_results.json ./
-# Captured model outputs and `vllm bench serve` sweeps; both folders ship with a .gitkeep so COPY never fails
 COPY quality/ ./quality/
 COPY bench/ ./bench/
 
@@ -23,7 +22,5 @@ USER 1001
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

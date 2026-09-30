@@ -30,15 +30,6 @@ jobs:
       run: |
         pytest --cov=app --cov-report=xml --cov-report=term
 
-    - name: Upload coverage reports
-      if: matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./coverage.xml
-        flags: unittests
-        fail_ci_if_error: false
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   lint:
     runs-on: ubuntu-latest
