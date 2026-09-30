@@ -34,6 +34,7 @@ class Track:
     copy: dict[str, dict[str, str]] = field(default_factory=dict)  # setup -> the card wording (see COPY)
     router_note: str = ""  # the line under the router strip: the next lanes, untested here
     settings_prefix: str = ""  # "qwen_": the track's own MODEL_<V>_ENDPOINT/NAME/MODE settings
+    license: dict[str, str] = field(default_factory=dict)  # the model's license line in the footer: text, url
     _cache: dict = field(default_factory=dict, compare=False, repr=False)
 
     def _setting(self, name: str) -> str:
@@ -151,7 +152,7 @@ QWEN_COPY = {
     "FP8": {
         "role": "A 71 GB slice, two per H200",
         "gets": "8-bit weights and activations on a 71 GB slice, two per H200",
-        "best": "Everyday chat and easy questions, on Ada, Hopper and newer",
+        "best": "Everyday traffic, two replicas per H200",
         "watch": "Needs FP8 tensor cores (Ada, Hopper and newer; on A100 vLLM falls back to a slower "
                  "weight-only kernel); less KV cache room than INT4 on the same slice",
     },
@@ -175,6 +176,9 @@ TRACKS = {
             "SPEC_DECODE": "Latency-sensitive, low traffic",
         },
         copy=LLAMA_COPY,
+        # Meta's license asks for this line wherever Llama outputs are shown
+        license={"text": "Built with Llama",
+                 "url": "https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/LICENSE"},
         router_note=(
             "A router pays off once your traffic is big and mixed enough to run more than one pool. With "
             "small traffic, pick the one setup that fits most of your questions. INT4 + spec decode, a draft "
@@ -213,6 +217,8 @@ TRACKS = {
         labels={"INT4": "INT4 (LLM Compressor W4A16)"},
         builds={"INT4": "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ)"},
         copy=QWEN_COPY,
+        # the Qwen/Qwen3.8-27B card: license apache-2.0
+        license={"text": "Qwen3.8-27B, Apache 2.0", "url": "https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/LICENSE"},
         # the DSpark card (RedHatAI/Qwen3.8-27B-speculator.dspark, evaluated on vLLM 0.29.0) says DSpark
         # "consistently delivers higher throughput and better interactivity than MTP with the same eight
         # speculative tokens"; the NVFP4 card evaluates on a B200 and recommends the DSpark draft on top
@@ -280,5 +286,6 @@ def describe(track: Track | None = None) -> dict:
         "lanes": t.lanes,
         "copy": t.copy,
         "router_note": t.router_note,
+        "license": t.license,
         "tracks": listing(),
     }

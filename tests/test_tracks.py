@@ -128,6 +128,14 @@ def test_router_note_names_the_track_next_lanes(client, qwen_data):
     assert "DSpark" in note and "vLLM 0.29+" in note and "NVFP4" in note and "untested here" in note
 
 
+def test_the_footer_license_follows_the_track(client):
+    lic = client.get("/api/config").json()["track"]["license"]
+    assert lic["text"] == "Built with Llama" and "llama3_1/LICENSE" in lic["url"]
+    client.post("/track/qwen")
+    lic = client.get("/api/config").json()["track"]["license"]
+    assert lic == {"text": "Qwen3.8-27B, Apache 2.0", "url": "https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/LICENSE"}
+
+
 def test_both_tracks_share_the_title(client):
     body = client.get("/api/config").json()
     assert body["track"]["title"] == tracks.TITLE
