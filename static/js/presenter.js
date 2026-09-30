@@ -17,10 +17,10 @@
             color: '--v-int4', role: 'Half the GPUs',
             gets: 'Half the GPUs, and about the same output per GPU under load',
             best: 'Everyday chat and easy questions',
-            bestWithFP8: 'When 71 GB of weights won\'t fit: memory-tight GPUs',
+            bestWithFP8: 'When 73 GB of weights won\'t fit: memory-tight GPUs',
             watch: '3 to 4 points lower on 280 MMLU-Pro questions, too few to call it, so the hardest questions stay on BF16 until it\'s tested further',
             route: 'Everyday questions',
-            routeWithFP8: '71 GB won\'t fit',
+            routeWithFP8: '73 GB won\'t fit',
         },
         SPEC_DECODE: {
             color: '--v-spec', role: 'Same 2 GPUs, 70B + 8B draft',
@@ -34,7 +34,7 @@
             color: '--v-fp8', role: 'One GPU, 8-bit',
             gets: 'BF16 speed on one GPU, and the most tokens per GPU under load',
             best: 'Everyday chat and easy questions, on Hopper or newer',
-            watch: 'Needs native FP8 (Hopper or newer) and 71 GB for the weights, so less room for KV cache than INT4',
+            watch: 'Needs native FP8 (Hopper or newer) and 73 GB for the weights as vLLM loads them, so less room for KV cache than INT4',
             route: 'Everyday questions',
         },
     };
@@ -125,7 +125,7 @@
         if (/\b(explain|describe|essay|report|story|function|code|script)\b|\b\d{3,} words\b/.test(t)) {
             return { key: 'SPEC_DECODE', why: 'it\'s a long answer with someone waiting, and Spec Decode answers fastest' };
         }
-        // the everyday lane: FP8 on Hopper when it's deployed, INT4 where 71 GB of weights won't fit
+        // the everyday lane: FP8 on Hopper when it's deployed, INT4 where 73 GB of weights won't fit
         if (hasFP8) return { key: 'FP8', why: 'nothing here needs the full model, and FP8 serves the most tokens per GPU' };
         return { key: 'INT4', why: 'nothing here needs the full model, so the cheapest tokens win' };
     }

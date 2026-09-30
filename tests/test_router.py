@@ -14,7 +14,7 @@ from app.quality import PROMPTS
 ROOT = Path(__file__).resolve().parent.parent
 node = shutil.which("node")
 
-# BF16 = the hardest questions, the everyday lane = FP8 on Hopper when it's deployed (INT4 where 71 GB of
+# BF16 = the hardest questions, the everyday lane = FP8 on Hopper when it's deployed (INT4 where 73 GB of
 # weights won't fit), Spec = latency-sensitive long answers
 LANES = {
     "reasoning": "FP16",
