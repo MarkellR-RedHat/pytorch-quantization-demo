@@ -1,0 +1,1 @@
+pod-qwen-int4-35gb-predictor-7ccb746499-4h6rs-42d02   reserved   <namespace>   True         3m54s

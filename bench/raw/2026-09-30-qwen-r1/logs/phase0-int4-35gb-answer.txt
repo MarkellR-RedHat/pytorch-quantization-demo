@@ -1,0 +1,15 @@
+=== Content (first 300 chars) ===
+To determine how many sheep the farmer has left, we need to carefully analyze the phrasing of the problem.
+
+### Step-by-Step Reasoning
+
+1.  **Identify the initial quantity**:
+    The farmer starts with **17** sheep.
+
+2.  **Analyze the condition**:
+    The problem states: "All but 9 run away."
+    Th
+
+Has <think> block: False
+Finish reason: stop
+Tokens: {'prompt_tokens': 43, 'total_tokens': 355, 'completion_tokens': 312, 'prompt_tokens_details': None}

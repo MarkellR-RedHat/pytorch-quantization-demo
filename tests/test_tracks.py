@@ -13,9 +13,16 @@ from app.quality import PROMPTS
 
 @pytest.fixture
 def client():
+    tracks.select("llama")
     with TestClient(main.app) as c:
         yield c
     tracks.select("llama")
+
+
+@pytest.fixture
+def pending_qwen(monkeypatch):
+    """The Qwen track before its files landed: its benchmark file is missing."""
+    monkeypatch.setattr(settings, "qwen_benchmark_file", "benchmark_results.qwen.missing.json")
 
 
 @pytest.fixture
@@ -45,11 +52,13 @@ def qwen_data(tmp_path, monkeypatch):
     return tmp_path
 
 
-def test_registry_lists_both_tracks_and_their_status():
+def test_registry_lists_both_tracks_and_their_status(monkeypatch):
     status = {t["key"]: t for t in tracks.listing()}
-    assert status["llama"]["status"] == "ready"
+    assert status["llama"]["status"] == "ready" and status["qwen"]["status"] == "ready"
+    monkeypatch.setattr(settings, "qwen_benchmark_file", "benchmark_results.qwen.missing.json")
+    status = {t["key"]: t for t in tracks.listing()}
     assert status["qwen"]["status"] == "pending"
-    assert "benchmark_results.qwen.json" in " ".join(status["qwen"]["missing"])
+    assert "benchmark_results.qwen.missing.json" in " ".join(status["qwen"]["missing"])
 
 
 def test_default_track_is_llama(client):
@@ -61,14 +70,14 @@ def test_default_track_is_llama(client):
     assert devices["FP8"] == {"name": "H200", "count": 1, "per_h200": 1}
 
 
-def test_a_pending_track_is_refused(client):
+def test_a_pending_track_is_refused(client, pending_qwen):
     r = client.post("/track/qwen")
     assert r.status_code == 409 and "pending" in r.json()["detail"]
     assert client.get("/api/config").json()["track"]["key"] == "llama"
     assert client.post("/track/nope").status_code == 404
 
 
-def test_allow_pending_shows_the_track_with_no_numbers(client, monkeypatch):
+def test_allow_pending_shows_the_track_with_no_numbers(client, monkeypatch, pending_qwen):
     monkeypatch.setattr(settings, "allow_pending_tracks", True)
     assert client.post("/track/qwen").status_code == 200
     body = client.get("/api/config").json()
@@ -94,7 +103,7 @@ def test_switching_tracks_swaps_benchmark_devices_and_recordings(client, qwen_da
     devices = {v["key"]: v["device"] for v in body["variants"]}
     assert devices["BF16"] == {"name": "H200", "count": 1, "per_h200": 1}
     assert devices["FP8"] == {"name": "71 GB slice", "count": 1, "per_h200": 2}
-    assert devices["INT4"] == {"name": "35 GB slice", "count": 1, "per_h200": 3}
+    assert devices["INT4"] == {"name": "71 GB slice", "count": 1, "per_h200": 2}
     stream = client.post("/ask/BF16", json={"preset": "reasoning"}).text
     lines = [json.loads(line) for line in stream.splitlines()]
     assert "".join(e["text"] for e in lines if e["t"] == "delta") == "Qwen says 9 sheep."
@@ -133,7 +142,24 @@ def test_track_env_setting_picks_the_start_track(qwen_data, monkeypatch):
     tracks.select("llama")
 
 
-def test_a_pending_start_track_falls_back_to_llama(monkeypatch):
+def test_a_pending_start_track_falls_back_to_llama(monkeypatch, pending_qwen):
     monkeypatch.setattr(settings, "track", "qwen")
     tracks.select_from_settings()
     assert tracks.active().key == "llama"
+
+
+def test_endpoints_and_modes_follow_the_track(client, monkeypatch):
+    """The Qwen track reads its own QWEN_MODEL_<V>_* settings: recorded by default, live when told."""
+    monkeypatch.setattr(settings, "model_bf16_endpoint", "http://llama.test/v1/chat/completions")
+    monkeypatch.setattr(settings, "model_bf16_mode", "live")
+    assert settings.mode_for("BF16") == "live" and settings.endpoint_for("BF16").startswith("http://llama")
+    client.post("/track/qwen")
+    assert settings.mode_for("BF16") == "recorded" and settings.endpoint_for("BF16") == ""
+    assert settings.served_name_for("SPEC_DECODE") == "qwen-mtp"
+    monkeypatch.setattr(settings, "qwen_model_spec_decode_endpoint", "http://qwen.test/v1/chat/completions")
+    monkeypatch.setattr(settings, "qwen_model_spec_decode_mode", "live")
+    assert settings.mode_for("SPEC_DECODE") == "live"
+    assert settings.endpoint_for("SPEC_DECODE") == "http://qwen.test/v1/chat/completions"
+    body = client.get("/api/config").json()
+    modes = {v["key"]: v["mode"] for v in body["variants"]}
+    assert modes["BF16"] == "recorded" and modes["SPEC_DECODE"] == "recorded"  # replay is on in tests

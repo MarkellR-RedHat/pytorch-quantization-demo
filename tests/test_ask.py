@@ -257,7 +257,7 @@ def test_preset_prompts(client):
 
 def test_replay_shows_only_presets_every_setup_has_recorded(client, no_captures, monkeypatch):
     """In replay every button must play a recording on every column: the reworded KV cache preset has
-    none until Oct 19, so it isn't offered; with no recordings at all, no buttons; live, all eight."""
+    no Llama recording, so it isn't offered; with no recordings at all, no buttons; live, all eight."""
     assert client.get("/api/config").json()["presets"] == []
     monkeypatch.setattr(settings, "quality_dir", "quality")
     keys = [p["key"] for p in client.get("/api/config").json()["presets"]]
@@ -272,9 +272,9 @@ def test_replay_shows_only_presets_every_setup_has_recorded(client, no_captures,
 
 def test_spec_sheep_replay_is_paced_at_the_benchmark_speed(client):
     """The Sep 29 evening recording of the sheep riddle on spec decode was a cold first request
-    (37 tokens/s, against 62 in the benchmark). Until the Oct 19 re-record, quality/ holds the
-    afternoon capture of the same answer, which has no timings, so replay uses the benchmark's speed
-    and first-token time and labels them as the benchmark's."""
+    (37 tokens/s, against 62 in the benchmark). quality/ holds the afternoon capture of the same
+    answer, which has no timings, so replay uses the benchmark's speed and first-token time and
+    labels them as the benchmark's."""
     done = events(client.post("/ask/SPEC_DECODE", json={"preset": "reasoning"}))[-1]
     assert done["tps_basis"] == "benchmark" and done["ttft_basis"] == "benchmark"
     assert done["tokens_per_second"] == main.benchmark_data.variant("SPEC_DECODE")["throughput_tps"]

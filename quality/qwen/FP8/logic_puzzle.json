@@ -1,0 +1,21 @@
+{
+  "variant": "FP8",
+  "model": "qwen-fp8",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "logic_puzzle",
+  "prompt": "Alice, Bob and Carol each have one meeting, on Monday, Tuesday or Wednesday, each on a different day. Alice's isn't on Monday. Bob's is the day after Alice's. Which day is Carol's? Explain step by step.",
+  "temperature": 0,
+  "response_text": "Here is the step-by-step logical deduction to determine the day of Carol's meeting.\n\n### Step 1: Analyze the Constraints\nWe have three people (Alice, Bob, Carol) and three days (Monday, Tuesday, Wednesday).\n1.  Each person has a meeting on a different day.\n2.  **Alice's** meeting is **not** on Monday.\n3.  **Bob's** meeting is the day **after** Alice's meeting.\n\n### Step 2: Determine Alice's Day\nLet's look at the possible days for Alice based on Constraint 2 and Constraint 3.\n\n*   **Option A: Alice is on Monday.**\n    *   This is explicitly forbidden by Constraint 2 (\"Alice's isn't on Monday\").\n    *   Therefore, Alice is **not** on Monday.\n\n*   **Option B: Alice is on Tuesday.**\n    *   If Alice is on Tuesday, then Bob must be on the day after Tuesday, which is **Wednesday** (Constraint 3).\n    *   This leaves **Monday** for Carol.\n    *   Let's check if this creates a conflict:\n        *   Alice: Tuesday\n        *   Bob: Wednesday\n        *   Carol: Monday\n        *   All days are distinct. This is a valid scenario.\n\n*   **Option C: Alice is on Wednesday.**\n    *   If Alice is on Wednesday, Bob must be on the day after Wednesday.\n    *   There is no day after Wednesday in the given set (Monday, Tuesday, Wednesday).\n    *   Therefore, Alice **cannot** be on Wednesday.\n\n### Step 3: Conclusion\nFrom Step 2, we determined that the only valid scenario is:\n*   Alice: Tuesday\n*   Bob: Wednesday\n*   Carol: Monday\n\nSince each person has a meeting on a different day, and Alice and Bob occupy Tuesday and Wednesday respectively, Carol must occupy the remaining day.\n\n**Answer:** Carol's meeting is on **Monday**.",
+  "usage": {
+    "prompt_tokens": 62,
+    "total_tokens": 487,
+    "completion_tokens": 425
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 300.7,
+  "total_ms": 6916.2,
+  "tokens_per_second": 61.4,
+  "captured_at": "2026-09-30T09:39:09-04:00"
+}

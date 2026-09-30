@@ -122,3 +122,35 @@ def test_preflight_day_of_env(setups, monkeypatch):
     assert got[(int4, "mode")] == "PASS" and (int4, "models list") not in got
     assert got[("FP8", "warm-up")] == "PASS"
     assert rows[-1][3] == '"Live: BF16, FP8, Spec Decode · Recorded: INT4 (Red Hat W4A16)"'
+
+
+def test_preflight_fully_recorded_qwen_track(monkeypatch):
+    """The Qwen track on the day: every column recorded by plan (the default), so it passes on its
+    recordings alone and no endpoint is called; run_all checks it after the Llama track."""
+    from app import tracks
+
+    monkeypatch.setattr(settings, "simulation_mode", False)
+    tracks.select("qwen")
+    try:
+        def never(request):
+            raise AssertionError(f"a recorded column must not call {request.url}")
+
+        rows = preflight.run(httpx.Client(transport=httpx.MockTransport(never)))
+    finally:
+        tracks.select("llama")
+    assert all(r[2] == "PASS" for r in rows), [r for r in rows if r[2] != "PASS"]
+    got = results(rows)
+    for label in ("BF16", "FP8", "INT4 (LLM Compressor W4A16)", "Spec Decode"):
+        assert got[(label, "mode")] == "PASS" and got[(label, "recordings")] == "PASS"
+    assert rows[-1][3] == '"Recorded: BF16, FP8, INT4 (LLM Compressor W4A16), Spec Decode"'
+    assert "quality/qwen/INT4/" in [r for r in rows if r[0].startswith("INT4")][1][3]
+
+
+def test_preflight_run_all_covers_both_tracks(setups, monkeypatch):
+    from app import tracks
+
+    rows = preflight.run_all(vllm())
+    assert tracks.active().key == "llama"
+    setups_seen = {r[0] for r in rows}
+    assert "Llama 70B: BF16" in setups_seen and "Qwen 27B: BF16" in setups_seen
+    assert all(r[2] == "PASS" for r in rows), [r for r in rows if r[2] != "PASS"]

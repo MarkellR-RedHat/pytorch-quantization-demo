@@ -1,0 +1,21 @@
+{
+  "variant": "INT4",
+  "model": "qwen-int4",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "code_generation",
+  "prompt": "Write a Python function that returns the second largest number in a list. Handle edge cases.",
+  "temperature": 0,
+  "response_text": "```python\ndef second_largest(numbers: list) -> float | None:\n    \"\"\"\n    Return the second largest number in a list.\n    \n    Args:\n        numbers: A list of numbers.\n        \n    Returns:\n        The second largest number, or None if there are fewer than 2 distinct numbers.\n        \n    Edge cases handled:\n        - Empty list or list with one element: returns None\n        - All elements are the same: returns None (no distinct second largest)\n        - List with duplicates: finds the second largest distinct value\n    \"\"\"\n    if not numbers or len(numbers) < 2:\n        return None\n    \n    # Get unique values to handle duplicates\n    unique_numbers = set(numbers)\n    \n    if len(unique_numbers) < 2:\n        return None\n    \n    # Find the two largest distinct values\n    largest = max(unique_numbers)\n    # Remove the largest and find the next largest\n    unique_numbers.remove(largest)\n    second = max(unique_numbers)\n    \n    return second\n```",
+  "usage": {
+    "prompt_tokens": 30,
+    "total_tokens": 253,
+    "completion_tokens": 223
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 305.6,
+  "total_ms": 4197.1,
+  "tokens_per_second": 53.1,
+  "captured_at": "2026-09-30T03:02:38-04:00"
+}

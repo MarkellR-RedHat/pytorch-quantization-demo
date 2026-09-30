@@ -1,0 +1,1 @@
+pod-qwen-bf16-predictor-796d45bfd9-wgmdz-1f01b   reserved   <namespace>   True         5m8s

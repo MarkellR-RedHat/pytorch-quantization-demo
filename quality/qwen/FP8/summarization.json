@@ -1,0 +1,21 @@
+{
+  "variant": "FP8",
+  "model": "qwen-fp8",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "summarization",
+  "prompt": "Summarize the key trade-offs of model quantization for production LLM deployments in 3 bullet points.",
+  "temperature": 0,
+  "response_text": "*   **Performance vs. Accuracy**: While quantization significantly reduces memory footprint and increases inference speed (throughput), it introduces rounding errors that can degrade model quality, potentially leading to hallucinations or reduced reasoning capabilities, particularly in lower-bit schemes (e.g., 4-bit) without careful calibration.\n*   **Hardware Compatibility vs. Optimization**: Quantized models often require specific hardware support (e.g., NVIDIA Tensor Cores for FP8/INT8) or specialized software stacks (e.g., vLLM, TensorRT-LLM) to achieve optimal performance, creating a trade-off between broad deployment flexibility and maximizing hardware efficiency.\n*   **Implementation Complexity vs. Resource Savings**: Achieving production-grade accuracy with quantization often requires additional steps like Quantization-Aware Training (QAT) or sophisticated post-training quantization (PTQ) techniques, adding engineering overhead and validation time compared to deploying full-precision models, despite the substantial savings in GPU memory and cost.",
+  "usage": {
+    "prompt_tokens": 34,
+    "total_tokens": 233,
+    "completion_tokens": 199
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 303.9,
+  "total_ms": 3391.6,
+  "tokens_per_second": 58.7,
+  "captured_at": "2026-09-30T09:38:59-04:00"
+}

@@ -33,6 +33,7 @@ class Track:
     builds: dict[str, str] = field(default_factory=dict)  # setup -> which build it runs, when worth saying
     copy: dict[str, dict[str, str]] = field(default_factory=dict)  # setup -> the card wording (see COPY)
     router_note: str = ""  # the line under the router strip: the next lanes, untested here
+    settings_prefix: str = ""  # "qwen_": the track's own MODEL_<V>_ENDPOINT/NAME/MODE settings
     _cache: dict = field(default_factory=dict, compare=False, repr=False)
 
     def _setting(self, name: str) -> str:
@@ -111,6 +112,7 @@ LLAMA_COPY = {
         "best": "Latency-sensitive, low-traffic work",
         "watch": "A slower first token, and about half of BF16's tokens per GPU under load: it's a latency "
                  "tool",
+        "watchVerdict": ": it's a latency tool",
         "acc": "= BF16", "accNote": "by design, the 70B checks every token",
         "drafter": "8B draft", "pass": "70B pass", "drafterLong": "Llama 3.1 8B as the draft",
     },
@@ -131,17 +133,18 @@ QWEN_COPY = {
         "acc": "100%", "accNote": "the reference",
     },
     "INT4": {
-        "role": "A 35 GB slice, three per H200",
-        "gets": "The smallest slice, three per H200, with 4-bit weights",
-        "best": "When 71 GB is too much: the smallest slice that serves the model",
-        "watch": "Speed here is the 35 GB slice's; accuracy is the checkpoint's, measured on a 71 GB slice "
-                 "(the footnote has the 71 GB like-for-like line against FP8)",
+        "role": "A 71 GB slice, two per H200",
+        "gets": "4-bit weights on the same 71 GB slice as FP8, with the most room left for KV cache",
+        "best": "Long contexts and big batches on a slice; it fits a 35 GB slice too (see the footnote)",
+        "watch": "Slower than FP8 on the same slice for one request; the slices were borrowed on a "
+                 "shared node, so their load numbers are noisier than the full card's",
     },
     "SPEC_DECODE": {
         "role": "Same H200, the model's own MTP head",
         "gets": "Faster answers on the same GPU, with BF16 quality",
-        "best": "Latency-sensitive, low-traffic work",
-        "watch": "A slower first token, and fewer of BF16's tokens per GPU under load: it's a latency tool",
+        "best": "Latency-sensitive, low-traffic work, and anything else: it comes free with this model",
+        "watch": "A slower first token, and fewer of BF16's tokens per GPU under load",
+        "watchVerdict": ", on the same card with no extra model to serve",
         "acc": "= BF16", "accNote": "by design, the 27B checks every token",
         "drafter": "MTP head", "pass": "27B pass", "drafterLong": "the model's own MTP head as the draft",
     },
@@ -150,7 +153,7 @@ QWEN_COPY = {
         "gets": "8-bit weights and activations on a 71 GB slice, two per H200",
         "best": "Everyday chat and easy questions, on Ada, Hopper and newer",
         "watch": "Needs FP8 tensor cores (Ada, Hopper and newer; on A100 vLLM falls back to a slower "
-                 "weight-only kernel)",
+                 "weight-only kernel); less KV cache room than INT4 on the same slice",
     },
 }
 
@@ -185,16 +188,16 @@ TRACKS = {
         model="Qwen3.8-27B",
         short="Qwen 27B",
         checkpoint="Qwen/Qwen3.8-27B",
-        # the INT4 card is the 35 GB slice: its speed, load numbers and recordings come from that run
-        # (INT4_35 in the raw folder), its accuracy from the same checkpoint on a 71 GB slice
+        # FP8 and INT4 both on the 71 GB slice, the same profile, so the two are like for like; the
+        # 35 GB run sits under the INT4 card as the "it fits there too" footnote
         devices={
-            "BF16": (H200, 1, 1), "FP8": (SLICE_71, 1, 2), "INT4": (SLICE_35, 1, 3),
+            "BF16": (H200, 1, 1), "FP8": (SLICE_71, 1, 2), "INT4": (SLICE_71, 1, 2),
             "SPEC_DECODE": (H200, 1, 1),
         },
         lanes={
             "BF16": "A wrong answer is expensive",
             "FP8": "Everyday questions",
-            "INT4": "When 71 GB is too much",
+            "INT4": "Long contexts on a slice",
             "SPEC_DECODE": "Latency-sensitive, low traffic",
         },
         paths={
@@ -202,9 +205,11 @@ TRACKS = {
             "quality_dir": "qwen_quality_dir",
             "bench_dir": "qwen_bench_dir",
         },
-        captures={"INT4": "INT4_35"},
         # RedHatAI/Qwen3.8-27B-INT4 is an LLM Compressor build (compressed-tensors, AWQ smoothing + GPTQ,
         # W4A16), unlike the Llama W4A16, which is AutoGPTQ format
+        settings_prefix="qwen_",
+        # the Qwen INT4 recordings are under INT4/ (MODEL_INT4_CAPTURES picks between the Llama builds only)
+        captures={"INT4": "INT4"},
         labels={"INT4": "INT4 (LLM Compressor W4A16)"},
         builds={"INT4": "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ)"},
         copy=QWEN_COPY,

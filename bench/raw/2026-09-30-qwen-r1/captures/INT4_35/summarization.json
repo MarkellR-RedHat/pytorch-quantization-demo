@@ -1,0 +1,21 @@
+{
+  "variant": "INT4_35",
+  "model": "qwen-int4-35gb",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "summarization",
+  "prompt": "Summarize the key trade-offs of model quantization for production LLM deployments in 3 bullet points.",
+  "temperature": 0,
+  "response_text": "*   **Performance vs. Accuracy**: While quantization significantly reduces memory footprint and increases inference speed (throughput), it introduces rounding errors that can degrade model quality, potentially leading to hallucinations or reduced reasoning capabilities, particularly in lower-bit schemes (e.g., 4-bit) without careful calibration.\n*   **Hardware Compatibility vs. Optimization**: Quantized models often require specific hardware support (e.g., GPU tensor cores optimized for INT8/FP8) or specialized software libraries (like vLLM or llama.cpp) to achieve speedups; deploying on unsupported hardware may result in slower inference than the original FP16 model due to dequantization overhead.\n*   **Deployment Simplicity vs. Tuning Complexity**: Quantization simplifies deployment by enabling larger models to run on consumer-grade hardware, but it adds complexity to the MLOps pipeline, requiring additional steps for calibration, sensitivity analysis, and A/B testing to ensure the quantized version meets strict production accuracy thresholds.",
+  "usage": {
+    "prompt_tokens": 34,
+    "total_tokens": 234,
+    "completion_tokens": 200
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 502.0,
+  "total_ms": 13009.8,
+  "tokens_per_second": 15.4,
+  "captured_at": "2026-09-30T10:28:01-04:00"
+}

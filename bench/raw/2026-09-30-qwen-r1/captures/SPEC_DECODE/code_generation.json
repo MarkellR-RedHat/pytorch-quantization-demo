@@ -1,0 +1,21 @@
+{
+  "variant": "SPEC_DECODE",
+  "model": "qwen-mtp",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "code_generation",
+  "prompt": "Write a Python function that returns the second largest number in a list. Handle edge cases.",
+  "temperature": 0,
+  "response_text": "```python\ndef second_largest(numbers: list) -> float | None:\n    \"\"\"\n    Return the second largest number in a list.\n    \n    Args:\n        numbers: A list of numbers.\n        \n    Returns:\n        The second largest number, or None if there are fewer than 2 distinct values.\n        \n    Raises:\n        TypeError: If the input is not a list or contains non-numeric elements.\n    \"\"\"\n    if not isinstance(numbers, list):\n        raise TypeError(\"Input must be a list\")\n    \n    if len(numbers) < 2:\n        return None\n    \n    # Filter out non-numeric elements and validate\n    for item in numbers:\n        if not isinstance(item, (int, float)):\n            raise TypeError(f\"All elements must be numeric, got {type(item).__name__}\")\n    \n    # Get unique values\n    unique_numbers = set(numbers)\n    \n    if len(unique_numbers) < 2:\n        return None\n    \n    # Sort unique numbers in descending order and pick the second one\n    sorted_unique = sorted(unique_numbers, reverse=True)\n    return sorted_unique[1]\n```",
+  "usage": {
+    "prompt_tokens": 30,
+    "total_tokens": 276,
+    "completion_tokens": 246
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 363.8,
+  "total_ms": 1704.6,
+  "tokens_per_second": 144.3,
+  "captured_at": "2026-09-30T09:27:56-04:00"
+}

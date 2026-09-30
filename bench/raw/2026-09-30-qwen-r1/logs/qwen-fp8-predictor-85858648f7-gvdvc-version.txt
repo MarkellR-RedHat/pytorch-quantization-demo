@@ -1,0 +1,5 @@
+vllm 0.24.0+rhaiv.13
+torch 2.11.0a0+git069d5d8
+transformers 5.14.1
+name, driver_version, memory.total [MiB]
+NVIDIA H200, 580.126.20, [Insufficient Permissions]

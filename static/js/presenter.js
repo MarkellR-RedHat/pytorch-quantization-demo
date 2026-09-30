@@ -364,7 +364,8 @@
         if (key === 'SPEC_DECODE' && b && bf && b.ttft_ms_avg && bf.ttft_ms_avg) {
             const t = targetInfo(), sb = t.best.SPEC_DECODE, bb = t.best.BF16;
             const share = sb && bb ? `about ${Math.round(100 * norm(sb) / norm(bb))}%` : 'about half';
-            return `First token about ${(b.ttft_ms_avg / bf.ttft_ms_avg).toFixed(0)}× slower than BF16's, and ${share} of BF16's tokens ${sliced() ? 'per H200' : 'per GPU'} under load: it's a latency tool`;
+            const verdict = s.watchVerdict != null ? s.watchVerdict : ": it's a latency tool";
+            return `First token about ${(b.ttft_ms_avg / bf.ttft_ms_avg).toFixed(0)}× slower than BF16's, and ${share} of BF16's tokens ${sliced() ? 'per H200' : 'per GPU'} under load${verdict}`;
         }
         return s.watch || '';
     }
@@ -460,15 +461,16 @@
         const g = a.gsm8k, qg = qa.gsm8k, m = a.mmlu_pro, qm = qa.mmlu_pro;
         if (!g || !qg || !m || !qm) return '';
         const pts = m.score - qm.score;
-        const gsmVerdict = qg.score >= g.score - g.stderr ? 'no loss' : `INT4 ${(g.score - qg.score).toFixed(1)} points lower`;
+        const gsmVerdict = qg.score >= g.score ? 'no loss' : qg.score >= g.score - g.stderr ? 'no measurable loss, inside the standard error' : `INT4 ${(g.score - qg.score).toFixed(1)} points lower`;
         const mmluVerdict = Math.abs(pts) <= m.stderr
             ? `inside the standard error on ${m.questions} questions, too few to call it either way`
             : pts > 0
                 ? `INT4 ${Math.floor(pts)} to ${Math.ceil(pts)} points lower on ${m.questions} questions, too few to call it, so the hard questions stay on BF16 until it's tested further`
                 : `INT4 ${Math.floor(-pts)} to ${Math.ceil(-pts)} points higher on ${m.questions} questions, too few to call it`;
-        const where = q.accuracy_note ? ` INT4's scores are the checkpoint's, measured on a ${q.int4_71 && q.int4_71.device ? q.int4_71.device.name : '71 GB slice'}.` : '';
-        const like = q.int4_71 && q.int4_71.throughput_tps && bf.throughput_tps
-            ? ` Like for like on FP8's ${q.int4_71.device ? q.int4_71.device.name : '71 GB slice'}, INT4 does ${one(q.int4_71.throughput_tps)} tokens/s (${Math.round(100 * q.int4_71.throughput_tps / bf.throughput_tps)}% of BF16).`
+        const where = '';
+        const s35 = q.int4_35;
+        const like = s35 && s35.throughput_tps && bf.throughput_tps
+            ? ` INT4 fits a ${s35.device ? s35.device.name : '35 GB slice'} too (${s35.device ? s35.device.per_h200 : 3} per H200): ${one(s35.throughput_tps)} tokens/s for one request${s35.enforce_eager ? ' in eager mode (no CUDA graphs on that slice)' : ''}, never under the ${targetInfo().ms} ms budget under load.`
             : '';
         const naive = ref ? `The naive pick, the ${ref.build.replace(', the naive pick', '')}: ${one(ref.throughput_tps)} tokens/s (${Math.round(100 * ref.speed_vs_baseline)}% of BF16), GSM8K ${ref.gsm8k.toFixed(1)}%, MMLU-Pro ${ref.mmlu_pro.toFixed(1)}%. ` : '';
         const f8 = bench('FP8'), fa = f8 && f8.accuracy;
@@ -489,7 +491,9 @@
             .map(kk => ({ kk, a: acc[`t0-k${kk}`], tps: sd[`throughput_tps_k${kk}`] })).filter(o => o.a && o.a.rate != null);
         if (others.length) {
             const list = others.map(o => o.kk), ks = list.length > 1 ? `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}` : `${list[0]}`;
-            text += ` With ${ks} speculative tokens (temperature 0): ${others.map(o => `${o.kk}: ${(100 * o.a.rate).toFixed(1)}% accepted${o.tps ? `, ${one(o.tps)} tokens/s` : ''}`).join('; ')} (${one(sd.throughput_tps)} with ${k}).`;
+            const rates = others.map(o => `${(100 * o.a.rate).toFixed(1)}%`), speeds = others.map(o => o.tps ? one(o.tps) : '–');
+            const list3 = a => a.length > 1 ? `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}` : `${a[0]}`;
+            text += ` With ${ks} speculative tokens: ${list3(rates)} accepted, ${list3(speeds)} tokens/s (${one(sd.throughput_tps)} with ${k}).`;
         }
         return text;
     }
@@ -508,7 +512,8 @@
             // where the run loaded two slices of one card together, that point is a measurement and says so
             const b = bench(k), m = b && b.per_h200 && b.per_h200.measured;
             const measured = m ? `, measured with ${m.slices_loaded} slices together at ${m.concurrency_per_slice} each: ${m.output_tokens_per_second.toFixed(0)}` : '';
-            return `${esc(shortLabel(k))} ${tps.toFixed(0)}${per}${measured}${price}`;
+            const lb = t.best[k].lower_bound ? ' (lower bound)' : '';
+            return `${esc(shortLabel(k))} ${tps.toFixed(0)}${per}${measured}${lb}${price}`;
         });
         const assumed = usd > 0 ? `, at an assumed $${usd}/${sliced() ? 'H200' : 'GPU'}-hour` : '';
         return ` <span class="pending-note">Under load, output tokens/s ${normLabel()} while the ${t.kind || 'tail'} time per token stays under ${t.ms} ms${assumed}: ${items.join(' · ')}.</span>`;
@@ -553,7 +558,9 @@
         const any = load[keys[0]].find(p => p.avg_input_tokens && p.avg_output_tokens);
         const sizes = any ? ` Synthetic random-token prompts of about ${any.avg_input_tokens} tokens, each asking for ${any.avg_output_tokens}.` : ' Synthetic random-token prompts.';
         const where = keys.some(k => (config.variants.find(v => v.key === k) || {}).device && config.variants.find(v => v.key === k).device.name !== 'H200') ? 'on the H200s and their MIG slices' : 'on the H200s';
-        $('#loadSetup').textContent = `A replay of the vllm bench serve load test ${where}: ${levels.join(', ').replace(/, (\d+)$/, ' and $1')} requests in flight at once, sent to each setup.${sizes}`;
+        const shared = keys.reduce((n, k) => n + load[k].filter(p => p.overlapped_with && p.overlapped_with.length).length, 0);
+        const sharedNote = shared ? ` ${shared} of the ${keys.reduce((n, k) => n + load[k].length, 0)} points (hollow) come from runs that shared their pod with another sweep, so they are lower bounds.` : '';
+        $('#loadSetup').textContent = `A replay of the vllm bench serve load test ${where}: ${levels.join(', ').replace(/, (\d+)$/, ' and $1')} requests in flight at once, sent to each setup.${sizes}${sharedNote}`;
         stage.style.setProperty('--cols', keys.length);
         stage.classList.toggle('cols-4', keys.length >= 4);
         const maxPerGpu = Math.max(...keys.flatMap(k => load[k].map(p => p.output_tokens_per_second_per_gpu)));
@@ -611,7 +618,7 @@
             drawTpot(card, pts, levels, i);
             const t = targetInfo(), best = t.best[card.dataset.key];
             $('.l-target', card).innerHTML = i < levels.length - 1 ? '' : best
-                ? `Under the ${t.ms} ms target: <b>${best.output_tokens_per_second_per_gpu.toFixed(0)} tokens/s per ${unit(card.dataset.key)}</b> at ${best.concurrency} in flight`
+                ? `Under the ${t.ms} ms target: <b>${best.output_tokens_per_second_per_gpu.toFixed(0)} tokens/s per ${unit(card.dataset.key)}</b> at ${best.concurrency} in flight${best.lower_bound ? ' (a lower bound: that run shared the pod with another sweep)' : ''}`
                 : `Never stayed under the ${t.ms} ms target`;
         }
         const play = $('#loadPlay');
@@ -638,7 +645,7 @@
         let svg = `<line x1="${L}" x2="${W - L}" y1="${H - B}" y2="${H - B}"/>`;
         svg += levels.map((c, j) => `<text x="${x(j)}" y="${H - 5}" text-anchor="${j === 0 ? 'start' : j === levels.length - 1 ? 'end' : 'middle'}">${c}</text>`).join('');
         if (shown.length > 1) svg += `<polyline points="${shown.map(o => `${x(o.j)},${y(o.p.output_tokens_per_second_per_gpu)}`).join(' ')}"/>`;
-        svg += shown.map(o => `<circle cx="${x(o.j)}" cy="${y(o.p.output_tokens_per_second_per_gpu)}" r="7"/>`).join('');
+        svg += shown.map(o => `<circle class="${o.p.overlapped_with && o.p.overlapped_with.length ? 'shared' : ''}" cx="${x(o.j)}" cy="${y(o.p.output_tokens_per_second_per_gpu)}" r="7"><title>${o.p.overlapped_with && o.p.overlapped_with.length ? `ran alongside ${o.p.overlapped_with.map(w => w.file).join(', ')} on the same pod: a lower bound` : `${o.p.concurrency} in flight`}</title></circle>`).join('');
         el.innerHTML = svg;
     }
 
@@ -672,13 +679,17 @@
             const r = pair.q.output_tokens_per_second_per_gpu / pair.bf.output_tokens_per_second_per_gpu;
             parts.push(`At ${perGpu} requests per GPU, ${esc(benchLabel('INT4'))} serves <b>${one(r)}× the output tokens per GPU</b> of ${esc(benchLabel('BF16'))}`);
         }
-        const same = [...levels].reverse().map(c => ({ c, bf: pointAt(bfPts, c), sp: pointAt(spPts, c) })).find(o => o.bf && o.sp && o.bf.latency_ms && o.sp.latency_ms);
+        // the highest load where both points exist, preferring one where neither run shared its pod
+        const pairs = [...levels].reverse().map(c => ({ c, bf: pointAt(bfPts, c), sp: pointAt(spPts, c) })).filter(o => o.bf && o.sp && o.bf.latency_ms && o.sp.latency_ms);
+        const clean = o => !(o.bf.overlapped_with && o.bf.overlapped_with.length) && !(o.sp.overlapped_with && o.sp.overlapped_with.length);
+        const same = pairs.find(clean) || pairs[0];
         if (same) {
             const r = same.sp.latency_ms / same.bf.latency_ms;
             const kind = same.bf.latency_kind === 'mean' ? 'mean' : 'median';
             const verdict = Math.abs(r - 1) < 0.03 ? 'about the same as' : r < 1 ? `<b>${Math.round(100 * (1 - r))}% lower</b> than` : `<b>${Math.round(100 * (r - 1))}% higher</b> than`;
             const sameDev = gpus('BF16') === 1 ? 'the same GPU' : `the same ${gpus('BF16')} GPUs`;
-            parts.push(`at ${same.c} requests on ${sameDev}, ${esc(benchLabel('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(benchLabel('BF16'))}'s`);
+            const caveat = clean(same) ? '' : ' (one of those runs shared its pod with another sweep)';
+            parts.push(`at ${same.c} requests on ${sameDev}, ${esc(benchLabel('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(benchLabel('BF16'))}'s${caveat}`);
         }
         // what sets cost: output tokens per GPU while the tail time per token stays under the target
         const t = targetInfo(), bfBest = t.best.BF16;

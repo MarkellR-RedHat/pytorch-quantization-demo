@@ -26,9 +26,20 @@ SWEEP = {  # setup -> concurrency -> (total output tok/s, p95 tpot ms); None = t
 TPOT = {1: 18, 8: 21, 16: 24, 32: 31, 64: 44}
 
 
-def bench_json(model: str, tput: float, tpot: float, n: int, c: int) -> dict:
+_CLOCK = [0]  # seconds since 2026-10-02 01:00:00: every run gets its own window, one after the other
+
+
+def stamp(seconds: int) -> str:
+    return f"20261002-{1 + seconds // 3600:02d}{seconds % 3600 // 60:02d}{seconds % 60:02d}"
+
+
+def bench_json(model: str, tput: float, tpot: float, n: int, c: int, start: int | None = None) -> dict:
+    """A vllm bench serve result. Runs are 60 s long and sequential unless a start is given (an overlap)."""
+    if start is None:
+        start, _CLOCK[0] = _CLOCK[0], _CLOCK[0] + 70
     return {
-        "date": "20261002-010203", "backend": "vllm", "model_id": model, "num_prompts": n, "max_concurrency": c,
+        "date": stamp(start), "duration": 60.0,
+        "backend": "vllm", "model_id": model, "num_prompts": n, "max_concurrency": c,
         "completed": n, "failed": 0, "total_input_tokens": n * 512, "total_output_tokens": n * 256,
         "output_throughput": tput, "mean_ttft_ms": 40.0 + c, "median_ttft_ms": 35.0 + c, "p95_ttft_ms": 60.0 + c,
         "mean_tpot_ms": tpot - 1, "median_tpot_ms": tpot - 1.5, "p95_tpot_ms": tpot, "p99_tpot_ms": tpot + 4,
@@ -37,8 +48,11 @@ def bench_json(model: str, tput: float, tpot: float, n: int, c: int) -> dict:
 
 
 def startup_text(isvc: str, checkpoint: str, gib: float, kv: int, spec: bool) -> str:
-    args = {"port": 8080, "model": checkpoint, "max_model_len": 32768, "served_model_name": [isvc],
-            "default_chat_template_kwargs": {"enable_thinking": False}}
+    eager = isvc.endswith("35gb")  # the NVML CUDA-graph profiling bug on that slice
+    args = {"default_chat_template_kwargs": {"enable_thinking": False}, "port": 8080, "model": checkpoint,
+            "max_model_len": 32768, "served_model_name": [isvc]}
+    if eager:
+        args["enforce_eager"] = True
     if spec:
         args.update({"spec_method": "mtp", "spec_tokens": 4})
     kernel = "Selected CutlassFP8ScaledMMLinearKernel for CompressedTensorsW8A8Fp8" if "FP8" in checkpoint else (
@@ -53,6 +67,7 @@ def startup_text(isvc: str, checkpoint: str, gib: float, kv: int, spec: bool) ->
         f"INFO [model_runner.py:1] Model loading took {gib} GiB memory and 12.3 seconds",
         f"INFO [kv_cache_utils.py:1] GPU KV cache size: {kv:,} tokens",
         "INFO [kv_cache_utils.py:2] Maximum concurrency for 32,768 tokens per request: 12.3x",
+        "" if eager else "INFO [gpu_model_runner.py:1] Graph capturing finished in 20 secs, took 0.61 GiB",
     ]
     if spec:
         lines.append("WARNING [config.py:1] Enabling num_speculative_tokens > 1 will run multiple times of forward on same MTP layer")
@@ -78,10 +93,9 @@ def write(root: Path) -> Path:
                 (sweeps / f"sharegpt-c{c}-failed.txt").write_text("torch.OutOfMemoryError: CUDA out of memory\n")
                 continue
             (sweeps / f"c{c}.json").write_text(json.dumps(bench_json(isvc, tput, TPOT[c], n, c)))
-            (sweeps / f"sharegpt-c{c}.json").write_text(json.dumps(bench_json(isvc, tput * 0.9, TPOT[c] - 2, n, c)))
-            if key == "FP8" and c == 32:  # two slices of one card loaded together: a measured per-H200 point
-                for side in ("a", "b"):
-                    (sweeps / f"c{c}-two-slices-{side}.json").write_text(json.dumps(bench_json(isvc, tput * 0.93, TPOT[c] + 3, n, c)))
+            # FP8's ShareGPT run at 64 starts inside the random run at 64: the one deliberate overlap
+            start = _CLOCK[0] - 40 if (key, c) == ("FP8", 64) else None
+            (sweeps / f"sharegpt-c{c}.json").write_text(json.dumps(bench_json(isvc, tput * 0.9, TPOT[c] - 2, n, c, start)))
         if key == "SPEC_DECODE":
             for k, rate in ((1, 0.90), (2, 0.82), (4, 0.72), (8, 0.55)):
                 for t in ("0", "0.7") if k == 4 else ("0",):

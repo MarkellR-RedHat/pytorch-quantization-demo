@@ -1,8 +1,8 @@
-# Not Every Question Needs Two GPUs
+# Not Every Question Needs the Whole GPU
 
-Llama 3.1 70B Instruct served by vLLM on NVIDIA H200s four ways: BF16 on two GPUs, FP8 on one, INT4 on one, and speculative decoding with an 8B draft on two. The demo sends one question to all of them at once, streams the answers side by side with their timing, and shows what each setup gets you, what it costs under load, and where a router fits. Built for the Demo Theater at PyTorch Conference North America 2026, San Jose.
+Two models served by vLLM on NVIDIA H200s four ways each. Llama 3.1 70B Instruct: BF16 on two GPUs, FP8 on one, INT4 on one, and speculative decoding with an 8B draft on two. Qwen3.8-27B: BF16 on one GPU, FP8 and INT4 on 71 GB MIG slices, and speculative decoding with the model's own MTP head on the same GPU. The demo sends one question to all four setups of a track at once, streams the answers side by side with their timing, and shows what each setup gets you, what it costs under load, and where a router fits. Built for the Demo Theater at PyTorch Conference North America 2026, San Jose.
 
-## Results
+## Results, Llama 3.1 70B
 
 vLLM `0.18.0+rhaiv.14` (the build in Red Hat AI), PyTorch 2.10.0, driver 580.126.20, September 29, 2026. One request at a time is `vllm bench serve` inside the pod on 30 ShareGPT prompts at temperature 0. Under load is the same tool at 1 to 64 requests in flight on 512-token random prompts asking for 256, and the number kept is output tokens per second per GPU with the p95 time per output token at or under 50 ms (20 tokens per second per user). Accuracy is `lm_eval`: GSM8K 8-shot chain of thought on all 1,319 questions, MMLU-Pro 5-shot on the first 20 questions of each of 14 subjects (280, standard error about ±2.8 points).
 
@@ -21,6 +21,24 @@ vLLM `0.18.0+rhaiv.14` (the build in Red Hat AI), PyTorch 2.10.0, driver 580.126
 
 Both INT4 builds run on vLLM's Machete kernel; FP8 on CutlassFP8ScaledMM; all four on FlashAttention 3. The AWQ build's ShareGPT run at 64 in flight was a retry on cached prompts and isn't used for any claim. The KV cache left on an H200: BF16 367K tokens, spec decode 218K, FP8 182K, INT4 283K.
 
+## Results, Qwen3.8-27B
+
+vLLM `0.24.0+rhaiv.13` (the Red Hat AI build that serves Qwen3.8's MTP head), PyTorch 2.11, driver 580.126.20, September 30, 2026, `--max-model-len 32768`, thinking turned off server-side in every pod. The same harness as above: 30 ShareGPT prompts one at a time at temperature 0, the 1-to-64 sweep on 512-token random prompts, `lm_eval` GSM8K (`gsm8k_cot`, the generic 8-shot task, so not comparable with the Llama track's `gsm8k_cot_llama` scores) and MMLU-Pro on 280. Every number is per device: a full H200, or one 71 GB MIG slice (two per H200) with 3/7 of the card's SMs. "Per H200" for a slice setup is that number times two, arithmetic and labeled so, because two slices at once couldn't be borrowed.
+
+| Setup | Device | Tokens/s, one request | First token | GSM8K | MMLU-Pro | Tokens/s per device under load | Weights | KV cache left |
+|---|---|---|---|---|---|---|---|---|
+| BF16 | 1 full H200 | 66.0 (1.00×) | 40 ms | 89.2% | 77.1% | 1,979 at 64 in flight | 51.1 GiB | 1.10M tokens |
+| FP8, Qwen's build | 1 × 71 GB slice | 63.5 (0.96×) | 47 ms | 88.6% | 77.5% | 883 at 32 | 28.5 GiB | 498K |
+| INT4, Red Hat's LLM Compressor W4A16 build | 1 × 71 GB slice | 56.8 (0.86×) | 63 ms | 88.3% | 77.9% | 845 at 32, a lower bound (see below) | 17.7 GiB | 1.24M |
+| Spec decode, the model's own MTP head, 4 tokens | the same full H200 | 151.2 (2.29×) | 85 ms | same as BF16 by design | | 1,527 at 32 | 51.9 GiB | 750K |
+
+- **FP8 and INT4 on the same 71 GB slice**, like for like: FP8 runs at 96% of BF16's single-request speed on 3/7 of the card's compute, INT4 at 86%, with no measurable accuracy loss on either (every difference is inside one standard error). INT4's 17.7 GiB of weights leave 1.24M tokens of KV cache on the slice against FP8's 498K, so INT4 is the slice for long contexts and big batches. INT4 loads on a 35 GB slice too (three per H200) at 15.9 tokens/s for one request, in eager mode because CUDA-graph memory profiling fails on that slice, and never got under the 50 ms budget under load.
+- **Spec decode comes built in**: 2.29× faster for one request on the same card with no extra model to serve, a first token about 2× slower (85 ms against 40), and about three quarters of BF16's tokens per GPU at the 50 ms budget (1,527 against 1,979). Four draft tokens is the sweet spot: 105 tokens/s at 1, 129 at 2, 151 at 4, 143 at 8; 55.4% of drafted tokens accepted at 4 (3.22 tokens per pass, per position 79 / 61 / 46 / 36%), 33% at 8, where positions 5 to 8 are accepted less than a quarter of the time and the draft work is wasted. At temperature 0.7, 135 tokens/s. Red Hat's DSpark speculator (see the technical questions) wasn't run: it needs vLLM 0.29.
+- **What the slice numbers carry**: the slices were borrowed on a shared MIG node, so their load numbers are noisier than the full card's. Some sweep runs shared their pod with another `vllm bench serve` run (the random and ShareGPT sweeps ran side by side for stretches, with the client inside the pod), so those points understate throughput; the benchmark file lists every run's window and what overlapped it, the Under load scene draws them hollow, and the number at the target comes from a clean point when there is one. INT4's is the exception (every random point overlapped a ShareGPT run), so its 845 is labeled a lower bound. The temperature-0.7 single-stream runs of BF16 and INT4 ran while their MMLU-Pro eval hit the same pod and are excluded.
+- **Recorded answers:** all four setups answered the sheep riddle with 9, put Carol's meeting on Monday (at temperature 0 and in 5 of 5 samples at 0.7), and extracted all three JSON values, with no `<think>` blocks. All eight presets are recorded on this track.
+
+INT4 runs on vLLM's Machete kernel (`CompressedTensorsWNA16`), FP8 on `FlashInferFp8DeepGEMMDynamicBlockScaled`, all four on FlashAttention 3, and the full-card and 71 GB-slice pods with CUDA graphs.
+
 ## Run it
 
 ```bash
@@ -28,7 +46,7 @@ make setup
 make run          # replay mode, no GPUs: http://localhost:8000/presenter
 ```
 
-Three scenes, keys `1` `2` `3`: **Ask** streams a question (typed, or one of eight presets) to every setup; **Under load** replays the sweep with the 50 ms target drawn on each card; **Numbers** is the money slide. `R` flips every column between the live models and the recordings, `Q` switches tracks once a second track (Qwen3.8-27B on MIG slices, its files pending) has data, `T` is the theme, `F` full screen. With `.env` pointing at vLLM endpoints (`SIMULATION_MODE=false`), Ask is live, and a column whose request fails or stalls plays its recording under a line that says so. A setup with `MODEL_<VARIANT>_MODE=recorded` never calls its endpoint. `make test` runs the suite; `scripts/preflight.py` checks the endpoints and recordings before a talk. The booth game is at `/arena` ([ARENA.md](ARENA.md)). Talk logistics are in [CONFERENCE_GUIDE.md](CONFERENCE_GUIDE.md).
+Three scenes, keys `1` `2` `3`: **Ask** streams a question (typed, or one of eight presets) to every setup; **Under load** replays the sweep with the 50 ms target drawn on each card; **Numbers** is the money slide. `R` flips every column between the live models and the recordings, `Q` switches between the Llama 3.1 70B and Qwen3.8-27B tracks, `T` is the theme, `F` full screen. In replay, and for a column recorded by plan, a preset button is offered only when every column on screen has a recording for it: the Llama track offers seven (its reworded KV cache prompt has no Llama recording), the Qwen track all eight. With `.env` pointing at vLLM endpoints (`SIMULATION_MODE=false`), Ask is live, and a column whose request fails or stalls plays its recording under a line that says so. A setup with `MODEL_<VARIANT>_MODE=recorded` never calls its endpoint; the Qwen track has its own `QWEN_MODEL_<VARIANT>_ENDPOINT`, `_NAME` and `_MODE` settings, recorded by default. `make test` runs the suite; `scripts/preflight.py` checks the endpoints and recordings before a talk. The booth game is at `/arena` ([ARENA.md](ARENA.md)). Talk logistics are in [CONFERENCE_GUIDE.md](CONFERENCE_GUIDE.md).
 
 ## Deploy
 
@@ -43,6 +61,15 @@ Not every setup needs a full H200:
 | FP8 | 67.7 GiB (72.7 GB) | 1 full H200 | no, the weights alone exceed it |
 | INT4 | 37.1 GiB | 1 GPU | untested (all runs were on full H200s); a 71 GB slice is 66.1 GiB, which after the weights, vLLM's 10% reserve and workspace leaves about 20 GiB for KV cache, and a 3g slice has 3/7 of the SMs, so no speed number here carries over |
 
+The Qwen track's InferenceServices are in `kubernetes/models/qwen/`, raw containers on the vLLM 0.24 image with `--max-model-len 32768` and thinking turned off server-side (`--default-chat-template-kwargs={"enable_thinking":false}`), as they ran:
+
+| Setup | Weights as loaded | Device | Notes |
+|---|---|---|---|
+| BF16 | 51.1 GiB | 1 full H200 | on a 71 GB slice it loads but leaves 11 GiB (167K tokens) of KV cache: usable, impractical |
+| Spec decode (MTP) | 51.9 GiB | 1 full H200 | `--spec-method=mtp --spec-tokens=4` |
+| FP8 | 28.5 GiB | 71 GB MIG slice (`nvidia.com/mig-3g.71gb`) | CUDA graphs on |
+| INT4 | 17.7 GiB | 71 GB MIG slice, or a 35 GB slice (`nvidia.com/mig-2g.35gb`) with `--enforce-eager` | the 35 GB slice fails CUDA-graph memory profiling with an NVML assertion; eager mode is the workaround, at 15.9 tokens/s |
+
 The demo app itself: `.env` on a laptop (see `.env.example`), or the backup on OpenShift:
 
 ```bash
@@ -55,7 +82,7 @@ One replica: metrics and websocket fan-out live in process memory.
 
 ## Where the evidence lives
 
-`benchmark_results.json` is built from the raw files by `scripts/build_benchmark_file.py` and the dashboard reads it; a test rebuilds it and checks it matches. `bench/raw/2026-09-29-r2/` holds the delivered files: `sweeps/` (also what Under load plays), `evals/`, `logs/` (startup logs, versions, GPU utilization, spec decode counters), `captures/`, `live/` (the Sep 30 live-path check against the FP8 deployment: preflight output, error log, screenshots), and `notes.txt`. `bench/raw/2026-09-29-r1/` is the afternoon run that preceded it, kept as history in the benchmark file. `quality/<VARIANT>/` holds the recordings the demo plays (7 of the 8 presets; the reworded KV cache preset is recorded on Oct 19). The raw files were scrubbed of the cluster and node name and nothing else.
+`benchmark_results.json` is built from the raw files by `scripts/build_benchmark_file.py` and the dashboard reads it; a test rebuilds it and checks it matches. `bench/raw/2026-09-29-r2/` holds the delivered files: `sweeps/` (also what Under load plays), `evals/`, `logs/` (startup logs, versions, GPU utilization, spec decode counters), `captures/`, `live/` (the Sep 30 live-path check against the FP8 deployment: preflight output, error log, screenshots), and `notes.txt`. `bench/raw/2026-09-29-r1/` is the afternoon run that preceded it, kept as history in the benchmark file. `quality/<VARIANT>/` holds the recordings the Llama track plays (7 of the 8 presets: the KV cache prompt was reworded after the run and has no Llama recording, so its button isn't offered in replay). The Qwen track is `benchmark_results.qwen.json`, built by `scripts/build_qwen_file.py` from `bench/raw/2026-09-30-qwen-r1/` (a test rebuilds and compares it too), with its recordings under `quality/qwen/<VARIANT>/`, all eight presets. `bench/raw/README.md` says what each folder holds and what to know when reading it. The raw files were scrubbed of the cluster and node name and nothing else.
 
 ## Technical questions
 

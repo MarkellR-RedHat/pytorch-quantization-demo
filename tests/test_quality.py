@@ -142,7 +142,7 @@ def test_sheep_captures_grade():
 
 
 def test_delivered_variant_name_is_accepted():
-    """The Sep 29 recordings say "variant": "FP16" inside; the Oct 19 ones will say BF16. The loader keys
+    """The Sep 29 recordings say "variant": "FP16" inside; later ones say BF16. The loader keys
     on the folder and the prompt, never on that field."""
     path = Path(__file__).resolve().parent.parent / "quality" / "BF16" / "complex_reasoning.json"
     delivered = json.loads(path.read_text())

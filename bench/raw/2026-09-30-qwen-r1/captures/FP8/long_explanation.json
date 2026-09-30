@@ -1,0 +1,21 @@
+{
+  "variant": "FP8",
+  "model": "qwen-fp8",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache in a transformer LLM to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "Welcome to the team! Let\u2019s demystify the **KV Cache**, one of the most critical optimizations in modern Large Language Models (LLMs).\n\nTo understand why we need it, look at how a Transformer generates text. It\u2019s an **autoregressive** process: to predict the next word, the model looks at all previous words. In the attention mechanism, each token interacts with every other token. Mathematically, this requires calculating **Query (Q)**, **Key (K)**, and **Value (V)** vectors for every token.\n\nHere\u2019s the problem: If you generate a sentence token-by-token, recalculating the K and V vectors for *all* previous tokens at every single step is computationally expensive. It\u2019s like re-reading the entire book every time you want to write the next sentence.\n\nThe **KV Cache** solves this by storing the K and V vectors of all previously processed tokens in memory.\n\n**How it works:**\n1.  **First Token:** The model processes the first token, computes its Q, K, and V, and generates the first output. It then **caches** the K and V vectors.\n2.  **Second Token:** When the second token arrives, the model only computes the Q, K, and V for *this new token*. It then concatenates the new K and V with the cached ones. The attention mechanism uses the new Q against the full set of cached K and V vectors.\n3.  **Subsequent Tokens:** This pattern continues. You only compute Q, K, and V for the *current* token, while reusing the cached K and V for all history.\n\n**Why it matters:**\n*   **Speed:** It reduces the computational complexity of the attention step from quadratic to linear with respect to the sequence length during generation. This makes inference significantly faster.\n*   **Memory Trade-off:** The trade-off is memory usage. The cache grows linearly with the sequence length. For long contexts, this can consume a large portion of GPU VRAM. This is why techniques like **PagedAttention** (used in vLLM) or **Quantized KV Caches** are popular\u2014they manage this memory footprint more efficiently.\n\nIn short, the KV Cache is a **memoization** strategy for the attention mechanism. It trades memory for speed, allowing LLMs to generate text efficiently without redundant calculations. As you dive deeper, you\u2019ll see that optimizing KV cache management is a key area of research for scaling LLMs to longer contexts.",
+  "usage": {
+    "prompt_tokens": 34,
+    "total_tokens": 557,
+    "completion_tokens": 523
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 365.0,
+  "total_ms": 8447.7,
+  "tokens_per_second": 61.9,
+  "captured_at": "2026-09-30T09:39:18-04:00"
+}

@@ -1,0 +1,1 @@
+registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:82b6b3afd769ef6fbbef6a914ca49fc077835c2b94bf43c7d5f353e1c09234ff registry.redhat.io/rhoai/odh-kube-auth-proxy-rhel9@sha256:7d67f6269761c9057f8bdab8d07ebdce1467432edf0646bcb7977f01c8d3655c

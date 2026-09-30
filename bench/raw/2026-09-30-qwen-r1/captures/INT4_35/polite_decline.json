@@ -1,0 +1,21 @@
+{
+  "variant": "INT4_35",
+  "model": "qwen-int4-35gb",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "polite_decline",
+  "prompt": "Write a short, polite reply declining a meeting on Friday at 3pm, and suggest next week instead.",
+  "temperature": 0,
+  "response_text": "Subject: Re: Meeting Request\n\nHi [Name],\n\nThank you for reaching out. Unfortunately, I have a conflict on my calendar for Friday at 3:00 PM.\n\nWould any time next week work for you? I am generally available [insert specific days/times, e.g., Tuesday or Wednesday morning], but I am happy to work around your schedule.\n\nBest regards,\n\n[Your Name]",
+  "usage": {
+    "prompt_tokens": 34,
+    "total_tokens": 120,
+    "completion_tokens": 86
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 449.2,
+  "total_ms": 5687.4,
+  "tokens_per_second": 15.1,
+  "captured_at": "2026-09-30T10:28:06-04:00"
+}

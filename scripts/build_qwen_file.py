@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
-"""Build benchmark_results.qwen.json from a results-qwen/ folder in the layout RUN-QWEN.md asks for.
+"""Build benchmark_results.qwen.json from a results-qwen/ folder in the layout RUN-QWEN.md asked for.
 
-    python scripts/build_qwen_file.py bench/raw/2026-10-qwen-r1       # writes benchmark_results.qwen.json
-    python scripts/build_qwen_file.py <folder> --out <file>               # anywhere else, for a dry run
+    python scripts/build_qwen_file.py                                   # bench/raw/2026-09-30-qwen-r1
+    python scripts/build_qwen_file.py <folder> --out <file>            # anywhere else, for a dry run
 
-The Qwen track ran on vLLM 0.24: BF16 and the MTP speculator on one full H200, FP8 on a 71 GB MIG slice
-(two per H200), and the INT4 card on a 35 GB slice (three per H200). The INT4 card's speed, load numbers
-and recordings come from the 35 GB run (INT4_35 in the raw folder); its accuracy comes from the same
-checkpoint on a 71 GB slice (INT4 in the raw folder), since accuracy is a property of the checkpoint,
-not the slice, and that 71 GB run is kept under the card as the apples-to-apples footnote against FP8.
+The Qwen track ran on vLLM 0.24: BF16 and the MTP speculator on one full H200, FP8 and INT4 on 71 GB
+MIG slices (two per H200, the same profile, so the two are like for like), and INT4 once more on a
+35 GB slice (three per H200) as the "it fits there too" footnote under the INT4 card.
 
-Every throughput number is per device (a full H200 or one slice). The `per_h200` block next to it is
-that number times the slices per card, arithmetic and not a measurement, and is labeled so; the app
-never divides a per-H200 number by a per-slice one.
+Every throughput is per device (a full H200 or one slice). The `per_h200` block next to it is that
+number times the slices per card: arithmetic, not a measurement (two slices at once weren't
+borrowable), and labeled so; the app never divides a per-H200 number by a per-slice one.
+
+What the file carries that the sheet of headline numbers doesn't: which pod each setup's log came
+from, whether that pod ran with CUDA graphs or in eager mode, the thinking-mode setting, every
+sweep point's timing window and which other runs on the same pod overlapped it (a point that shared
+its pod with another sweep is a lower bound, and the app labels it), the runs excluded and why, every
+number of speculative tokens the run measured, and the other eval files when a task was run more
+than once.
 """
 
 import json
 import re
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -31,88 +37,139 @@ DEVICES = {  # resource -> (device name, slices per H200)
 PER_H200_NOTE = "per device times the slices per H200: arithmetic, not a measurement"
 INT4_BUILD = "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ, compressed-tensors)"
 
+# Each setup names the pod whose logs it reads, since some ran on more than one pod.
 SETUPS = {
-    "BF16": {"raw": "BF16", "isvc": "qwen-bf16", "checkpoint": "Qwen/Qwen3.8-27B", "quantization": None,
-             "resource": "nvidia.com/gpu"},
-    "FP8": {"raw": "FP8", "isvc": "qwen-fp8", "checkpoint": "Qwen/Qwen3.8-27B-FP8",
-            "quantization": "FP8 (W8A8)", "resource": "nvidia.com/mig-3g.71gb", "build": "Qwen's FP8 build"},
-    "INT4": {"raw": "INT4_35", "isvc": "qwen-int4-35gb", "checkpoint": "RedHatAI/Qwen3.8-27B-INT4",
-             "quantization": "W4A16", "resource": "nvidia.com/mig-2g.35gb", "build": INT4_BUILD,
-             "accuracy_from": "INT4"},
-    "SPEC_DECODE": {"raw": "SPEC_DECODE", "isvc": "qwen-mtp", "checkpoint": "Qwen/Qwen3.8-27B",
-                    "quantization": None, "resource": "nvidia.com/gpu",
+    "BF16": {"raw": "BF16", "pod": "qwen-bf16-predictor-796d45bfd9-wgmdz", "checkpoint": "Qwen/Qwen3.8-27B",
+             "quantization": None, "resource": "nvidia.com/gpu"},
+    "FP8": {"raw": "FP8", "pod": "qwen-fp8-predictor-5446d888bb-r9nmt", "checkpoint": "Qwen/Qwen3.8-27B-FP8",
+            "quantization": "FP8 (W8A8)", "resource": "nvidia.com/mig-3g.71gb", "build": "Qwen's FP8 build",
+            "pod_note": "the measured pod, thinking off; qwen-fp8-predictor-85858648f7-gvdvc was the Phase 0 "
+                        "smoke pod without the thinking flag"},
+    "INT4": {"raw": "INT4", "pod": "qwen-int4-predictor-5d5c69c57b-qcrcc",
+             "checkpoint": "RedHatAI/Qwen3.8-27B-INT4", "quantization": "W4A16",
+             "resource": "nvidia.com/mig-3g.71gb", "build": INT4_BUILD},
+    "SPEC_DECODE": {"raw": "SPEC_DECODE", "pod": "qwen-mtp-predictor-67986cf5bf-47s94",
+                    "checkpoint": "Qwen/Qwen3.8-27B", "quantization": None, "resource": "nvidia.com/gpu",
                     "speculation": "MTP, the model's own head", "num_speculative_tokens": 4},
 }
-# the same INT4 checkpoint on a 71 GB slice: the evals ran here, and it's the like-for-like line against FP8
-INT4_71 = {"raw": "INT4", "isvc": "qwen-int4", "checkpoint": "RedHatAI/Qwen3.8-27B-INT4",
-           "quantization": "W4A16", "resource": "nvidia.com/mig-3g.71gb", "build": INT4_BUILD}
+# the same INT4 checkpoint on a 35 GB slice: single-stream and the sweep, no evals (accuracy is the
+# checkpoint's), the footnote under the INT4 card
+INT4_35 = {"raw": "INT4_35", "pod": "qwen-int4-35gb-predictor-7ccb746499-qcbgv",
+           "checkpoint": "RedHatAI/Qwen3.8-27B-INT4", "quantization": "W4A16",
+           "resource": "nvidia.com/mig-2g.35gb", "build": INT4_BUILD,
+           "pod_note": "the later of the two 35 GB pods, the one with the GPU record; both ran in eager mode"}
+
+# Runs the file keeps but no number is taken from, with the reason (the raw files stay as delivered).
+EXCLUDED = {
+    ("BF16", "single-t0.7.json"): "the BF16 MMLU-Pro eval (lm_eval, 32 concurrent) ran against the same pod "
+                                  "during this run: per-token time doubled at the same output length",
+    ("INT4", "single-t0.7.json"): "the INT4 MMLU-Pro eval (lm_eval, 32 concurrent) ran against the same pod "
+                                  "during this run: per-token time tripled at the same output length",
+}
 
 
-def pod_file(raw: Path, isvc: str, suffix: str) -> Path:
-    [path] = raw.glob(f"logs/{isvc}-predictor-*-{suffix}.txt")
-    return path
+def pod_file(raw: Path, pod: str, suffix: str) -> Path:
+    return raw / "logs" / f"{pod}-{suffix}.txt"
 
 
-def startup_log(raw: Path, isvc: str) -> dict:
-    text = pod_file(raw, isvc, "startup-full").read_text()
-    find = lambda pattern: (m := re.search(pattern, text)) and m.group(1)  # noqa: E731
+def startup_log(raw: Path, pod: str) -> dict:
+    text = pod_file(raw, pod, "startup-full").read_text()
+
+    def find(pattern):
+        m = re.search(pattern, text)
+        return m.group(1) if m else None
+
+    args = find(r"non-default args: (\{.*\})") or ""
     info = {
+        "pod": pod,
         "weights_gib_per_gpu": float(find(r"Model loading took ([\d.]+) GiB")),
         "kv_cache_tokens": int(find(r"GPU KV cache size: ([\d,]+) tokens").replace(",", "")),
         "attention": f"FlashAttention {find(r'Using FlashAttention version (\d)')}",
         "kernels": sorted(set(re.findall(r"\b(\w+Kernel)\b", text))),
-        "non_default_args": find(r"non-default args: (\{.*\})"),
+        "non_default_args": args,
+        # eager mode means no CUDA graphs: the MIG slices that hit the NVML profiling bug ran this way
+        "enforce_eager": "'enforce_eager': True" in args,
+        "cuda_graphs_captured": bool(re.search(r"Capturing CUDA graph|Graph capturing finished", text)),
     }
     if m := re.search(r"speculative_config=SpeculativeConfig\(method='(\w+)'.*?num_spec_tokens=(\d+)", text):
         info["spec_method"], info["spec_tokens_from_log"] = m.group(1), int(m.group(2))
-    # thinking turned off server-side: --default-chat-template-kwargs={"enable_thinking": false} shows up in
-    # the non-default args as default_chat_template_kwargs; absent, the setting came per request or not at all
-    args = info["non_default_args"] or ""
     if m := re.search(r"enable_thinking['\"]?\s*:\s*(True|False|true|false)", args):
         info["thinking_in_server_args"] = m.group(1).lower() == "true"
     return info
 
 
-def versions(raw: Path, isvc: str) -> dict:
-    lines = pod_file(raw, isvc, "version").read_text().splitlines()
+def parse_versions(text: str) -> dict:
+    """A pod's version file: "vllm X / torch Y / transformers Z" plus an nvidia-smi line, or, from the
+    measured pods, the bare vLLM version alone (the record helper's python one-liner printed only that)."""
+    lines = text.splitlines()
     out = {}
     for line in lines:
         parts = line.split()
         if len(parts) == 2 and parts[0] in ("vllm", "torch", "transformers"):
             out[parts[0]] = parts[1]
+        elif len(parts) == 1 and re.fullmatch(r"\d+\.\d+\.\d+\S*", parts[0]):
+            out.setdefault("vllm", parts[0])
     gpu_line = next((line for line in lines if line.startswith("NVIDIA")), "")
     fields = [x.strip() for x in gpu_line.split(",")]
-    out["gpu"] = fields[0] if fields else None
-    out["driver"] = fields[1] if len(fields) > 1 else None
+    if fields and fields[0]:
+        out["gpu"] = fields[0]
+    if len(fields) > 1:
+        out["driver"] = fields[1]
     if len(fields) > 2 and fields[2].endswith("MiB"):
         out["device_memory_mib"] = int(fields[2].split()[0])
     return out
 
 
-def image_digest(raw: Path, isvc: str) -> str | None:
-    path = next(raw.glob(f"logs/{isvc}-predictor-*-image.txt"), None)
-    return path.read_text().strip() if path else None
+def versions(raw: Path, pod: str) -> dict:
+    """The pod's own versions, with torch, transformers and the driver filled in from another pod's full
+    version file when the pod's own file has only the vLLM version (every pod ran the same image)."""
+    out = parse_versions(pod_file(raw, pod, "version").read_text())
+    if "torch" not in out or "driver" not in out:
+        for other in sorted((raw / "logs").glob("*-version.txt")):
+            full = parse_versions(other.read_text())
+            if "torch" in full and "driver" in full:
+                if full.get("vllm") != out.get("vllm"):
+                    continue
+                for key in ("torch", "transformers", "driver", "gpu"):
+                    out.setdefault(key, full.get(key))
+                out["versions_from"] = other.name.removesuffix("-version.txt")
+                break
+    return out
+
+
+def image_digest(raw: Path, pod: str) -> str | None:
+    path = raw / "logs" / f"{pod}-image.txt"
+    return path.read_text().strip() if path.is_file() else None
+
+
+def gsm8k(raw: Path, path: Path) -> dict:
+    g = load(path)
+    task = next(k for k in g["results"] if k.startswith("gsm8k"))
+    gr = g["results"][task]
+    return {
+        "task": task, "metric": "exact_match, flexible-extract",
+        "score": round(100 * gr["exact_match,flexible-extract"], 2),
+        "stderr": round(100 * gr["exact_match_stderr,flexible-extract"], 2),
+        "strict": round(100 * gr["exact_match,strict-match"], 2),
+        "questions": g["n-samples"][task]["effective"],
+        "fewshot": g["configs"][task]["num_fewshot"],
+        "file": str(path.relative_to(raw)),
+    }
 
 
 def accuracy(raw: Path, folder: str) -> dict | None:
-    gsm = next(raw.glob(f"evals/{folder}/*/results_*.json"), None)
-    mmlu = next(raw.glob(f"evals/{folder}-mmlu_pro/*/results_*.json"), None)
+    """The latest results file of each task, with any earlier runs of the same task listed."""
+    gsm = sorted(raw.glob(f"evals/{folder}/*/results_*.json"))
+    mmlu = sorted(raw.glob(f"evals/{folder}-mmlu_pro/*/results_*.json"))
     if not gsm:
         return None
-    g = load(gsm)
-    task = next(k for k in g["results"] if k.startswith("gsm8k"))
-    gr = g["results"][task]
-    out = {
-        "gsm8k": {
-            "task": task, "metric": "exact_match, flexible-extract",
-            "score": round(100 * gr["exact_match,flexible-extract"], 2),
-            "stderr": round(100 * gr["exact_match_stderr,flexible-extract"], 2),
-            "questions": g["n-samples"][task]["effective"],
-            "fewshot": g["configs"][task]["num_fewshot"],
-        }
-    }
+    out = {"gsm8k": gsm8k(raw, gsm[-1])}
+    if len(gsm) > 1:
+        out["gsm8k"]["other_runs"] = [gsm8k(raw, p) for p in gsm[:-1]]
+        out["gsm8k"]["note"] = (f"the task was run {len(gsm)} times against the same pod (two of them at the "
+                                "same time); the latest file is the score, the others are listed")
     if mmlu:
-        m = load(mmlu)
+        m = load(mmlu[-1])
         mr = m["results"]["mmlu_pro"]
         subjects = sorted(k for k in m["results"] if k != "mmlu_pro")
         out["mmlu_pro"] = {
@@ -124,6 +181,7 @@ def accuracy(raw: Path, folder: str) -> dict | None:
             "per_subject": int(m["config"]["limit"]),
             "fewshot": m["configs"][subjects[0]]["num_fewshot"],
             "note": "the first 20 questions of each subject (lm_eval --limit 20), not a random sample",
+            "file": str(mmlu[-1].relative_to(raw)),
         }
     return out
 
@@ -154,8 +212,9 @@ def acceptance(raw: Path, temperature: str, k: int) -> dict | None:
     b, a = counters(before), counters(after)
     delta = {key: a[key] - b.get(key, 0.0) for key in a}
 
-    def find(part):
-        return next((v for key, v in delta.items() if part in key and "[" not in key), None)
+    def find(part):  # the _total counters, never the _created ones 0.24 reports beside them
+        return next((v for key, v in delta.items()
+                     if part in key and "[" not in key and "created" not in key), None)
 
     drafts, draft_tokens, accepted = find("num_drafts"), find("num_draft_tokens"), find("num_accepted_tokens")
     out = {"spec_tokens": k, "counters": {key: int(v) for key, v in delta.items()}}
@@ -166,7 +225,7 @@ def acceptance(raw: Path, temperature: str, k: int) -> dict | None:
             "mean_acceptance_length": round(1 + accepted / drafts, 2),
         })
         per_pos = {int(key.split("[")[1][:-1]): v for key, v in delta.items()
-                   if "accepted_tokens_per_pos[" in key}
+                   if "accepted_tokens_per_pos" in key and "[" in key and "created" not in key}
         if per_pos:
             out["accepted_per_position"] = [round(per_pos[p] / drafts, 4) for p in sorted(per_pos)]
     return out
@@ -182,6 +241,32 @@ def snapshot_keys(raw: Path) -> set[tuple[str, int]]:
     return keys
 
 
+def sweep_runs(raw: Path, folder: str) -> dict:
+    """Every vllm bench serve run in the setup's folder with its window (the pod's clock, from the
+    result's date and duration) and which other runs on the same pod overlapped it. The bench client
+    runs inside the pod, so two runs at once share one server: an overlapped point is a lower bound."""
+    runs = {}
+    for path in sorted((raw / "sweeps" / folder).glob("*.json")):
+        d = load(path)
+        if not d.get("date") or d.get("duration") is None:
+            continue
+        start = datetime.strptime(d["date"], "%Y%m%d-%H%M%S")
+        runs[path.name] = {"start": start, "end": start + timedelta(seconds=float(d["duration"])),
+                           "concurrency": d.get("max_concurrency")}
+    out = {}
+    for name, r in runs.items():
+        others = [
+            {"file": other, "concurrency": o["concurrency"]}
+            for other, o in runs.items() if other != name and o["start"] < r["end"] and r["start"] < o["end"]
+        ]
+        out[name] = {
+            "start": r["start"].isoformat(timespec="seconds") + "Z",
+            "end": r["end"].isoformat(timespec="seconds") + "Z",
+            "overlapped_with": others,
+        }
+    return out
+
+
 def sweep_note(raw: Path, folder: str) -> str | None:
     failed = sorted(p.name for p in (raw / "sweeps" / folder).glob("*-failed.txt"))
     if not failed:
@@ -190,31 +275,29 @@ def sweep_note(raw: Path, folder: str) -> str | None:
 
 
 def setup(raw: Path, spec: dict) -> dict:
-    out = {k: v for k, v in spec.items() if k not in ("raw", "isvc", "accuracy_from")}
+    out = {k: v for k, v in spec.items() if k not in ("raw", "pod")}
     name, slices = DEVICES[spec["resource"]]
     out["device"] = {"name": name, "count": 1, "per_h200": slices}
     out["gpus"] = 1  # one device, a full card or one slice; every per-GPU number in the app is per device
     out["slices_per_h200"] = slices
     out["tensor_parallel_size"] = 1
     out["dtype"] = "bfloat16"
-    t0, t07 = single_stream(raw, spec["raw"], "0"), single_stream(raw, spec["raw"], "0.7")
-    out.update(t0)
+    out.update(single_stream(raw, spec["raw"], "0"))
     out["temperature"] = 0
-    out["at_temperature_0_7"] = t07
-    out.update(startup_log(raw, spec["isvc"]))
-    out["versions"] = versions(raw, spec["isvc"])
-    out["image_digest"] = image_digest(raw, spec["isvc"])
-    if acc := accuracy(raw, spec.get("accuracy_from", spec["raw"])):
+    if (spec["raw"], "single-t0.7.json") in EXCLUDED:
+        out["at_temperature_0_7"] = None
+        out["excluded_runs"] = [{"file": f"sweeps/{spec['raw']}/single-t0.7.json",
+                                 "reason": EXCLUDED[(spec["raw"], "single-t0.7.json")]}]
+    else:
+        out["at_temperature_0_7"] = single_stream(raw, spec["raw"], "0.7")
+    out.update(startup_log(raw, spec["pod"]))
+    out["versions"] = versions(raw, spec["pod"])
+    out["image_digest"] = image_digest(raw, spec["pod"])
+    if acc := accuracy(raw, spec["raw"]):
         out["accuracy"] = acc
-        if "accuracy_from" in spec:
-            out["accuracy_note"] = (
-                f"measured on the same checkpoint on a {DEVICES[INT4_71['resource']][0]}: accuracy is a "
-                "property of the checkpoint, not the slice"
-            )
     if "speculation" in spec:
-        # every -t<T>-k<K> snapshot pair the run made, whatever the K values (RUN-QWEN asks for 1, 2 and
-        # 4; an extra pass at 8 or any other K is picked up the same way), and the single-stream file
-        # for every K other than the main one (single-t0.json is the main K's run)
+        # every -t<T>-k<K> snapshot pair the run made, whatever the K values, and the single-stream
+        # file for every K other than the main one (single-t0.json is the main K's run)
         main_k = spec["num_speculative_tokens"]
         out["acceptance"] = {}
         for t, k in sorted(snapshot_keys(raw)):
@@ -230,62 +313,41 @@ def setup(raw: Path, spec: dict) -> dict:
             out[f"throughput_tps_k{k}"] = round(load(path)["output_throughput"], 1)
     if note := sweep_note(raw, spec["raw"]):
         out["sweep_note"] = note
+    out["sweep_runs"] = sweep_runs(raw, spec["raw"])
+    overlapped = sorted(n for n, r in out["sweep_runs"].items() if r["overlapped_with"])
+    if overlapped:
+        out["overlap_note"] = (
+            f"{len(overlapped)} of {len(out['sweep_runs'])} runs shared the pod with another vllm bench "
+            "serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are "
+            "lower bounds and the app labels them: " + ", ".join(overlapped)
+        )
     out["sweep_dir"] = spec["raw"]
     out["captures_dir"] = spec["raw"]
     return out
 
 
-def run_date(stamp: str | None) -> str | None:
-    """vllm bench serve stamps results YYYYMMDD-HHMMSS; the app wants YYYY-MM-DD."""
-    if stamp and len(stamp) >= 8 and stamp[:8].isdigit():
-        return f"{stamp[:4]}-{stamp[4:6]}-{stamp[6:8]}"
-    return stamp
-
-
-def two_slices(raw: Path, folder: str) -> dict | None:
-    """sweeps/<V>/c<N>-two-slices-{a,b}.json: the same setup on two slices of one card, loaded at the same
-    time. Their output throughputs added are a measured per-H200 number for that load, not arithmetic."""
-    pairs = {}
-    for path in (raw / "sweeps" / folder).glob("c*-two-slices-*.json"):
-        m = re.fullmatch(r"c(\d+)-two-slices-(\w+)\.json", path.name)
-        if m:
-            pairs.setdefault(int(m.group(1)), {})[m.group(2)] = load(path)
-    for c in sorted(pairs, reverse=True):
-        runs = pairs[c]
-        if len(runs) >= 2:
-            per_slice = {k: round(runs[k]["output_throughput"], 1) for k in sorted(runs)}
-            return {
-                "concurrency_per_slice": c,
-                "slices_loaded": len(runs),
-                "output_tokens_per_second": round(sum(r["output_throughput"] for r in runs.values()), 1),
-                "per_slice": per_slice,
-                "tpot_p95_ms": {k: runs[k].get("p95_tpot_ms") for k in sorted(runs)},
-                "files": [f"sweeps/{folder}/c{c}-two-slices-{k}.json" for k in sorted(runs)],
-                "note": f"{len(runs)} slices of one H200 loaded together at {c} requests each: measured",
-            }
-    return None
-
-
-def finish(raw: Path, variants: list[dict], baseline: dict) -> None:
-    """Ratios from the unrounded single-stream numbers, and the labeled per-H200 arithmetic (or the
-    two-slices measurement where the run made one)."""
+def finish(variants: list[dict], baseline: dict) -> None:
+    """Ratios from the unrounded single-stream numbers, and the labeled per-H200 arithmetic."""
     for v in variants:
         v["speed_vs_baseline"] = round(v["_tps"] / baseline["_tps"], 3)
-        t07, base07 = v["at_temperature_0_7"]["_tps"], baseline["at_temperature_0_7"]["_tps"]
-        v["speed_vs_baseline_t0_7"] = round(t07 / base07, 3)
+        if v["at_temperature_0_7"] and baseline["at_temperature_0_7"]:
+            t07, base07 = v["at_temperature_0_7"]["_tps"], baseline["at_temperature_0_7"]["_tps"]
+            v["speed_vs_baseline_t0_7"] = round(t07 / base07, 3)
+        else:
+            v["speed_vs_baseline_t0_7"] = None
         n = v["slices_per_h200"]
         v["per_h200"] = {
             "slices": n,
             "throughput_tps": round(v["_tps"] * n, 1),
             "note": PER_H200_NOTE if n > 1 else "one full H200, the measured number",
         }
-        if n > 1 and (measured := two_slices(raw, v["sweep_dir"])):
-            v["per_h200"]["measured"] = measured
     for v in variants:
-        del v["_tps"], v["at_temperature_0_7"]["_tps"]
+        del v["_tps"]
+        if v["at_temperature_0_7"]:
+            del v["at_temperature_0_7"]["_tps"]
 
 
-def thinking_setting(raw: Path, variants: list[dict]) -> str | None:
+def thinking_setting(raw: Path, variants: list[dict]) -> str:
     """What the run says about Qwen's thinking mode: the notes.txt line, and whether the pods themselves
     carried enable_thinking in their args (server-side, the same for every request)."""
     notes = (raw / "notes.txt").read_text() if (raw / "notes.txt").is_file() else ""
@@ -295,25 +357,33 @@ def thinking_setting(raw: Path, variants: list[dict]) -> str | None:
         server = "off server-side in every pod (--default-chat-template-kwargs enable_thinking=false)"
     elif flags == {True}:
         server = "on server-side in every pod"
-    elif None in flags and len(flags) == 1:
+    elif flags == {None}:
         server = "not set in the pods' args (per request, if at all)"
     else:
         server = "NOT THE SAME IN EVERY POD: " + ", ".join(
-            f"{v['checkpoint']}={v.get('thinking_in_server_args')}" for v in variants)
+            f"{v['pod']}={v.get('thinking_in_server_args')}" for v in variants)
     return f"{line}; {server}" if line else server
+
+
+def run_date(stamp: str | None) -> str | None:
+    """vllm bench serve stamps results YYYYMMDD-HHMMSS; the app wants YYYY-MM-DD."""
+    if stamp and len(stamp) >= 8 and stamp[:8].isdigit():
+        return f"{stamp[:4]}-{stamp[4:6]}-{stamp[6:8]}"
+    return stamp
 
 
 def build(raw: Path) -> dict:
     variants = {key: setup(raw, spec) for key, spec in SETUPS.items()}
-    variants["INT4"]["int4_71"] = setup(raw, INT4_71)
-    variants["INT4"]["int4_71"]["note"] = (
-        "the same checkpoint on a 71 GB slice, the profile FP8 ran on, so this line and FP8's get the same "
-        "share of the GPU's compute; the card above is the 35 GB slice"
+    variants["INT4"]["int4_35"] = setup(raw, INT4_35)
+    variants["INT4"]["int4_35"]["note"] = (
+        "the same checkpoint on a 35 GB slice (three per H200): it loads and answers, in eager mode (the "
+        "NVML CUDA-graph profiling bug on that slice), and never got under the 50 ms p95 budget under load"
     )
-    everything = list(variants.values()) + [variants["INT4"]["int4_71"]]
-    finish(raw, everything, variants["BF16"])
+    everything = list(variants.values()) + [variants["INT4"]["int4_35"]]
+    finish(everything, variants["BF16"])
     ver = variants["BF16"]["versions"]
     thinking = thinking_setting(raw, everything)
+    eager = sorted(v["device"]["name"] for v in everything if v["enforce_eager"])
     where = raw.relative_to(ROOT) if raw.is_relative_to(ROOT) else raw
     return {
         "track": "qwen",
@@ -326,19 +396,25 @@ def build(raw: Path) -> dict:
         "date": run_date(load(raw / "sweeps" / "BF16" / "single-t0.json").get("date")),
         "source": f"built by scripts/build_qwen_file.py from {where}",
         "thinking": thinking,
+        "eager_devices": eager,
         "per_h200_note": PER_H200_NOTE,
         "notes": (
             "Qwen3.8-27B on vLLM 0.24.0+rhaiv.13 (the Llama track ran on 0.18; 0.24 is needed for MTP). "
             "Single stream: vllm bench serve inside each pod, 30 ShareGPT prompts one at a time, "
             "temperature 0 (headline) and 0.7, --max-model-len 32768. BF16 and the MTP speculator on one "
-            "full H200; FP8 on a 71 GB MIG slice (two per H200); the INT4 card on a 35 GB slice (three per "
-            "H200), with its accuracy "
-            "from the same checkpoint on a 71 GB slice and that run kept under it as the like-for-like line "
-            "against FP8. Every throughput is per device; per_h200 is that number times the slices per card, "
-            "arithmetic and not a measurement. Accuracy is lm_eval: GSM8K (gsm8k_cot) on all questions and "
-            "MMLU-Pro on the first 20 of each subject. Spec decode counters were read before and after each "
+            "full H200 with CUDA graphs; FP8 and INT4 on 71 GB MIG slices (two per H200, the same profile, "
+            "also with CUDA graphs); INT4 once more on a 35 GB slice (three per H200) in eager mode, the "
+            "workaround for an NVML CUDA-graph profiling failure on that slice. The slices were borrowed "
+            "on a shared node. Every throughput is per device; per_h200 is that number times the slices "
+            "per card, arithmetic and not a measurement. Under load, some runs shared their pod with "
+            "another vllm bench serve run (sweep_runs lists every window); those points are lower bounds. "
+            "The temperature-0.7 single-stream runs of BF16 and INT4 ran while their MMLU-Pro eval hit the "
+            "same pod and are excluded. Accuracy is lm_eval: GSM8K (gsm8k_cot, not the Llama prompt "
+            "format, so not comparable with the Llama track's figures) on all questions and MMLU-Pro on "
+            "the first 20 of each subject. Spec decode counters were read before and after each "
             "single-stream run, per temperature and per number of speculative tokens (k). Thinking mode: "
-            f"{thinking}."
+            f"{thinking}. nvidia-smi inside a MIG slice reports no utilization, so the GPU-util CSVs of "
+            "the slice setups are empty."
         ),
         "single_stream": {"dataset": "ShareGPT", "prompts": 30, "concurrency": 1, "where": "inside the pod"},
         "variants": variants,
@@ -347,7 +423,7 @@ def build(raw: Path) -> dict:
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    raw = Path(args[0] if args else ROOT / "bench" / "raw" / "2026-10-qwen-r1").resolve()
+    raw = Path(args[0] if args else ROOT / "bench" / "raw" / "2026-09-30-qwen-r1").resolve()
     out_path = ROOT / "benchmark_results.qwen.json"
     if "--out" in sys.argv:
         out_path = Path(sys.argv[sys.argv.index("--out") + 1])
@@ -355,4 +431,4 @@ if __name__ == "__main__":
     out_path.write_text(json.dumps(result, indent=2) + "\n")
     for key, v in result["variants"].items():
         print(f"{key:12s} {v['throughput_tps']:6.1f} tok/s per {v['device']['name']:12s} "
-              f"{v['speed_vs_baseline']:.2f}x")
+              f"{v['speed_vs_baseline']:.2f}x  eager={v['enforce_eager']}")

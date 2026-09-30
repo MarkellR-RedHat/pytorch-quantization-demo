@@ -1,0 +1,165 @@
+Qwen3.8-27B track run notes
+============================
+
+Date: 2026-09-30
+vLLM: 0.24.0+rhaiv.13
+Image: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:c056e61672b6aea489ad5dde0bd2f8497230f5333e87f7cf6c494eba3bfdc808
+
+Thinking mode: OFF (server-side)
+  Qwen3.8-27B emits <think> blocks by default. Phase 0 FP8 answer contained a <think> block.
+  Disabled server-side with --default-chat-template-kwargs={"enable_thinking":false} in all 6 manifests.
+  Confirmed: no <think> block, no reasoning_content in any answer after the flag was set.
+  The flag is in vLLM 0.24's --help output. This covers chat completions (captures, evals, smoke answers)
+  and is ignored by the raw completions endpoint (benchmarks use --dataset-name random/sharegpt, which
+  goes through the completions path, not the chat path, so thinking doesn't affect timing).
+  Old FP8 answer (with thinking) saved as logs/phase0-fp8-answer-thinking-on.txt for evidence.
+
+Warm-ups: 5 throwaway requests on every pod before any measured run.
+
+GPU budget: 1 full H200 (Kueue quota nvidia.com/gpu: 1) + 1 MIG slice borrowed at a time (MIG quota: 0, borrow from unreserved cohort).
+  Tested 2nd slice borrowing: "insufficient unused quota for nvidia.com/mig-3g.71gb, 1 more needed."
+  Execution is two-lane: H200 lane (BF16, then MTP) and slice lane (INT4/71GB, then FP8/71GB, then INT4_35/35GB), sequential on each lane.
+
+Phase 0 deployment facts
+------------------------
+
+BF16 (full H200, 140 GiB):
+  Model loading: 51.1 GiB, 51.87 seconds
+  Checkpoint: 51.75 GiB
+  KV cache: 72.3 GiB available, 1,099,548 tokens
+  Max concurrency at 32768 ctx: 33.56x
+  FlashAttention v3, DeepGEMM PDL enabled
+  Smoke answer: 9 (correct), no <think> block
+
+FP8 (mig-3g.71gb, 69.75 GiB):
+  Model loading: 28.54 GiB (from feasibility run; redeployed with thinking flag, same numbers)
+  KV cache: 32.76 GiB available, 498,073 tokens
+  Max concurrency at 32768 ctx: 15.2x
+  FlashInferFp8DeepGEMMDynamicBlockScaledKernel, FlashAttention v3, DeepGEMM PDL enabled
+  quantization=fp8
+  Smoke answer: 9 (correct), had <think> block (before server-side disable)
+
+INT4 (mig-3g.71gb, 69.75 GiB):
+  Model loading: 17.73 GiB, 27.05 seconds
+  Checkpoint: 18.12 GiB
+  KV cache: 43.4 GiB available, 1,236,992 tokens
+  Max concurrency at 32768 ctx: 37.75x
+  FlashAttention v3, DeepGEMM PDL + E8M0 enabled
+  quantization=compressed-tensors
+  Smoke answer: 9 (correct), no <think> block (after server-side disable)
+
+INT4_35 (mig-2g.35gb, 32.5 GiB):
+  Model loading: 17.73 GiB, 28.87 seconds
+  KV cache: 10.09 GiB available, 286,720 tokens
+  Max concurrency at 32768 ctx: 8.75x
+  FlashAttention v3, DeepGEMM PDL + E8M0 enabled
+  quantization=compressed-tensors
+  enforce_eager=True (NVML CUDA graph profiling bug on MIG slices: "NVML_SUCCESS == r INTERNAL ASSERT FAILED")
+  Smoke answer: 9 (correct), no <think> block
+
+BF16_71GB (mig-3g.71gb, 69.75 GiB):
+  Model loading: 51.1 GiB, 49.51 seconds
+  KV cache: 10.98 GiB available, 166,752 tokens
+  Max concurrency at 32768 ctx: 5.09x
+  enforce_eager=True (same NVML bug on MIG slices)
+  THIS IS WHY BF16 SHOULDN'T RUN ON A SLICE: 51.1 GiB model on 69.75 GiB slice leaves
+  only 10.98 GiB for KV cache (166K tokens, 5.09x concurrency). Usable but impractical.
+  INT4 on the same slice: 17.73 GiB model leaves 43.4 GiB KV cache (1.24M tokens, 37.75x).
+  Smoke answer: 9 (correct), no <think> block
+
+MIG slice NVML note:
+  Both 71GB (mig-3g.71gb) and 35GB (mig-2g.35gb) slices fail CUDA graph profiling with
+  "RuntimeError: NVML_SUCCESS == r INTERNAL ASSERT FAILED at /pytorch/c10/cuda/CUDACachingAllocator.cpp:1165"
+  Workaround: --enforce-eager on all MIG slice deployments. Full H200 pods do NOT need this.
+  All MIG-slice benchmarks and captures run with enforce_eager=True.
+
+Phase A: BF16 on full H200 — COMPLETE
+--------------------------------------
+  Sweeps: 12/12 (single-t0, single-t0.7, c1/c8/c16/c32/c64 random + sharegpt)
+  Captures: 9/9
+  Evals: gsm8k_cot 89.16% flex / 87.26% strict, mmlu_pro 77.14%
+  GPU util: 604-line CSV (c64 sweep)
+
+Phase B: INT4 on mig-3g.71gb — COMPLETE
+----------------------------------------
+  Sweeps: 12/12
+  Captures: 9/9
+  Evals: gsm8k_cot 88.32% flex / 85.97% strict, mmlu_pro 77.86%
+  GPU util: 447-line CSV
+
+Phase C: SPEC_DECODE (MTP k=4) on full H200 — COMPLETE
+-------------------------------------------------------
+  Sweeps: 14/14 (12 standard + single-t0-k1 + single-t0-k2)
+  Captures: 9/9
+  Evals: not run (per plan, accuracy same as BF16)
+  GPU util: 1-line CSV (nvidia-smi killed early)
+  MTP acceptance rates (per-position):
+    k=4 T=0: 83% → 65% → 51% → 40% (avg ~60%), E2EL 1400ms — BEST THROUGHPUT
+    k=2 T=0: 84% → 67% (avg ~76%), E2EL 1800ms
+    k=1 T=0: 87% (single position), E2EL 2140ms
+    k=8 T=0: 78% → 55% → 41% → 30% → 23% → 16% → 12% → 9% (avg 33%), E2EL 1078ms
+             142.65 tok/s output — SLOWER than k=4 (151 tok/s)
+             Positions 4-7 have <25% acceptance, costing compute without benefit
+  Conclusion: k=4 wins — k=8 wastes draft compute on low-acceptance positions.
+              Validates Red Hat AI's claim that DSpark beats MTP at 8 tokens.
+
+Phase D: FP8 on mig-3g.71gb — COMPLETE
+---------------------------------------
+  Sweeps: 12/12
+  Captures: 9/9
+  Evals: gsm8k_cot 89.1% flex / 86.6% strict, mmlu_pro 77.5%
+  GPU util: 178-line CSV
+
+Phase E: INT4_35 on mig-2g.35gb — COMPLETE
+-------------------------------------------
+  Sweeps: 12/12 (ran via nohup due to oc exec TCP timeouts on 35GB slice)
+  Captures: 9/9
+  Evals: not run (same checkpoint as INT4; accuracy inherited)
+  GPU util: 257-line CSV (all "[N/A]" / "Insufficient Permissions" — see note below)
+  enforce_eager=True (NVML CUDA graph profiling bug on all MIG slices)
+  Significantly slower than 71GB slice due to reduced compute + no CUDA graphs
+  Key metrics:
+    Single-stream T=0: E2EL p50=8165ms p95=46592ms, TTFT=244ms, TPOT=61ms
+    Single-stream T=0.7: E2EL p50=7796ms p95=47875ms, TTFT=247ms, TPOT=63ms
+    c=64 random: 2.0 req/s, 514 tok/s output, E2EL mean=31128ms
+    c=64 did NOT OOM — the 35GB slice handled all concurrency levels
+
+GPU util limitation on MIG slices
+----------------------------------
+  nvidia-smi inside MIG partitions reports "[N/A]" for utilization.gpu and
+  "[Insufficient Permissions]" for memory.used/memory.total. This affects FP8,
+  INT4, and INT4_35 GPU util CSVs (all on MIG slices). Only BF16 (full H200)
+  has usable GPU utilization data. SPEC_DECODE GPU util was killed early (1 line).
+
+Add-ons
+-------
+  1. k=8 MTP single-stream: DONE. Deployed MTP with --spec-tokens=8 on full H200.
+     Result: 142.65 tok/s, 33.07% acceptance rate (vs k=4's 151 tok/s, 56.58%).
+     k=8 is slower — positions 4-7 have <25% acceptance. Saved as sweeps/SPEC_DECODE/single-t0-k8.json.
+     Manifest saved as manifests/isvc-qwen-mtp-k8.yaml.
+  2. vLLM 0.24 help text: DONE. Saved as logs/vllm-0.24-serve-help.txt and logs/vllm-0.24-bench-serve-help.txt.
+  3. Live demo check: DEFERRED. All pods were cleaned up. Needs redeployment of multiple pods
+     simultaneously, which is expensive on quota. Conference is Oct 20; can test when pods are up
+     for other reasons.
+  4. Two slices at once: SKIP (confirmed impossible — only 1 borrowable MIG slice at a time).
+
+Accuracy summary
+-----------------
+  BF16:  gsm8k_cot 89.16% flex / 87.26% strict, mmlu_pro 77.14%
+  FP8:   gsm8k_cot 89.08% flex / 86.58% strict, mmlu_pro 77.50% (100.5% of BF16)
+  INT4:  gsm8k_cot 88.32% flex / 85.97% strict, mmlu_pro 77.86% (100.9% of BF16)
+  INT4_35: inherited from INT4 (same checkpoint)
+
+Headline numbers for the talk
+------------------------------
+  MTP k=4: 151 tok/s single-stream, 2.29x BF16 speed
+  MTP k=8: 142.65 tok/s — slower, proving diminishing returns past k=4
+  FP8 per H200 (two 71GB slices): 1549.5 x2 = 3099 tok/s vs BF16's 1743 (1.78x)
+  INT4 fits on a 35GB slice: 514 tok/s at c=64, doesn't OOM
+  Accuracy preserved across all quantizations
+
+Security scrub
+--------------
+  Namespace: replaced with <namespace> in manifests and kueue logs
+  HF tokens: redacted from all startup-full logs
+  No cluster hostnames, node names, bearer tokens, or API keys in any file

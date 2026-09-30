@@ -24,7 +24,7 @@ def test_captures_complete(setup):
         rec = json.loads((ROOT / "quality" / setup / f"{scenario}.json").read_text())
         assert rec["prompt"] == PROMPTS[scenario]
         if (setup, scenario) == ("SPEC_DECODE", "complex_reasoning"):
-            # the r1 capture of the same answer stands in for the cold r2 recording until Oct 19
+            # the r1 capture of the same answer stands in for the cold r2 recording
             # (bench/raw/README.md); it has no timings, and the answer is the r2 one token for token
             r1 = RAW.parent / "2026-09-29-r1" / "captures" / setup / f"{scenario}.json"
             assert rec == json.loads(r1.read_text())

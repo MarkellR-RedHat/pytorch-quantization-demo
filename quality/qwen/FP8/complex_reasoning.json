@@ -1,0 +1,21 @@
+{
+  "variant": "FP8",
+  "model": "qwen-fp8",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "complex_reasoning",
+  "prompt": "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left? Explain your reasoning step by step.",
+  "temperature": 0,
+  "response_text": "### Step-by-Step Reasoning\n\n1.  **Analyze the Initial State**:\n    The farmer starts with a total of **17** sheep.\n\n2.  **Analyze the Condition**:\n    The problem states: \"All but 9 run away.\"\n    This is a common linguistic trick. The phrase \"all but $X$\" means that everyone *except* $X$ leaves. It does **not** mean that \"all of them, minus 9,\" leave.\n\n    *   \"All\" refers to the entire group of 17 sheep.\n    *   \"But 9\" acts as an exception.\n    *   Therefore, the sheep that run away are the ones that are *not* part of the group of 9.\n\n3.  **Determine Who Remains**:\n    Since the 9 sheep are the exception to the rule of running away, they are the ones that stay. The other $17 - 9 = 8$ sheep run away.\n\n4.  **Calculate the Final Count**:\n    The question asks how many sheep the farmer has **left**.\n    The sheep that did not run away are the ones left.\n    Number of sheep left = 9.\n\n### Final Conclusion\n\nThe farmer has **9** sheep left.",
+  "usage": {
+    "prompt_tokens": 43,
+    "total_tokens": 319,
+    "completion_tokens": 276
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 320.6,
+  "total_ms": 4608.5,
+  "tokens_per_second": 59.9,
+  "captured_at": "2026-09-30T09:38:52-04:00"
+}

@@ -1,0 +1,1179 @@
+{
+  "track": "qwen",
+  "model": "Qwen/Qwen3.8-27B",
+  "gpu": "NVIDIA H200 (141 GB): a full card or a MIG slice per setup, named under each setup's device",
+  "vllm_version": "0.24.0+rhaiv.13",
+  "torch_version": "2.11.0a0+git069d5d8",
+  "transformers_version": "5.14.1",
+  "driver_version": "580.126.20",
+  "date": "2026-09-30",
+  "source": "built by scripts/build_qwen_file.py from bench/raw/2026-09-30-qwen-r1",
+  "thinking": "Thinking mode: OFF (server-side); off server-side in every pod (--default-chat-template-kwargs enable_thinking=false)",
+  "eager_devices": [
+    "35 GB slice"
+  ],
+  "per_h200_note": "per device times the slices per H200: arithmetic, not a measurement",
+  "notes": "Qwen3.8-27B on vLLM 0.24.0+rhaiv.13 (the Llama track ran on 0.18; 0.24 is needed for MTP). Single stream: vllm bench serve inside each pod, 30 ShareGPT prompts one at a time, temperature 0 (headline) and 0.7, --max-model-len 32768. BF16 and the MTP speculator on one full H200 with CUDA graphs; FP8 and INT4 on 71 GB MIG slices (two per H200, the same profile, also with CUDA graphs); INT4 once more on a 35 GB slice (three per H200) in eager mode, the workaround for an NVML CUDA-graph profiling failure on that slice. The slices were borrowed on a shared node. Every throughput is per device; per_h200 is that number times the slices per card, arithmetic and not a measurement. Under load, some runs shared their pod with another vllm bench serve run (sweep_runs lists every window); those points are lower bounds. The temperature-0.7 single-stream runs of BF16 and INT4 ran while their MMLU-Pro eval hit the same pod and are excluded. Accuracy is lm_eval: GSM8K (gsm8k_cot, not the Llama prompt format, so not comparable with the Llama track's figures) on all questions and MMLU-Pro on the first 20 of each subject. Spec decode counters were read before and after each single-stream run, per temperature and per number of speculative tokens (k). Thinking mode: Thinking mode: OFF (server-side); off server-side in every pod (--default-chat-template-kwargs enable_thinking=false). nvidia-smi inside a MIG slice reports no utilization, so the GPU-util CSVs of the slice setups are empty.",
+  "single_stream": {
+    "dataset": "ShareGPT",
+    "prompts": 30,
+    "concurrency": 1,
+    "where": "inside the pod"
+  },
+  "variants": {
+    "BF16": {
+      "checkpoint": "Qwen/Qwen3.8-27B",
+      "quantization": null,
+      "resource": "nvidia.com/gpu",
+      "device": {
+        "name": "H200",
+        "count": 1,
+        "per_h200": 1
+      },
+      "gpus": 1,
+      "slices_per_h200": 1,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "prompts": 30,
+      "throughput_tps": 66.0,
+      "avg_latency_ms": 3411.5,
+      "median_latency_ms": 1991.0,
+      "p95_latency_ms": 11381.4,
+      "ttft_ms_avg": 39.5,
+      "ttft_ms_median": 31.7,
+      "ttft_ms_p95": 77.1,
+      "tpot_ms_median": 15.03,
+      "avg_tokens_per_request": 225.2,
+      "avg_input_tokens": 226.9,
+      "temperature": 0,
+      "at_temperature_0_7": null,
+      "excluded_runs": [
+        {
+          "file": "sweeps/BF16/single-t0.7.json",
+          "reason": "the BF16 MMLU-Pro eval (lm_eval, 32 concurrent) ran against the same pod during this run: per-token time doubled at the same output length"
+        }
+      ],
+      "pod": "qwen-bf16-predictor-796d45bfd9-wgmdz",
+      "weights_gib_per_gpu": 51.1,
+      "kv_cache_tokens": 1099548,
+      "attention": "FlashAttention 3",
+      "kernels": [],
+      "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'Qwen/Qwen3.8-27B', 'max_model_len': 32768, 'served_model_name': ['qwen-bf16']}",
+      "enforce_eager": false,
+      "cuda_graphs_captured": true,
+      "thinking_in_server_args": false,
+      "versions": {
+        "vllm": "0.24.0+rhaiv.13",
+        "torch": "2.11.0a0+git069d5d8",
+        "transformers": "5.14.1",
+        "driver": "580.126.20",
+        "gpu": "NVIDIA H200",
+        "versions_from": "qwen-fp8-predictor-85858648f7-gvdvc"
+      },
+      "image_digest": "registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:c056e61672b6aea489ad5dde0bd2f8497230f5333e87f7cf6c494eba3bfdc808",
+      "accuracy": {
+        "gsm8k": {
+          "task": "gsm8k_cot",
+          "metric": "exact_match, flexible-extract",
+          "score": 89.16,
+          "stderr": 0.86,
+          "strict": 87.26,
+          "questions": 1319,
+          "fewshot": 8,
+          "file": "evals/BF16/qwen-bf16/results_2026-09-30T03-10-12.731834.json"
+        },
+        "mmlu_pro": {
+          "task": "mmlu_pro",
+          "metric": "exact_match, custom-extract",
+          "score": 77.14,
+          "stderr": 2.49,
+          "questions": 280,
+          "subjects": 14,
+          "per_subject": 20,
+          "fewshot": 5,
+          "note": "the first 20 questions of each subject (lm_eval --limit 20), not a random sample",
+          "file": "evals/BF16-mmlu_pro/qwen-bf16/results_2026-09-30T03-13-10.169457.json"
+        }
+      },
+      "sweep_runs": {
+        "c1.json": {
+          "start": "2026-09-30T07:15:46Z",
+          "end": "2026-09-30T07:20:52Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "c16.json": {
+          "start": "2026-09-30T07:50:41Z",
+          "end": "2026-09-30T07:51:41Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c64.json",
+              "concurrency": 64
+            }
+          ]
+        },
+        "c32.json": {
+          "start": "2026-09-30T07:29:32Z",
+          "end": "2026-09-30T07:30:23Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c8.json",
+              "concurrency": 8
+            }
+          ]
+        },
+        "c64.json": {
+          "start": "2026-09-30T07:32:07Z",
+          "end": "2026-09-30T07:33:13Z",
+          "overlapped_with": []
+        },
+        "c8.json": {
+          "start": "2026-09-30T07:22:51Z",
+          "end": "2026-09-30T07:23:30Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "sharegpt-c1.json": {
+          "start": "2026-09-30T07:19:40Z",
+          "end": "2026-09-30T07:23:01Z",
+          "overlapped_with": [
+            {
+              "file": "c1.json",
+              "concurrency": 1
+            },
+            {
+              "file": "c8.json",
+              "concurrency": 8
+            }
+          ]
+        },
+        "sharegpt-c16.json": {
+          "start": "2026-09-30T07:25:38Z",
+          "end": "2026-09-30T07:26:17Z",
+          "overlapped_with": []
+        },
+        "sharegpt-c32.json": {
+          "start": "2026-09-30T07:30:34Z",
+          "end": "2026-09-30T07:31:16Z",
+          "overlapped_with": []
+        },
+        "sharegpt-c64.json": {
+          "start": "2026-09-30T07:50:46Z",
+          "end": "2026-09-30T07:51:50Z",
+          "overlapped_with": [
+            {
+              "file": "c16.json",
+              "concurrency": 16
+            }
+          ]
+        },
+        "sharegpt-c8.json": {
+          "start": "2026-09-30T07:29:25Z",
+          "end": "2026-09-30T07:30:07Z",
+          "overlapped_with": [
+            {
+              "file": "c32.json",
+              "concurrency": 32
+            }
+          ]
+        },
+        "single-t0.7.json": {
+          "start": "2026-09-30T07:10:12Z",
+          "end": "2026-09-30T07:13:43Z",
+          "overlapped_with": []
+        },
+        "single-t0.json": {
+          "start": "2026-09-30T07:06:12Z",
+          "end": "2026-09-30T07:07:54Z",
+          "overlapped_with": []
+        }
+      },
+      "overlap_note": "7 of 12 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c16.json, c32.json, c8.json, sharegpt-c1.json, sharegpt-c64.json, sharegpt-c8.json",
+      "sweep_dir": "BF16",
+      "captures_dir": "BF16",
+      "speed_vs_baseline": 1.0,
+      "speed_vs_baseline_t0_7": null,
+      "per_h200": {
+        "slices": 1,
+        "throughput_tps": 66.0,
+        "note": "one full H200, the measured number"
+      }
+    },
+    "FP8": {
+      "checkpoint": "Qwen/Qwen3.8-27B-FP8",
+      "quantization": "FP8 (W8A8)",
+      "resource": "nvidia.com/mig-3g.71gb",
+      "build": "Qwen's FP8 build",
+      "pod_note": "the measured pod, thinking off; qwen-fp8-predictor-85858648f7-gvdvc was the Phase 0 smoke pod without the thinking flag",
+      "device": {
+        "name": "71 GB slice",
+        "count": 1,
+        "per_h200": 2
+      },
+      "gpus": 1,
+      "slices_per_h200": 2,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "prompts": 30,
+      "throughput_tps": 63.5,
+      "avg_latency_ms": 3358.9,
+      "median_latency_ms": 2076.6,
+      "p95_latency_ms": 9283.7,
+      "ttft_ms_avg": 47.3,
+      "ttft_ms_median": 36.5,
+      "ttft_ms_p95": 94.6,
+      "tpot_ms_median": 15.6,
+      "avg_tokens_per_request": 213.2,
+      "avg_input_tokens": 226.9,
+      "temperature": 0,
+      "at_temperature_0_7": {
+        "prompts": 30,
+        "throughput_tps": 62.9,
+        "avg_latency_ms": 3580.3,
+        "median_latency_ms": 2266.4,
+        "p95_latency_ms": 11932.9,
+        "ttft_ms_avg": 47.3,
+        "ttft_ms_median": 36.8,
+        "ttft_ms_p95": 98.7,
+        "tpot_ms_median": 15.75,
+        "avg_tokens_per_request": 225.2,
+        "avg_input_tokens": 226.9
+      },
+      "pod": "qwen-fp8-predictor-5446d888bb-r9nmt",
+      "weights_gib_per_gpu": 28.54,
+      "kv_cache_tokens": 498073,
+      "attention": "FlashAttention 3",
+      "kernels": [
+        "FlashInferFp8DeepGEMMDynamicBlockScaledKernel"
+      ],
+      "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'Qwen/Qwen3.8-27B-FP8', 'max_model_len': 32768, 'served_model_name': ['qwen-fp8']}",
+      "enforce_eager": false,
+      "cuda_graphs_captured": true,
+      "thinking_in_server_args": false,
+      "versions": {
+        "vllm": "0.24.0+rhaiv.13",
+        "torch": "2.11.0a0+git069d5d8",
+        "transformers": "5.14.1",
+        "driver": "580.126.20",
+        "gpu": "NVIDIA H200",
+        "versions_from": "qwen-fp8-predictor-85858648f7-gvdvc"
+      },
+      "image_digest": "registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:c056e61672b6aea489ad5dde0bd2f8497230f5333e87f7cf6c494eba3bfdc808",
+      "accuracy": {
+        "gsm8k": {
+          "task": "gsm8k_cot",
+          "metric": "exact_match, flexible-extract",
+          "score": 88.63,
+          "stderr": 0.87,
+          "strict": 86.58,
+          "questions": 1319,
+          "fewshot": 8,
+          "file": "evals/FP8/qwen-fp8/results_2026-09-30T10-21-24.171461.json",
+          "other_runs": [
+            {
+              "task": "gsm8k_cot",
+              "metric": "exact_match, flexible-extract",
+              "score": 88.63,
+              "stderr": 0.87,
+              "strict": 86.5,
+              "questions": 1319,
+              "fewshot": 8,
+              "file": "evals/FP8/qwen-fp8/results_2026-09-30T10-14-59.671561.json"
+            },
+            {
+              "task": "gsm8k_cot",
+              "metric": "exact_match, flexible-extract",
+              "score": 89.08,
+              "stderr": 0.86,
+              "strict": 86.58,
+              "questions": 1319,
+              "fewshot": 8,
+              "file": "evals/FP8/qwen-fp8/results_2026-09-30T10-15-11.229119.json"
+            }
+          ],
+          "note": "the task was run 3 times against the same pod (two of them at the same time); the latest file is the score, the others are listed"
+        },
+        "mmlu_pro": {
+          "task": "mmlu_pro",
+          "metric": "exact_match, custom-extract",
+          "score": 77.5,
+          "stderr": 2.48,
+          "questions": 280,
+          "subjects": 14,
+          "per_subject": 20,
+          "fewshot": 5,
+          "note": "the first 20 questions of each subject (lm_eval --limit 20), not a random sample",
+          "file": "evals/FP8-mmlu_pro/qwen-fp8/results_2026-09-30T10-21-06.881317.json"
+        }
+      },
+      "sweep_runs": {
+        "c1.json": {
+          "start": "2026-09-30T13:50:29Z",
+          "end": "2026-09-30T13:54:50Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "c16.json": {
+          "start": "2026-09-30T13:57:23Z",
+          "end": "2026-09-30T13:58:09Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "c32.json": {
+          "start": "2026-09-30T14:01:34Z",
+          "end": "2026-09-30T14:02:48Z",
+          "overlapped_with": []
+        },
+        "c64.json": {
+          "start": "2026-09-30T14:06:09Z",
+          "end": "2026-09-30T14:08:01Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c64.json",
+              "concurrency": 64
+            }
+          ]
+        },
+        "c8.json": {
+          "start": "2026-09-30T13:55:25Z",
+          "end": "2026-09-30T13:56:04Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "sharegpt-c1.json": {
+          "start": "2026-09-30T13:54:27Z",
+          "end": "2026-09-30T13:58:04Z",
+          "overlapped_with": [
+            {
+              "file": "c1.json",
+              "concurrency": 1
+            },
+            {
+              "file": "c16.json",
+              "concurrency": 16
+            },
+            {
+              "file": "c8.json",
+              "concurrency": 8
+            },
+            {
+              "file": "sharegpt-c8.json",
+              "concurrency": 8
+            }
+          ]
+        },
+        "sharegpt-c16.json": {
+          "start": "2026-09-30T14:00:00Z",
+          "end": "2026-09-30T14:01:07Z",
+          "overlapped_with": []
+        },
+        "sharegpt-c32.json": {
+          "start": "2026-09-30T14:03:38Z",
+          "end": "2026-09-30T14:05:21Z",
+          "overlapped_with": []
+        },
+        "sharegpt-c64.json": {
+          "start": "2026-09-30T14:07:43Z",
+          "end": "2026-09-30T14:08:54Z",
+          "overlapped_with": [
+            {
+              "file": "c64.json",
+              "concurrency": 64
+            }
+          ]
+        },
+        "sharegpt-c8.json": {
+          "start": "2026-09-30T13:56:18Z",
+          "end": "2026-09-30T13:56:49Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "single-t0.7.json": {
+          "start": "2026-09-30T13:45:18Z",
+          "end": "2026-09-30T13:47:05Z",
+          "overlapped_with": []
+        },
+        "single-t0.json": {
+          "start": "2026-09-30T13:42:13Z",
+          "end": "2026-09-30T13:43:53Z",
+          "overlapped_with": []
+        }
+      },
+      "overlap_note": "7 of 12 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c16.json, c64.json, c8.json, sharegpt-c1.json, sharegpt-c64.json, sharegpt-c8.json",
+      "sweep_dir": "FP8",
+      "captures_dir": "FP8",
+      "speed_vs_baseline": 0.962,
+      "speed_vs_baseline_t0_7": null,
+      "per_h200": {
+        "slices": 2,
+        "throughput_tps": 127.0,
+        "note": "per device times the slices per H200: arithmetic, not a measurement"
+      }
+    },
+    "INT4": {
+      "checkpoint": "RedHatAI/Qwen3.8-27B-INT4",
+      "quantization": "W4A16",
+      "resource": "nvidia.com/mig-3g.71gb",
+      "build": "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ, compressed-tensors)",
+      "device": {
+        "name": "71 GB slice",
+        "count": 1,
+        "per_h200": 2
+      },
+      "gpus": 1,
+      "slices_per_h200": 2,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "prompts": 30,
+      "throughput_tps": 56.8,
+      "avg_latency_ms": 3771.5,
+      "median_latency_ms": 2332.4,
+      "p95_latency_ms": 13174.0,
+      "ttft_ms_avg": 62.6,
+      "ttft_ms_median": 41.1,
+      "ttft_ms_p95": 142.6,
+      "tpot_ms_median": 17.37,
+      "avg_tokens_per_request": 214.4,
+      "avg_input_tokens": 226.9,
+      "temperature": 0,
+      "at_temperature_0_7": null,
+      "excluded_runs": [
+        {
+          "file": "sweeps/INT4/single-t0.7.json",
+          "reason": "the INT4 MMLU-Pro eval (lm_eval, 32 concurrent) ran against the same pod during this run: per-token time tripled at the same output length"
+        }
+      ],
+      "pod": "qwen-int4-predictor-5d5c69c57b-qcrcc",
+      "weights_gib_per_gpu": 17.73,
+      "kv_cache_tokens": 1236992,
+      "attention": "FlashAttention 3",
+      "kernels": [
+        "MacheteLinearKernel"
+      ],
+      "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'RedHatAI/Qwen3.8-27B-INT4', 'max_model_len': 32768, 'served_model_name': ['qwen-int4']}",
+      "enforce_eager": false,
+      "cuda_graphs_captured": true,
+      "thinking_in_server_args": false,
+      "versions": {
+        "vllm": "0.24.0+rhaiv.13",
+        "torch": "2.11.0a0+git069d5d8",
+        "transformers": "5.14.1",
+        "driver": "580.126.20",
+        "gpu": "NVIDIA H200",
+        "versions_from": "qwen-fp8-predictor-85858648f7-gvdvc"
+      },
+      "image_digest": "registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:c056e61672b6aea489ad5dde0bd2f8497230f5333e87f7cf6c494eba3bfdc808",
+      "accuracy": {
+        "gsm8k": {
+          "task": "gsm8k_cot",
+          "metric": "exact_match, flexible-extract",
+          "score": 88.32,
+          "stderr": 0.88,
+          "strict": 85.97,
+          "questions": 1319,
+          "fewshot": 8,
+          "file": "evals/INT4/qwen-int4/results_2026-09-30T03-12-23.286610.json"
+        },
+        "mmlu_pro": {
+          "task": "mmlu_pro",
+          "metric": "exact_match, custom-extract",
+          "score": 77.86,
+          "stderr": 2.47,
+          "questions": 280,
+          "subjects": 14,
+          "per_subject": 20,
+          "fewshot": 5,
+          "note": "the first 20 questions of each subject (lm_eval --limit 20), not a random sample",
+          "file": "evals/INT4-mmlu_pro/qwen-int4/results_2026-09-30T03-16-14.793407.json"
+        }
+      },
+      "sweep_runs": {
+        "c1.json": {
+          "start": "2026-09-30T07:25:06Z",
+          "end": "2026-09-30T07:30:03Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "c16.json": {
+          "start": "2026-09-30T07:34:28Z",
+          "end": "2026-09-30T07:35:42Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            },
+            {
+              "file": "sharegpt-c32.json",
+              "concurrency": 32
+            }
+          ]
+        },
+        "c32.json": {
+          "start": "2026-09-30T07:33:07Z",
+          "end": "2026-09-30T07:34:24Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            },
+            {
+              "file": "sharegpt-c8.json",
+              "concurrency": 8
+            }
+          ]
+        },
+        "c64.json": {
+          "start": "2026-09-30T07:37:16Z",
+          "end": "2026-09-30T07:39:18Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c16.json",
+              "concurrency": 16
+            }
+          ]
+        },
+        "c8.json": {
+          "start": "2026-09-30T07:31:10Z",
+          "end": "2026-09-30T07:32:01Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "sharegpt-c1.json": {
+          "start": "2026-09-30T07:29:55Z",
+          "end": "2026-09-30T07:34:28Z",
+          "overlapped_with": [
+            {
+              "file": "c1.json",
+              "concurrency": 1
+            },
+            {
+              "file": "c16.json",
+              "concurrency": 16
+            },
+            {
+              "file": "c32.json",
+              "concurrency": 32
+            },
+            {
+              "file": "c8.json",
+              "concurrency": 8
+            },
+            {
+              "file": "sharegpt-c8.json",
+              "concurrency": 8
+            }
+          ]
+        },
+        "sharegpt-c16.json": {
+          "start": "2026-09-30T07:36:40Z",
+          "end": "2026-09-30T07:38:26Z",
+          "overlapped_with": [
+            {
+              "file": "c64.json",
+              "concurrency": 64
+            }
+          ]
+        },
+        "sharegpt-c32.json": {
+          "start": "2026-09-30T07:34:46Z",
+          "end": "2026-09-30T07:35:59Z",
+          "overlapped_with": [
+            {
+              "file": "c16.json",
+              "concurrency": 16
+            }
+          ]
+        },
+        "sharegpt-c64.json": {
+          "start": "2026-09-30T07:39:29Z",
+          "end": "2026-09-30T07:41:16Z",
+          "overlapped_with": []
+        },
+        "sharegpt-c8.json": {
+          "start": "2026-09-30T07:32:49Z",
+          "end": "2026-09-30T07:34:01Z",
+          "overlapped_with": [
+            {
+              "file": "c32.json",
+              "concurrency": 32
+            },
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "single-t0.7.json": {
+          "start": "2026-09-30T07:12:31Z",
+          "end": "2026-09-30T07:17:52Z",
+          "overlapped_with": []
+        },
+        "single-t0.json": {
+          "start": "2026-09-30T07:06:40Z",
+          "end": "2026-09-30T07:08:33Z",
+          "overlapped_with": []
+        }
+      },
+      "overlap_note": "9 of 12 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c16.json, c32.json, c64.json, c8.json, sharegpt-c1.json, sharegpt-c16.json, sharegpt-c32.json, sharegpt-c8.json",
+      "sweep_dir": "INT4",
+      "captures_dir": "INT4",
+      "int4_35": {
+        "checkpoint": "RedHatAI/Qwen3.8-27B-INT4",
+        "quantization": "W4A16",
+        "resource": "nvidia.com/mig-2g.35gb",
+        "build": "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ, compressed-tensors)",
+        "pod_note": "the later of the two 35 GB pods, the one with the GPU record; both ran in eager mode",
+        "device": {
+          "name": "35 GB slice",
+          "count": 1,
+          "per_h200": 3
+        },
+        "gpus": 1,
+        "slices_per_h200": 3,
+        "tensor_parallel_size": 1,
+        "dtype": "bfloat16",
+        "prompts": 30,
+        "throughput_tps": 15.9,
+        "avg_latency_ms": 13508.8,
+        "median_latency_ms": 8165.4,
+        "p95_latency_ms": 46591.8,
+        "ttft_ms_avg": 243.7,
+        "ttft_ms_median": 211.4,
+        "ttft_ms_p95": 392.1,
+        "tpot_ms_median": 62.11,
+        "avg_tokens_per_request": 214.8,
+        "avg_input_tokens": 226.9,
+        "temperature": 0,
+        "at_temperature_0_7": {
+          "prompts": 30,
+          "throughput_tps": 15.6,
+          "avg_latency_ms": 13561.8,
+          "median_latency_ms": 7795.9,
+          "p95_latency_ms": 47874.9,
+          "ttft_ms_avg": 246.6,
+          "ttft_ms_median": 214.1,
+          "ttft_ms_p95": 367.2,
+          "tpot_ms_median": 63.01,
+          "avg_tokens_per_request": 211.8,
+          "avg_input_tokens": 226.9
+        },
+        "pod": "qwen-int4-35gb-predictor-7ccb746499-qcbgv",
+        "weights_gib_per_gpu": 17.73,
+        "kv_cache_tokens": 286720,
+        "attention": "FlashAttention 3",
+        "kernels": [
+          "MacheteLinearKernel"
+        ],
+        "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'RedHatAI/Qwen3.8-27B-INT4', 'max_model_len': 32768, 'enforce_eager': True, 'served_model_name': ['qwen-int4-35gb']}",
+        "enforce_eager": true,
+        "cuda_graphs_captured": false,
+        "thinking_in_server_args": false,
+        "versions": {
+          "vllm": "0.24.0+rhaiv.13",
+          "torch": "2.11.0a0+git069d5d8",
+          "transformers": "5.14.1",
+          "driver": "580.126.20",
+          "gpu": "NVIDIA H200",
+          "versions_from": "qwen-fp8-predictor-85858648f7-gvdvc"
+        },
+        "image_digest": "registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:c056e61672b6aea489ad5dde0bd2f8497230f5333e87f7cf6c494eba3bfdc808",
+        "sweep_runs": {
+          "c1.json": {
+            "start": "2026-09-30T16:54:30Z",
+            "end": "2026-09-30T17:11:29Z",
+            "overlapped_with": [
+              {
+                "file": "c8.json",
+                "concurrency": 8
+              },
+              {
+                "file": "sharegpt-c1.json",
+                "concurrency": 1
+              }
+            ]
+          },
+          "c16.json": {
+            "start": "2026-09-30T16:16:45Z",
+            "end": "2026-09-30T16:19:16Z",
+            "overlapped_with": []
+          },
+          "c32.json": {
+            "start": "2026-09-30T16:22:49Z",
+            "end": "2026-09-30T16:25:42Z",
+            "overlapped_with": []
+          },
+          "c64.json": {
+            "start": "2026-09-30T16:30:23Z",
+            "end": "2026-09-30T16:34:37Z",
+            "overlapped_with": [
+              {
+                "file": "sharegpt-c64.json",
+                "concurrency": 64
+              }
+            ]
+          },
+          "c8.json": {
+            "start": "2026-09-30T16:57:00Z",
+            "end": "2026-09-30T16:59:23Z",
+            "overlapped_with": [
+              {
+                "file": "c1.json",
+                "concurrency": 1
+              }
+            ]
+          },
+          "sharegpt-c1.json": {
+            "start": "2026-09-30T17:10:44Z",
+            "end": "2026-09-30T17:24:06Z",
+            "overlapped_with": [
+              {
+                "file": "c1.json",
+                "concurrency": 1
+              }
+            ]
+          },
+          "sharegpt-c16.json": {
+            "start": "2026-09-30T16:19:37Z",
+            "end": "2026-09-30T16:22:08Z",
+            "overlapped_with": []
+          },
+          "sharegpt-c32.json": {
+            "start": "2026-09-30T16:25:49Z",
+            "end": "2026-09-30T16:28:27Z",
+            "overlapped_with": []
+          },
+          "sharegpt-c64.json": {
+            "start": "2026-09-30T16:34:20Z",
+            "end": "2026-09-30T16:37:55Z",
+            "overlapped_with": [
+              {
+                "file": "c64.json",
+                "concurrency": 64
+              }
+            ]
+          },
+          "sharegpt-c8.json": {
+            "start": "2026-09-30T16:13:55Z",
+            "end": "2026-09-30T16:16:09Z",
+            "overlapped_with": []
+          },
+          "single-t0.7.json": {
+            "start": "2026-09-30T15:54:06Z",
+            "end": "2026-09-30T16:00:52Z",
+            "overlapped_with": []
+          },
+          "single-t0.json": {
+            "start": "2026-09-30T15:44:47Z",
+            "end": "2026-09-30T15:51:32Z",
+            "overlapped_with": []
+          }
+        },
+        "overlap_note": "5 of 12 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c64.json, c8.json, sharegpt-c1.json, sharegpt-c64.json",
+        "sweep_dir": "INT4_35",
+        "captures_dir": "INT4_35",
+        "note": "the same checkpoint on a 35 GB slice (three per H200): it loads and answers, in eager mode (the NVML CUDA-graph profiling bug on that slice), and never got under the 50 ms p95 budget under load",
+        "speed_vs_baseline": 0.241,
+        "speed_vs_baseline_t0_7": null,
+        "per_h200": {
+          "slices": 3,
+          "throughput_tps": 47.7,
+          "note": "per device times the slices per H200: arithmetic, not a measurement"
+        }
+      },
+      "speed_vs_baseline": 0.861,
+      "speed_vs_baseline_t0_7": null,
+      "per_h200": {
+        "slices": 2,
+        "throughput_tps": 113.7,
+        "note": "per device times the slices per H200: arithmetic, not a measurement"
+      }
+    },
+    "SPEC_DECODE": {
+      "checkpoint": "Qwen/Qwen3.8-27B",
+      "quantization": null,
+      "resource": "nvidia.com/gpu",
+      "speculation": "MTP, the model's own head",
+      "num_speculative_tokens": 4,
+      "device": {
+        "name": "H200",
+        "count": 1,
+        "per_h200": 1
+      },
+      "gpus": 1,
+      "slices_per_h200": 1,
+      "tensor_parallel_size": 1,
+      "dtype": "bfloat16",
+      "prompts": 30,
+      "throughput_tps": 151.2,
+      "avg_latency_ms": 1488.9,
+      "median_latency_ms": 1071.7,
+      "p95_latency_ms": 4415.9,
+      "ttft_ms_avg": 85.1,
+      "ttft_ms_median": 80.0,
+      "ttft_ms_p95": 120.2,
+      "tpot_ms_median": 6.64,
+      "avg_tokens_per_request": 225.2,
+      "avg_input_tokens": 226.9,
+      "temperature": 0,
+      "at_temperature_0_7": {
+        "prompts": 30,
+        "throughput_tps": 135.4,
+        "avg_latency_ms": 1661.5,
+        "median_latency_ms": 1443.2,
+        "p95_latency_ms": 4623.5,
+        "ttft_ms_avg": 79.7,
+        "ttft_ms_median": 78.4,
+        "ttft_ms_p95": 116.8,
+        "tpot_ms_median": 7.69,
+        "avg_tokens_per_request": 225.0,
+        "avg_input_tokens": 226.9
+      },
+      "pod": "qwen-mtp-predictor-67986cf5bf-47s94",
+      "weights_gib_per_gpu": 51.89,
+      "kv_cache_tokens": 749568,
+      "attention": "FlashAttention 3",
+      "kernels": [],
+      "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'Qwen/Qwen3.8-27B', 'max_model_len': 32768, 'served_model_name': ['qwen-mtp'], 'spec_method': 'mtp', 'spec_tokens': 4}",
+      "enforce_eager": false,
+      "cuda_graphs_captured": true,
+      "spec_method": "mtp",
+      "spec_tokens_from_log": 4,
+      "thinking_in_server_args": false,
+      "versions": {
+        "vllm": "0.24.0+rhaiv.13",
+        "torch": "2.11.0a0+git069d5d8",
+        "transformers": "5.14.1",
+        "driver": "580.126.20",
+        "gpu": "NVIDIA H200",
+        "versions_from": "qwen-fp8-predictor-85858648f7-gvdvc"
+      },
+      "image_digest": "registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:c056e61672b6aea489ad5dde0bd2f8497230f5333e87f7cf6c494eba3bfdc808",
+      "acceptance": {
+        "t0-k1": {
+          "spec_tokens": 1,
+          "counters": {
+            "num_drafts_total": 7200,
+            "num_drafts_created": 0,
+            "num_draft_tokens_total": 7200,
+            "num_draft_tokens_created": 0,
+            "num_accepted_tokens_total": 6262,
+            "num_accepted_tokens_created": 0,
+            "num_accepted_tokens_per_pos_total[0]": 6262,
+            "num_accepted_tokens_per_pos_created[0]": 0
+          },
+          "drafts": 7200,
+          "draft_tokens": 7200,
+          "accepted": 6262,
+          "rate": 0.8697,
+          "mean_acceptance_length": 1.87,
+          "accepted_per_position": [
+            0.8697
+          ]
+        },
+        "t0-k2": {
+          "spec_tokens": 2,
+          "counters": {
+            "num_drafts_total": 5333,
+            "num_drafts_created": 0,
+            "num_draft_tokens_total": 10666,
+            "num_draft_tokens_created": 0,
+            "num_accepted_tokens_total": 8179,
+            "num_accepted_tokens_created": 0,
+            "num_accepted_tokens_per_pos_total[0]": 4527,
+            "num_accepted_tokens_per_pos_total[1]": 3652,
+            "num_accepted_tokens_per_pos_created[0]": 0,
+            "num_accepted_tokens_per_pos_created[1]": 0
+          },
+          "drafts": 5333,
+          "draft_tokens": 10666,
+          "accepted": 8179,
+          "rate": 0.7668,
+          "mean_acceptance_length": 2.53,
+          "accepted_per_position": [
+            0.8489,
+            0.6848
+          ]
+        },
+        "t0-k4": {
+          "spec_tokens": 4,
+          "counters": {
+            "num_drafts_total": 3997,
+            "num_drafts_created": 0,
+            "num_draft_tokens_total": 15988,
+            "num_draft_tokens_created": 0,
+            "num_accepted_tokens_total": 8860,
+            "num_accepted_tokens_created": 0,
+            "num_accepted_tokens_per_pos_total[0]": 3146,
+            "num_accepted_tokens_per_pos_total[1]": 2421,
+            "num_accepted_tokens_per_pos_total[2]": 1853,
+            "num_accepted_tokens_per_pos_total[3]": 1440,
+            "num_accepted_tokens_per_pos_created[0]": 0,
+            "num_accepted_tokens_per_pos_created[1]": 0,
+            "num_accepted_tokens_per_pos_created[2]": 0,
+            "num_accepted_tokens_per_pos_created[3]": 0
+          },
+          "drafts": 3997,
+          "draft_tokens": 15988,
+          "accepted": 8860,
+          "rate": 0.5542,
+          "mean_acceptance_length": 3.22,
+          "accepted_per_position": [
+            0.7871,
+            0.6057,
+            0.4636,
+            0.3603
+          ]
+        },
+        "t0-k8": {
+          "spec_tokens": 8,
+          "counters": {
+            "num_drafts_total": 1862,
+            "num_drafts_created": 0,
+            "num_draft_tokens_total": 14896,
+            "num_draft_tokens_created": 0,
+            "num_accepted_tokens_total": 4926,
+            "num_accepted_tokens_created": 0,
+            "num_accepted_tokens_per_pos_total[0]": 1456,
+            "num_accepted_tokens_per_pos_total[1]": 1016,
+            "num_accepted_tokens_per_pos_total[2]": 765,
+            "num_accepted_tokens_per_pos_total[3]": 553,
+            "num_accepted_tokens_per_pos_total[4]": 436,
+            "num_accepted_tokens_per_pos_total[5]": 305,
+            "num_accepted_tokens_per_pos_total[6]": 231,
+            "num_accepted_tokens_per_pos_total[7]": 164,
+            "num_accepted_tokens_per_pos_created[0]": 0,
+            "num_accepted_tokens_per_pos_created[1]": 0,
+            "num_accepted_tokens_per_pos_created[2]": 0,
+            "num_accepted_tokens_per_pos_created[3]": 0,
+            "num_accepted_tokens_per_pos_created[4]": 0,
+            "num_accepted_tokens_per_pos_created[5]": 0,
+            "num_accepted_tokens_per_pos_created[6]": 0,
+            "num_accepted_tokens_per_pos_created[7]": 0
+          },
+          "drafts": 1862,
+          "draft_tokens": 14896,
+          "accepted": 4926,
+          "rate": 0.3307,
+          "mean_acceptance_length": 3.65,
+          "accepted_per_position": [
+            0.782,
+            0.5456,
+            0.4108,
+            0.297,
+            0.2342,
+            0.1638,
+            0.1241,
+            0.0881
+          ]
+        },
+        "t0.7-k4": {
+          "spec_tokens": 4,
+          "counters": {
+            "num_drafts_total": 7265,
+            "num_drafts_created": 0,
+            "num_draft_tokens_total": 29060,
+            "num_draft_tokens_created": 0,
+            "num_accepted_tokens_total": 12418,
+            "num_accepted_tokens_created": 0,
+            "num_accepted_tokens_per_pos_total[0]": 4644,
+            "num_accepted_tokens_per_pos_total[1]": 3350,
+            "num_accepted_tokens_per_pos_total[2]": 2479,
+            "num_accepted_tokens_per_pos_total[3]": 1945,
+            "num_accepted_tokens_per_pos_created[0]": 0,
+            "num_accepted_tokens_per_pos_created[1]": 0,
+            "num_accepted_tokens_per_pos_created[2]": 0,
+            "num_accepted_tokens_per_pos_created[3]": 0
+          },
+          "drafts": 7265,
+          "draft_tokens": 29060,
+          "accepted": 12418,
+          "rate": 0.4273,
+          "mean_acceptance_length": 2.71,
+          "accepted_per_position": [
+            0.6392,
+            0.4611,
+            0.3412,
+            0.2677
+          ]
+        }
+      },
+      "draft_acceptance_rate": 0.5542,
+      "mean_acceptance_length": 3.22,
+      "spec_tokens_measured": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "throughput_tps_k1": 105.2,
+      "throughput_tps_k2": 128.6,
+      "throughput_tps_k8": 142.7,
+      "sweep_runs": {
+        "c1.json": {
+          "start": "2026-09-30T13:35:27Z",
+          "end": "2026-09-30T13:38:37Z",
+          "overlapped_with": [
+            {
+              "file": "c64.json",
+              "concurrency": 64
+            },
+            {
+              "file": "sharegpt-c32.json",
+              "concurrency": 32
+            },
+            {
+              "file": "sharegpt-c64.json",
+              "concurrency": 64
+            }
+          ]
+        },
+        "c16.json": {
+          "start": "2026-09-30T13:32:52Z",
+          "end": "2026-09-30T13:33:22Z",
+          "overlapped_with": []
+        },
+        "c32.json": {
+          "start": "2026-09-30T13:34:38Z",
+          "end": "2026-09-30T13:35:20Z",
+          "overlapped_with": []
+        },
+        "c64.json": {
+          "start": "2026-09-30T13:37:02Z",
+          "end": "2026-09-30T13:38:14Z",
+          "overlapped_with": [
+            {
+              "file": "c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "c8.json": {
+          "start": "2026-09-30T13:31:23Z",
+          "end": "2026-09-30T13:31:47Z",
+          "overlapped_with": [
+            {
+              "file": "single-t0.7.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "sharegpt-c1.json": {
+          "start": "2026-09-30T13:38:52Z",
+          "end": "2026-09-30T13:41:57Z",
+          "overlapped_with": [
+            {
+              "file": "sharegpt-c64.json",
+              "concurrency": 64
+            }
+          ]
+        },
+        "sharegpt-c16.json": {
+          "start": "2026-09-30T13:33:37Z",
+          "end": "2026-09-30T13:34:01Z",
+          "overlapped_with": []
+        },
+        "sharegpt-c32.json": {
+          "start": "2026-09-30T13:35:30Z",
+          "end": "2026-09-30T13:36:01Z",
+          "overlapped_with": [
+            {
+              "file": "c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "sharegpt-c64.json": {
+          "start": "2026-09-30T13:38:15Z",
+          "end": "2026-09-30T13:39:07Z",
+          "overlapped_with": [
+            {
+              "file": "c1.json",
+              "concurrency": 1
+            },
+            {
+              "file": "sharegpt-c1.json",
+              "concurrency": 1
+            }
+          ]
+        },
+        "sharegpt-c8.json": {
+          "start": "2026-09-30T13:32:03Z",
+          "end": "2026-09-30T13:32:21Z",
+          "overlapped_with": []
+        },
+        "single-t0-k1.json": {
+          "start": "2026-09-30T13:57:09Z",
+          "end": "2026-09-30T13:58:13Z",
+          "overlapped_with": []
+        },
+        "single-t0-k2.json": {
+          "start": "2026-09-30T13:47:01Z",
+          "end": "2026-09-30T13:47:53Z",
+          "overlapped_with": []
+        },
+        "single-t0-k8.json": {
+          "start": "2026-09-30T17:33:55Z",
+          "end": "2026-09-30T17:34:42Z",
+          "overlapped_with": []
+        },
+        "single-t0.7.json": {
+          "start": "2026-09-30T13:31:10Z",
+          "end": "2026-09-30T13:31:59Z",
+          "overlapped_with": [
+            {
+              "file": "c8.json",
+              "concurrency": 8
+            }
+          ]
+        },
+        "single-t0.json": {
+          "start": "2026-09-30T13:29:38Z",
+          "end": "2026-09-30T13:30:22Z",
+          "overlapped_with": []
+        }
+      },
+      "overlap_note": "7 of 15 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c64.json, c8.json, sharegpt-c1.json, sharegpt-c32.json, sharegpt-c64.json, single-t0.7.json",
+      "sweep_dir": "SPEC_DECODE",
+      "captures_dir": "SPEC_DECODE",
+      "speed_vs_baseline": 2.291,
+      "speed_vs_baseline_t0_7": null,
+      "per_h200": {
+        "slices": 1,
+        "throughput_tps": 151.2,
+        "note": "one full H200, the measured number"
+      }
+    }
+  }
+}

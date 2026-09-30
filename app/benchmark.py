@@ -51,7 +51,10 @@ def at_target(points: list[dict], target_ms: float) -> dict | None:
     ok = [p for p in points if p.get("tpot_tail_ms") is not None and p["tpot_tail_ms"] <= target_ms]
     if not ok:
         return None
-    best = max(ok, key=lambda p: p["output_tokens_per_second_per_gpu"])
+    # a point whose run shared the pod with another sweep is a lower bound (the GPU was serving both);
+    # a clean point wins when there is one, otherwise the best lower bound, labeled as one
+    clean = [p for p in ok if not p.get("overlapped_with")]
+    best = max(clean or ok, key=lambda p: p["output_tokens_per_second_per_gpu"])
     return {
         "concurrency": best["concurrency"],
         "output_tokens_per_second_per_gpu": best["output_tokens_per_second_per_gpu"],
@@ -59,6 +62,8 @@ def at_target(points: list[dict], target_ms: float) -> dict | None:
         "slices_per_h200": best.get("slices_per_h200", 1),
         "tpot_tail_ms": best["tpot_tail_ms"],
         "tpot_tail_kind": best["tpot_tail_kind"],
+        "lower_bound": bool(best.get("overlapped_with")),
+        "overlapped_with": best.get("overlapped_with") or [],
     }
 
 
@@ -125,6 +130,7 @@ class BenchmarkData:
             return []
         gpus = self.gpus(key)
         slices = self.slices_per_h200(key)
+        runs = self.variant(key).get("sweep_runs") or {}
         points = []
         for f in folder.glob("c*.json"):
             m = re.fullmatch(r"c(\d+)\.json", f.name)
@@ -158,6 +164,8 @@ class BenchmarkData:
                 "tpot_median_ms": _round(data.get("median_tpot_ms")),
                 "tpot_tail_ms": _round(data.get(f"{tail_kind}_tpot_ms")) if tail_kind else None,
                 "tpot_tail_kind": tail_kind,
+                # other vllm bench serve runs that shared the pod during this one (from the file's window)
+                "overlapped_with": (runs.get(f.name) or {}).get("overlapped_with") or [],
             })
         return sorted(points, key=lambda p: p["concurrency"])
 
@@ -179,8 +187,9 @@ class BenchmarkData:
             "weights_gib_per_gpu": self.weights_gib_per_gpu(key),
             "mean_acceptance_length": v.get("mean_acceptance_length"),
             "num_speculative_tokens": v.get("num_speculative_tokens"),
-            "throughput_tps_k1": v.get("throughput_tps_k1"),
-            "throughput_tps_k2": v.get("throughput_tps_k2"),
+            "spec_tokens_measured": v.get("spec_tokens_measured"),
+            # single-stream speed at every other number of speculative tokens the run tried
+            **{k: val for k, val in v.items() if re.fullmatch(r"throughput_tps_k\d+", k)},
             # round-2 fields, passed through as they are so every number on screen traces to the file
             "ttft_ms_avg": v.get("ttft_ms_avg"),
             "speed_vs_baseline": v.get("speed_vs_baseline"),
@@ -191,15 +200,18 @@ class BenchmarkData:
             "build": v.get("build"),
             "kernel": v.get("kernel"),
             "accuracy": v.get("accuracy"),
-            "accuracy_note": v.get("accuracy_note"),
             "acceptance": v.get("acceptance"),
             "reference": self._reference(v.get("reference")),
-            "int4_71": self._footnote(v.get("int4_71")),
+            "int4_35": self._footnote(v.get("int4_35")),
+            "enforce_eager": v.get("enforce_eager"),
+            "kv_cache_tokens": v.get("kv_cache_tokens"),
+            "excluded_runs": v.get("excluded_runs"),
+            "overlap_note": v.get("overlap_note"),
         }
 
     @staticmethod
     def _footnote(run: dict | None) -> dict | None:
-        """The Qwen INT4 card's like-for-like line: the same checkpoint on the 71 GB slice FP8 ran on."""
+        """The Qwen INT4 card's footnote: the same checkpoint on a 35 GB slice."""
         if not run:
             return None
         return {
@@ -209,6 +221,7 @@ class BenchmarkData:
             "weights_gib_per_gpu": run.get("weights_gib_per_gpu"),
             "kv_cache_tokens": run.get("kv_cache_tokens"),
             "per_h200": run.get("per_h200"),
+            "enforce_eager": run.get("enforce_eager"),
             "note": run.get("note"),
         }
 

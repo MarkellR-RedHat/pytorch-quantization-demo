@@ -1,0 +1,21 @@
+{
+  "variant": "BF16",
+  "model": "qwen-bf16",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "quick_fact",
+  "prompt": "What is the capital of Australia, and why isn't it Sydney? Answer in two sentences.",
+  "temperature": 0,
+  "response_text": "The capital of Australia is Canberra. It was chosen as a compromise between the two largest cities, Sydney and Melbourne, to prevent either from dominating the new nation's government.",
+  "usage": {
+    "prompt_tokens": 31,
+    "total_tokens": 66,
+    "completion_tokens": 35
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 298.5,
+  "total_ms": 807.6,
+  "tokens_per_second": 43.3,
+  "captured_at": "2026-09-30T03:01:44-04:00"
+}

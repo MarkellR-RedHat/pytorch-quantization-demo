@@ -68,7 +68,7 @@ def active_variants() -> list[str]:
     if simulator.is_enabled():
         fp8 = bench().has("FP8")
     else:
-        fp8 = bool(settings.model_fp8_endpoint) or settings.mode_for("FP8") == "recorded"
+        fp8 = bool(settings.endpoint_for("FP8")) or settings.mode_for("FP8") == "recorded"
     return [k for k in ALL_VARIANTS if k != "FP8" or fp8]
 
 

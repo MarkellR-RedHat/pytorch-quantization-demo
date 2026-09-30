@@ -1,0 +1,21 @@
+{
+  "variant": "INT4",
+  "model": "qwen-int4",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache in a transformer LLM to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "Welcome to the team! Let\u2019s demystify the **KV Cache**, one of the most critical components for making Large Language Models (LLMs) efficient.\n\nTo understand why we need it, you first need to understand how Transformers generate text. They are **autoregressive**, meaning they generate one token at a time. To predict the next word, the model needs to look at all previous words in the sequence. In a standard Transformer, this involves calculating **Attention** between the current token and every previous token.\n\nHere is the problem: If you generate a sentence of 100 tokens, calculating attention from scratch for the 101st token requires re-processing the first 100 tokens. For the 102nd token, you re-process the first 101, and so on. This leads to **quadratic complexity** ($O(n^2)$) in computation time. As the sequence gets longer, the model becomes exponentially slower because it is doing massive amounts of redundant work.\n\nThe **KV Cache** solves this by storing the results of the **Key (K)** and **Value (V)** projections for all previously processed tokens.\n\nIn the Attention mechanism, the current token\u2019s **Query (Q)** is compared against the **Keys (K)** of all previous tokens to determine relevance, and then it aggregates information from the **Values (V)** of those tokens. Since the previous tokens never change, their K and V vectors are static. Instead of recalculating them every single step, we store them in a cache.\n\nWhen generating the next token, the model only needs to:\n1. Compute the Q, K, and V for the **new** token.\n2. Append the new K and V to the existing cache.\n3. Use the new Q to attend to the entire history of K and V in the cache.\n\nThis reduces the computational complexity from quadratic to **linear** ($O(n)$) with respect to the sequence length during inference.\n\n**The Trade-off:**\nThe catch is **memory**. The KV Cache grows with the sequence length and the batch size. For long contexts or large batches, the cache can consume gigabytes of GPU memory, often becoming the bottleneck for throughput. This is why techniques like **PagedAttention** (used in vLLM) and **Quantization** are so popular\u2014they optimize how this cache is stored and managed.\n\nIn short: The KV Cache is a memory-for-computation trade-off. It sacrifices GPU memory to avoid redundant calculations, allowing LLMs to generate text at a usable speed.",
+  "usage": {
+    "prompt_tokens": 34,
+    "total_tokens": 569,
+    "completion_tokens": 535
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 374.4,
+  "total_ms": 9583.5,
+  "tokens_per_second": 55.8,
+  "captured_at": "2026-09-30T03:03:02-04:00"
+}

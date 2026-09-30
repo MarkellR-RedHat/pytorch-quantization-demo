@@ -1,0 +1,5 @@
+usage: lm-eval [-h] COMMAND ...
+lm-eval: error: unrecognized arguments: --version
+Name: lm_eval
+Version: 0.4.13
+Summary: A framework for evaluating language models

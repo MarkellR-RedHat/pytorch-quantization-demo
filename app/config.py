@@ -45,6 +45,22 @@ class Settings(BaseSettings):
     # build, INT4_RH for Red Hat's W4A16 build. It also names the build on screen.
     model_int4_captures: str = "INT4_RH"
 
+    # The Qwen track's endpoints, served names and modes: the same four columns, its own pods. They
+    # default to recorded, so the track plays its recordings unless an endpoint is given and its mode
+    # set to live (the same rules as the Llama settings above, read when the Qwen track is on screen).
+    qwen_model_bf16_endpoint: str = ""
+    qwen_model_fp8_endpoint: str = ""
+    qwen_model_int4_endpoint: str = ""
+    qwen_model_spec_decode_endpoint: str = ""
+    qwen_model_bf16_name: str = "qwen-bf16"
+    qwen_model_fp8_name: str = "qwen-fp8"
+    qwen_model_int4_name: str = "qwen-int4"
+    qwen_model_spec_decode_name: str = "qwen-mtp"
+    qwen_model_bf16_mode: str = "recorded"
+    qwen_model_fp8_mode: str = "recorded"
+    qwen_model_int4_mode: str = "recorded"
+    qwen_model_spec_decode_mode: str = "recorded"
+
     # Demo
     simulation_mode: bool = False
     presenter_key: str = ""
@@ -73,21 +89,26 @@ class Settings(BaseSettings):
     allow_pending_tracks: bool = False
     qwen_benchmark_file: str = "benchmark_results.qwen.json"
     qwen_quality_dir: str = "quality/qwen"
-    qwen_bench_dir: str = "bench/raw/2026-10-qwen-r1/sweeps"
+    qwen_bench_dir: str = "bench/raw/2026-09-30-qwen-r1/sweeps"
     sim_time_scale: float = 1.0
 
     def resolve(self, path: str) -> Path:
         p = Path(path)
         return p if p.is_absolute() else REPO_ROOT / p
 
+    def _field(self, key: str, what: str, default=""):
+        """The setting for a column on the track on screen: model_<key>_<what>, or the track's prefixed
+        copy of it (qwen_model_<key>_<what>) when the Qwen track is up."""
+        return getattr(self, f"{_track().settings_prefix}model_{key.lower()}_{what}", default)
+
     def endpoint_for(self, key: str) -> str:
-        return getattr(self, f"model_{key.lower()}_endpoint", "")
+        return self._field(key, "endpoint")
 
     def served_name_for(self, key: str) -> str:
-        return getattr(self, f"model_{key.lower()}_name", "") or key.lower()
+        return self._field(key, "name") or key.lower()
 
     def mode_for(self, key: str) -> str:
-        mode = str(getattr(self, f"model_{key.lower()}_mode", "live")).strip().lower()
+        mode = str(self._field(key, "mode", "live")).strip().lower()
         return "recorded" if mode == "recorded" else "live"
 
     def captures_for(self, key: str) -> str:

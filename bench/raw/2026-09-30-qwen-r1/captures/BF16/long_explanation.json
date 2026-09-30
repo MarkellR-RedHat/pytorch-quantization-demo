@@ -1,0 +1,21 @@
+{
+  "variant": "BF16",
+  "model": "qwen-bf16",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache in a transformer LLM to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "In a Transformer-based Large Language Model (LLM), the **KV Cache** is a critical optimization technique used during the autoregressive generation of text. To understand why it exists, you first need to understand how attention works.\n\nWhen the model generates a new token, it must compute attention scores between the new token and all previous tokens in the sequence. This process requires the **Key (K)** and **Value (V)** vectors for every previous token. In a naive implementation, the model would recompute these K and V vectors for the entire history of the sequence every single time it generates a new token. This is computationally expensive and redundant, as the K and V vectors for past tokens never change once they are calculated.\n\nThe KV Cache solves this by storing the computed Key and Value vectors for all previously generated tokens in memory. Instead of recalculating them, the model simply retrieves the cached K and V vectors for the existing context and only computes the K and V for the single new token. This drastically reduces the computational complexity of the attention mechanism from quadratic to linear with respect to the number of new tokens generated, significantly speeding up inference.\n\nHowever, this optimization comes with a significant trade-off: **memory consumption**. The size of the KV Cache grows linearly with the sequence length and the number of layers in the model. For long-context models or large batch sizes, the KV Cache can consume a substantial portion of the GPU\u2019s memory, often becoming the primary bottleneck for serving LLMs.\n\nTo manage this, engineers employ various strategies. These include using lower-precision data types (like FP8 or INT8) for the cache, implementing sliding window attention to limit the context length, or using quantization techniques to compress the stored vectors. Understanding the KV Cache is essential for any engineer working on LLM inference, as it directly impacts latency, throughput, and hardware requirements. Balancing the speed benefits of caching against the memory costs is a central challenge in deploying efficient LLMs.",
+  "usage": {
+    "prompt_tokens": 34,
+    "total_tokens": 439,
+    "completion_tokens": 405
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 322.5,
+  "total_ms": 6412.8,
+  "tokens_per_second": 63.2,
+  "captured_at": "2026-09-30T03:01:57-04:00"
+}

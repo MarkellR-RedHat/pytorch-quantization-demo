@@ -1,0 +1,21 @@
+{
+  "variant": "SPEC_DECODE",
+  "model": "qwen-mtp",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "summarization",
+  "prompt": "Summarize the key trade-offs of model quantization for production LLM deployments in 3 bullet points.",
+  "temperature": 0,
+  "response_text": "*   **Latency and Throughput vs. Accuracy**: Quantization significantly reduces memory footprint and increases inference speed (throughput) by using lower-precision data types (e.g., INT8 or INT4), but this often results in a measurable degradation of model quality, such as reduced reasoning capability or increased hallucination rates, particularly for complex tasks.\n*   **Hardware Efficiency vs. Compatibility and Overhead**: While quantized models enable deployment on cost-effective or edge hardware with limited VRAM, they may require specific hardware support (e.g., Tensor Cores for INT8) or specialized software stacks, and the dequantization process can introduce computational overhead that negates some speed gains on non-optimized infrastructure.\n*   **Deployment Simplicity vs. Calibration Complexity**: Post-training quantization (PTQ) offers a quick path to deployment with minimal retraining, but achieving optimal performance often requires careful calibration datasets and tuning; alternatively, quantization-aware training (QAT) preserves accuracy better but demands significant additional compute resources and engineering effort during the training phase.",
+  "usage": {
+    "prompt_tokens": 34,
+    "total_tokens": 250,
+    "completion_tokens": 216
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 343.5,
+  "total_ms": 2087.1,
+  "tokens_per_second": 103.5,
+  "captured_at": "2026-09-30T09:27:58-04:00"
+}

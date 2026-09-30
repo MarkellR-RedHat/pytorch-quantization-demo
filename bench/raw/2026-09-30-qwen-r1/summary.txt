@@ -1,0 +1,132 @@
+==========================================================================================
+  QWEN3.8-27B FULL BENCHMARK SUMMARY — 2026-09-30
+  vLLM 0.24.0+rhaiv.13 | Thinking OFF (server-side)
+==========================================================================================
+
+========================================
+  BF16 (full H200)
+========================================
+  Single T=  0: TTFT=     40ms  E2EL=    3411ms  tok/s=   66.0
+  Single T=0.7: TTFT=    113ms  E2EL=    7040ms  tok/s=   31.5
+
+  Concurrency sweep (random):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      53.4     0.2      114ms      4789ms   18.3ms
+     8     411.9     1.6      328ms      4971ms   18.2ms
+    16     537.6     2.1      693ms      7618ms   27.2ms
+    32    1274.0     5.0      992ms      6427ms   21.3ms
+    64    1978.9     7.7     1582ms      8273ms   26.2ms
+
+  Concurrency sweep (ShareGPT):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      65.3     0.3       41ms      3151ms   15.2ms
+     8     278.0     1.5       88ms      4684ms   24.2ms
+    16     689.9     3.2      101ms      3919ms   17.9ms
+    32    1287.0     6.0      151ms      4491ms   20.7ms
+    64    1743.0     8.0      275ms      6802ms   30.8ms
+
+========================================
+  SPEC_DECODE (full H200 (MTP k=4))
+========================================
+  Single T=  0: TTFT=     85ms  E2EL=    1489ms  tok/s=  151.2
+  Single T=0.7: TTFT=     80ms  E2EL=    1661ms  tok/s=  135.4
+
+  Concurrency sweep (random):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      85.8     0.3      120ms      2982ms   11.2ms
+     8     670.3     2.6      150ms      2911ms   10.8ms
+    16    1089.9     4.3      202ms      3470ms   12.8ms
+    32    1526.8     6.0      343ms      4864ms   17.7ms
+    64    1798.8     7.0      536ms      8580ms   31.5ms
+
+  Concurrency sweep (ShareGPT):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      67.0     0.3      122ms      2899ms   16.8ms
+     8     720.4     3.5       99ms      1899ms   10.3ms
+    16    1088.2     5.3      150ms      2485ms   12.8ms
+    32    1741.1     8.1      219ms      3459ms   17.1ms
+    64    2084.9     9.7      379ms      5847ms   30.8ms
+
+========================================
+  FP8 (71GB slice)
+========================================
+  Single T=  0: TTFT=     47ms  E2EL=    3359ms  tok/s=   63.5
+  Single T=0.7: TTFT=     47ms  E2EL=    3580ms  tok/s=   62.9
+
+  Concurrency sweep (random):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      62.6     0.2       67ms      4090ms   15.8ms
+     8     413.5     1.6      357ms      4950ms   18.0ms
+    16     706.1     2.8      489ms      5795ms   20.8ms
+    32     883.4     3.5      646ms      9262ms   33.8ms
+    64    1170.2     4.6      827ms     13974ms   51.6ms
+
+  Concurrency sweep (ShareGPT):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      62.8     0.3       51ms      3393ms   15.7ms
+     8     366.2     2.0       90ms      3382ms   18.2ms
+    16     398.7     1.9      207ms      7072ms   33.9ms
+    32     537.6     2.5      244ms     11169ms   50.0ms
+    64    1549.3     7.1      248ms      7713ms   37.3ms
+
+========================================
+  INT4 (71GB slice)
+========================================
+  Single T=  0: TTFT=     63ms  E2EL=    3771ms  tok/s=   56.8
+  Single T=0.7: TTFT=    170ms  E2EL=   10709ms  tok/s=   20.4
+
+  Concurrency sweep (random):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      55.1     0.2      122ms      4648ms   17.8ms
+     8     318.4     1.2      518ms      6423ms   23.2ms
+    16     440.6     1.7      706ms      9288ms   33.7ms
+    32     844.8     3.3      890ms      9685ms   34.5ms
+    64    1069.9     4.2     1141ms     15273ms   55.4ms
+
+  Concurrency sweep (ShareGPT):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      50.6     0.2       91ms      4275ms   19.5ms
+     8     188.4     0.9      151ms      7265ms   32.1ms
+    16     253.8     1.2      254ms      9522ms   42.0ms
+    32     745.9     3.5      249ms      8215ms   39.2ms
+    64    1028.1     4.8      458ms     12060ms   63.1ms
+
+========================================
+  INT4_35 (35GB slice)
+========================================
+  Single T=  0: TTFT=    244ms  E2EL=   13509ms  tok/s=   15.9
+  Single T=0.7: TTFT=    247ms  E2EL=   13562ms  tok/s=   15.6
+
+  Concurrency sweep (random):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      16.1     0.1      242ms     15931ms   61.5ms
+     8     114.5     0.4     1174ms     17873ms   65.5ms
+    16     216.1     0.8     1564ms     18946ms   68.2ms
+    32     377.5     1.5     1994ms     21668ms   77.2ms
+    64     514.5     2.0     7275ms     31128ms   93.5ms
+
+  Concurrency sweep (ShareGPT):
+     c     tok/s   req/s      TTFT       E2EL    TPOT
+     1      16.1     0.1      197ms     12537ms   59.7ms
+     8      99.2     0.5      309ms     14117ms   65.8ms
+    16     179.0     0.8      377ms     14666ms   68.3ms
+    32     350.4     1.6      510ms     16542ms   75.8ms
+    64     515.7     2.4     4380ms     22128ms   88.4ms
+
+==========================================================================================
+  PEAK THROUGHPUT COMPARISON (c=64 random)
+==========================================================================================
+         Variant     tok/s   req/s      TTFT       E2EL
+            BF16    1978.9     7.7     1582ms      8273ms
+     SPEC_DECODE    1798.8     7.0      536ms      8580ms
+             FP8    1170.2     4.6      827ms     13974ms
+            INT4    1069.9     4.2     1141ms     15273ms
+         INT4_35     514.5     2.0     7275ms     31128ms
+
+  SINGLE-STREAM LATENCY (T=0, 30 prompts)
+         Variant     tok/s      TTFT       E2EL
+            BF16      66.0       40ms      3411ms
+     SPEC_DECODE     151.2       85ms      1489ms
+             FP8      63.5       47ms      3359ms
+            INT4      56.8       63ms      3771ms
+         INT4_35      15.9      244ms     13509ms

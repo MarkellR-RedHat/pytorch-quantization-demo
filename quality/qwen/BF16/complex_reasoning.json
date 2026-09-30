@@ -1,0 +1,21 @@
+{
+  "variant": "BF16",
+  "model": "qwen-bf16",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "complex_reasoning",
+  "prompt": "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left? Explain your reasoning step by step.",
+  "temperature": 0,
+  "response_text": "To determine how many sheep the farmer has left, we need to carefully analyze the phrasing of the problem.\n\n### Step-by-Step Reasoning\n\n1.  **Identify the initial quantity**:\n    The farmer starts with **17** sheep.\n\n2.  **Analyze the condition \"All but 9 run away\"**:\n    The phrase \"all but $X$\" is a common idiom that means \"everyone except $X$.\"\n    *   \"All\" refers to the entire group of 17 sheep.\n    *   \"But 9\" means we exclude 9 sheep from the group that runs away.\n    *   Therefore, the sheep that **run away** are $17 - 9 = 8$ sheep.\n    *   The sheep that **do not** run away (i.e., the ones that stay) are the 9 sheep mentioned in the exception.\n\n3.  **Determine the remaining quantity**:\n    The question asks how many sheep the farmer has **left**.\n    *   The sheep that ran away are no longer with the farmer.\n    *   The sheep that did not run away are still with the farmer.\n    *   Since \"all but 9\" ran away, it implies that **9** sheep remained.\n\n### Common Misconception\nA common mistake is to interpret the sentence as \"9 sheep ran away,\" which would lead to the calculation $17 - 9 = 8$. However, the phrase \"all but 9\" specifically identifies the 9 sheep as the ones that *stayed*, not the ones that left.\n\n### Conclusion\n\nThe farmer has **9** sheep left.",
+  "usage": {
+    "prompt_tokens": 43,
+    "total_tokens": 399,
+    "completion_tokens": 356
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 414.2,
+  "total_ms": 5751.5,
+  "tokens_per_second": 61.9,
+  "captured_at": "2026-09-30T03:01:34-04:00"
+}

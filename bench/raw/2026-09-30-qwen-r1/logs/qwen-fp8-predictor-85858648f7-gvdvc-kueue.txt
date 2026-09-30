@@ -1,0 +1,1 @@
+pod-qwen-fp8-predictor-85858648f7-gvdvc-e14bc admitted-by=<namespace> flavors={"cpu":"h200","memory":"h200","nvidia.com/mig-3g.71gb":"h200"}

@@ -1,0 +1,21 @@
+{
+  "variant": "INT4_35",
+  "model": "qwen-int4-35gb",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache in a transformer LLM to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "Welcome to the team! Let\u2019s demystify the **KV Cache**, one of the most critical components for making Large Language Models (LLMs) efficient.\n\nTo understand why we need it, you first need to understand how Transformers generate text. They are **autoregressive**, meaning they generate one token at a time. To predict the next word, the model needs to look at all previous words in the sequence. In a standard Transformer, this involves computing **Attention** between the current token and every previous token.\n\nHere\u2019s the problem: If you generate a sentence of 100 tokens, and then a 101st token, a naive approach would require recalculating the attention scores for *all* 100 previous tokens against the new one. As the sequence grows, this becomes computationally expensive and redundant because the relationships between the first 100 tokens haven\u2019t changed.\n\nThis is where the **KV Cache** comes in.\n\nIn the Attention mechanism, each token is transformed into three vectors: **Query (Q)**, **Key (K)**, and **Value (V)**.\n*   **Query**: Represents what the current token is looking for.\n*   **Key**: Represents what information a previous token offers.\n*   **Value**: The actual content or data associated with that token.\n\nThe **KV Cache** is a memory buffer that stores the **Key** and **Value** vectors for all previously processed tokens.\n\n**How it works:**\n1.  **Prefill Phase**: When the user inputs a prompt (e.g., \"Hello, how are you?\"), the model processes all tokens in parallel. It computes the K and V vectors for each token and stores them in the cache.\n2.  **Decoding Phase**: When generating the next token (e.g., \"I\"), the model only computes the **Query** vector for this new token. It then uses this single Query to attend to the **cached** Keys and Values of all previous tokens.\n\n**Why is this important?**\n*   **Speed**: It reduces the computational complexity from quadratic $O(n^2)$ to linear $O(n)$ per step during generation. You avoid recalculating K and V for past tokens.\n*   **Efficiency**: It allows the GPU to focus its power on the new token rather than reprocessing the entire history.\n\n**The Trade-off:**\nThe downside is **memory usage**. The KV Cache grows linearly with the sequence length and the number of layers. For long contexts, this can consume significant VRAM, which is why techniques like **Quantization** or **Sliding Window Attention** are often used to manage memory constraints.\n\nIn short, the KV Cache is the model\u2019s \"memory\" of past context, allowing it to generate text quickly without re-reading its own history from scratch every time.",
+  "usage": {
+    "prompt_tokens": 34,
+    "total_tokens": 625,
+    "completion_tokens": 591
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 520.6,
+  "total_ms": 37932.8,
+  "tokens_per_second": 15.6,
+  "captured_at": "2026-09-30T10:29:16-04:00"
+}

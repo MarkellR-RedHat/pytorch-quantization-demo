@@ -51,12 +51,15 @@ _FINAL_ANSWER = (
     r"answer is\D{0,12}?(\d+)",
     r"(?:has|have|left with|still has|remain(?:s|ing)?)\D{0,25}?(\d+)\s+sheep",
     r"(\d+)\s+sheep\s+(?:left|remain)",
+    r"sheep left\s*=\s*(\d+)",
 )
 
 
 def sheep_verdict(text: str) -> bool:
     """Correct iff the last stated answer is 9 ("the farmer has 9 sheep left", "the answer is 9").
-    Falls back to the first sentence's last number when the answer isn't phrased either way."""
+    Falls back to the first sentence's last number when the answer isn't phrased either way.
+    Markdown emphasis around the number ("**9** sheep") is stripped first."""
+    text = re.sub(r"[*_`]+", "", text)
     hits = sorted((m.start(), m.group(1)) for p in _FINAL_ANSWER for m in re.finditer(p, text, flags=re.I))
     if hits:
         return hits[-1][1] == "9"

@@ -1,0 +1,1 @@
+pod-qwen-int4-predictor-5d5c69c57b-qcrcc-e52ef   reserved   <namespace>   True         4m12s

@@ -1,0 +1,1 @@
+pod-qwen-fp8-predictor-5446d888bb-r9nmt-57db4   reserved   <namespace>   True         26m

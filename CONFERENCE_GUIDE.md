@@ -49,40 +49,25 @@ The exact wording lives in `app/quality.py` (`PROMPTS`), and `scripts/capture_pr
 | `/` | Jump to the question box |
 | `Enter` | Send the question to every setup |
 | `R` | Switch every column between live models and replay |
-| `Q` | Switch tracks (Llama 3.1 70B, Qwen3.8-27B) once both have data |
+| `Q` | Switch tracks (Llama 3.1 70B, Qwen3.8-27B) |
 | `T` | Light or dark theme |
 | `F` | Full screen |
 
-## The plan: five H200s
+## The plan
 
-| Setup | On the day |
-|---|---|
-| BF16, tensor parallel 2 | 2x H200, live |
-| Speculative decoding, tensor parallel 2 | 2x H200, live |
-| FP8 | 1x H200, live |
-| INT4 | not deployed: the column plays the Oct 19 recordings (`MODEL_INT4_MODE=recorded`), labeled "Recorded <date>", and the corner badge says so |
+Two tracks in one app; `Q` switches between them. Nothing gets re-run or re-recorded: the numbers and the recordings in the repo are final. On the day the only steps are bring the endpoints up, run preflight, present live, and let a column fall back to its recording if a request fails.
 
-FP8 needs the full GPU; INT4, if it were live, would fit a 71 GB MIG slice (untested), which would leave the full GPUs for other people's work. The sizing table is in the README.
+| Track | Setup | On the day |
+|---|---|---|
+| Llama 3.1 70B | BF16, tensor parallel 2 | 2× H200, live |
+| | Speculative decoding, tensor parallel 2 | 2× H200, live |
+| | FP8 | 1× H200, live |
+| | INT4 | recorded by plan (`MODEL_INT4_MODE=recorded`) from `quality/INT4_RH/`, labeled "Recorded Sep 29"; the badge says so |
+| Qwen3.8-27B | all four | recorded by plan from `quality/qwen/` (the default for every `QWEN_MODEL_<VARIANT>_MODE`), labeled "Recorded Sep 30" |
 
-### Oct 19: final testing and fresh recordings
+That is the five H200s booked. If a sixth H200 and two 71 GB MIG slices are free that morning, the Qwen track goes live on three columns with the second `.env` below (MTP on the H200, FP8 and INT4 on the slices; BF16 stays recorded, since its H200 is the one MTP uses). FP8 on the Llama track needs a full GPU; the sizing tables are in the README.
 
-Re-record every preset from the day's deployments, so the answers the fallback and the INT4 column play are warm and from the exact models on stage. INT4 borrows the fifth GPU first:
-
-1. Deploy BF16, spec decode and INT4 with `kubernetes/models/isvc-bf16-tp2.yaml`, `isvc-spec-decode.yaml` and `isvc-int4-rh.yaml` (`oc apply -n <namespace>`). Wait until all three are Ready, then warm each up (`python scripts/preflight.py` sends the warm-ups).
-2. With the port-forwards up, record INT4, which writes straight into `quality/INT4_RH/`:
-   ```bash
-   python3 scripts/capture_presets.py INT4_RH http://localhost:18002/v1/chat/completions benchmark-int4-rh
-   ```
-3. Delete the INT4 InferenceService, deploy FP8 with `isvc-fp8.yaml` on the freed GPU, wait for Ready, warm it up.
-4. Record the three live setups:
-   ```bash
-   python3 scripts/capture_presets.py BF16        http://localhost:18001/v1/chat/completions benchmark-bf16
-   python3 scripts/capture_presets.py SPEC_DECODE http://localhost:18003/v1/chat/completions benchmark-spec
-   python3 scripts/capture_presets.py FP8         http://localhost:18004/v1/chat/completions benchmark-fp8
-   ```
-5. `python scripts/preflight.py` with the day-of `.env` (INT4 passes on its recordings alone), then commit `quality/`.
-
-About 5 minutes per setup. If the day runs short, the Sep 29 recordings already in `quality/` are acceptable, all except "Explain KV cache": that prompt was reworded on Sep 30 (to say "in a transformer LLM", because every setup had explained a generic key-value store) and has no recording until this step, so preflight fails it on purpose. The Sep 29 evening recording of the sheep riddle on spec decode was a cold first request, so `quality/` plays the afternoon capture of the same answer (paced at the benchmark speed, labeled so) until this step replaces it. In replay, and for a recorded-by-plan setup, a preset button is only offered when every setup on screen has a recording for it.
+In replay, and for a column recorded by plan, a preset button is offered only when every column on screen has a recording for it. The Llama track offers seven: its "Explain KV cache" prompt was reworded after the Sep 29 run and has no Llama recording, so the button appears only while all four Llama columns are live. The Qwen track offers all eight. The Llama spec decode column's sheep riddle recording is the afternoon capture of the same answer (the evening one was a cold first request), paced at the benchmark speed and labeled so.
 
 ### The day before
 
@@ -91,6 +76,7 @@ About 5 minutes per setup. If the day runs short, the Sep 29 recordings already 
   ```bash
   SIMULATION_MODE=false
   PRESENTER_KEY=<a long random string>
+  TRACK=llama
   MODEL_BF16_ENDPOINT=http://localhost:18001/v1/chat/completions
   MODEL_BF16_NAME=benchmark-bf16
   MODEL_SPEC_DECODE_ENDPOINT=http://localhost:18003/v1/chat/completions
@@ -99,18 +85,31 @@ About 5 minutes per setup. If the day runs short, the Sep 29 recordings already 
   MODEL_FP8_NAME=benchmark-fp8
   MODEL_INT4_MODE=recorded
   MODEL_INT4_CAPTURES=INT4_RH
+  # the Qwen track: every column recorded, nothing else needed
+  ```
+- The second `.env`, only if a sixth H200 and two 71 GB slices are free that morning: deploy `kubernetes/models/qwen/isvc-qwen-mtp.yaml`, `isvc-qwen-fp8.yaml` and `isvc-qwen-int4.yaml`, port-forward them to 18012, 18013 and 18014, and add:
+  ```bash
+  QWEN_MODEL_SPEC_DECODE_ENDPOINT=http://localhost:18012/v1/chat/completions
+  QWEN_MODEL_SPEC_DECODE_NAME=qwen-mtp
+  QWEN_MODEL_SPEC_DECODE_MODE=live
+  QWEN_MODEL_FP8_ENDPOINT=http://localhost:18013/v1/chat/completions
+  QWEN_MODEL_FP8_NAME=qwen-fp8
+  QWEN_MODEL_FP8_MODE=live
+  QWEN_MODEL_INT4_ENDPOINT=http://localhost:18014/v1/chat/completions
+  QWEN_MODEL_INT4_NAME=qwen-int4
+  QWEN_MODEL_INT4_MODE=live
   ```
 - The laptop opened `http://localhost:8000/presenter?key=<value>` once, so the Ask box works
-- One typed question and all eight presets answered live
+- One typed question and every preset answered on both tracks (`Q` to switch)
 - The backup, the same app behind an OpenShift Route (README, Deploy), is up with the same values
 - `/presenter?mode=sim` tested as the fallback
 - Backup video recorded and on a USB drive
 
 ### 30 minutes before
 
-- `python scripts/preflight.py` from the repo root with the same `.env` as the app. For each setup it checks that `/v1/models` lists the served name and a 1-token completion answers, sends 3 warm-up requests so the first live answer isn't cold, and confirms every preset has a recording. It prints what the corner badge will say and one PASS/FAIL table, and exits 1 on any FAIL. It needs no cluster login.
+- `python scripts/preflight.py` from the repo root with the same `.env` as the app. For every track with data and every setup on it, it checks that `/v1/models` lists the served name and a 1-token completion answers, sends 3 warm-up requests so the first live answer isn't cold, and confirms every preset has a recording; a setup recorded by plan passes on its recordings alone, so a fully recorded Qwen track passes. It prints what the corner badge will say on each track and one PASS/FAIL table, and exits 1 on any FAIL. It needs no cluster login.
 - Port-forwards (or VPN) up, app started, `http://localhost:8000/presenter` full screen (`F`)
-- The badge in the top right says "Live: BF16, FP8, Spec Decode · Recorded: INT4 (Red Hat W4A16)"
+- The badge in the top right says "Llama 70B · Live: BF16, FP8, Spec Decode · Recorded: INT4 (Red Hat W4A16)", and after `Q`, "Qwen 27B · Recorded: BF16, FP8, INT4 (LLM Compressor W4A16), Spec Decode"
 - Notifications off, other apps closed
 
 ## If something goes wrong
@@ -123,7 +122,7 @@ About 5 minutes per setup. If the day runs short, the Sep 29 recordings already 
 
 **The laptop app breaks:** open the backup Route (`https://<route>/presenter?key=<value>`) in the same browser; same code, same recordings. If the venue network is bad, stay on the laptop: fonts and everything else are bundled, and `R` plays the recordings.
 
-**Nobody calls out a question:** use the eight preset buttons. Sheep riddle and Logic puzzle go to BF16, the four everyday ones to FP8, Python function and Explain KV cache to Spec Decode.
+**Nobody calls out a question:** use the preset buttons. Sheep riddle and Logic puzzle go to BF16, the four everyday ones to FP8, Python function (and, on the Qwen track, Explain KV cache) to Spec Decode.
 
 **Everything fails:** play the backup video from the USB drive, narrate over it, and move to Q&A.
 

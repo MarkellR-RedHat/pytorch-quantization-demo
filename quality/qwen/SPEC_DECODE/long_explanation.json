@@ -1,0 +1,21 @@
+{
+  "variant": "SPEC_DECODE",
+  "model": "qwen-mtp",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache in a transformer LLM to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "In a Transformer-based Large Language Model (LLM), the **KV Cache** is a critical optimization technique used during the autoregressive generation of text. To understand why it exists, you first need to understand how attention works.\n\nWhen the model generates a new token, it must compute the attention mechanism for that token against all previous tokens in the sequence. This involves calculating the dot product between the current token\u2019s **Query (Q)** vector and the **Key (K)** vectors of all preceding tokens, followed by a weighted sum of their **Value (V)** vectors.\n\nWithout the KV Cache, generating the $n$-th token would require recalculating the Key and Value vectors for all $n-1$ previous tokens from scratch. Since the Key and Value vectors for a given token depend only on that token\u2019s input and its position in the sequence (via positional encoding), they remain constant once computed. Recalculating them is redundant and computationally expensive, leading to quadratic time complexity relative to the sequence length.\n\nThe KV Cache solves this by storing the computed Key and Value vectors for all previously generated tokens in a dedicated memory buffer. When the model generates the next token, it only needs to compute the Q, K, and V for that single new token. It then appends the new K and V vectors to the existing cache. The attention calculation for the new token uses its fresh Q vector against the entire history of cached K vectors, and combines the results using the cached V vectors.\n\nThis reduces the computational complexity of each generation step from $O(n^2)$ to $O(n)$, where $n$ is the sequence length. While this significantly speeds up inference, it comes with a memory trade-off. The cache size grows linearly with the sequence length and the number of layers, which can become a bottleneck for long contexts or large batch sizes. Consequently, modern LLMs often employ techniques like quantization, sliding window attention, or paged attention to manage KV Cache memory efficiently.\n\nIn summary, the KV Cache is a space-for-time optimization that stores historical Key and Value vectors to avoid redundant calculations, enabling faster and more efficient text generation in Transformer models.",
+  "usage": {
+    "prompt_tokens": 34,
+    "total_tokens": 480,
+    "completion_tokens": 446
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 408.7,
+  "total_ms": 3705.6,
+  "tokens_per_second": 120.4,
+  "captured_at": "2026-09-30T09:28:06-04:00"
+}

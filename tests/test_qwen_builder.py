@@ -1,6 +1,5 @@
-"""The Qwen builder against a synthetic results-qwen/ in the agreed layout, so the real import is a drop-in.
-The INT4 card is the 35 GB slice: speed, load numbers and recordings from INT4_35, accuracy from the same
-checkpoint on the 71 GB slice, and that run kept under the card as the like-for-like line against FP8."""
+"""The Qwen builder against a synthetic results-qwen/ in the delivered layout, so its rules (pod choice,
+eager mode, overlaps, exclusions, any K, per-H200 arithmetic) are pinned independently of the real files."""
 
 import importlib.util
 import json
@@ -27,6 +26,10 @@ def load_module(name):
 def built(tmp_path_factory):
     raw = qwen_synthetic.write(tmp_path_factory.mktemp("results-qwen"))
     builder = load_module("build_qwen_file")
+    # the builder names the real run's pods; the synthetic run has one pod per setup
+    for key, spec in builder.SETUPS.items():
+        spec["pod"] = f"{qwen_synthetic.SETUPS[key][0]}-predictor-abc12-xyz34"
+    builder.INT4_35["pod"] = f"{qwen_synthetic.SETUPS['INT4_35'][0]}-predictor-abc12-xyz34"
     return raw, builder.build(raw)
 
 
@@ -35,21 +38,19 @@ def test_four_setups_with_devices(built):
     v = out["variants"]
     assert list(v) == ["BF16", "FP8", "INT4", "SPEC_DECODE"]
     assert v["BF16"]["device"] == {"name": "H200", "count": 1, "per_h200": 1}
-    assert v["FP8"]["device"] == {"name": "71 GB slice", "count": 1, "per_h200": 2}
-    assert v["INT4"]["device"] == {"name": "35 GB slice", "count": 1, "per_h200": 3}
-    assert v["INT4"]["gpus"] == 1
+    assert v["FP8"]["device"] == v["INT4"]["device"] == {"name": "71 GB slice", "count": 1, "per_h200": 2}
+    assert v["INT4"]["int4_35"]["device"] == {"name": "35 GB slice", "count": 1, "per_h200": 3}
     assert out["vllm_version"] == "0.24.0+rhaiv.13" and out["transformers_version"] == "5.16.1"
     assert out["thinking"].startswith("thinking: off; off server-side in every pod")
-    assert out["variants"]["FP8"]["thinking_in_server_args"] is False
-    assert "Thinking mode: thinking: off; off server-side" in out["notes"]
+    assert out["date"] == "2026-10-02"
 
 
 def test_numbers_trace_to_the_files(built):
     raw, out = built
-    for key, folder in (("BF16", "BF16"), ("FP8", "FP8"), ("INT4", "INT4_35")):
-        single = json.loads((raw / "sweeps" / folder / "single-t0.json").read_text())
+    for key in ("BF16", "FP8", "INT4"):
+        single = json.loads((raw / "sweeps" / key / "single-t0.json").read_text())
         assert out["variants"][key]["throughput_tps"] == round(single["output_throughput"], 1)
-        assert out["variants"][key]["sweep_dir"] == out["variants"][key]["captures_dir"] == folder
+        assert out["variants"][key]["sweep_dir"] == out["variants"][key]["captures_dir"] == key
     assert out["variants"]["SPEC_DECODE"]["speed_vs_baseline"] == 1.3
     assert out["variants"]["BF16"]["weights_gib_per_gpu"] == 51.89
     assert out["variants"]["BF16"]["kv_cache_tokens"] == 403613
@@ -58,6 +59,15 @@ def test_numbers_trace_to_the_files(built):
     digest = out["variants"]["BF16"]["image_digest"]
     assert digest.startswith("registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:c056e6")
     assert "'max_model_len': 32768" in out["variants"]["BF16"]["non_default_args"]
+    assert out["variants"]["BF16"]["pod"] == "qwen-bf16-predictor-abc12-xyz34"
+
+
+def test_eager_mode_is_read_from_each_pod(built):
+    _raw, out = built
+    v = out["variants"]
+    assert not v["INT4"]["enforce_eager"] and v["INT4"]["cuda_graphs_captured"]
+    assert v["INT4"]["int4_35"]["enforce_eager"] and not v["INT4"]["int4_35"]["cuda_graphs_captured"]
+    assert out["eager_devices"] == ["35 GB slice"]
 
 
 def test_per_h200_is_separate_and_labeled(built):
@@ -67,47 +77,61 @@ def test_per_h200_is_separate_and_labeled(built):
         "slices": 1, "throughput_tps": 60.0, "note": "one full H200, the measured number",
     }
     assert v["FP8"]["per_h200"]["throughput_tps"] == round(2 * v["FP8"]["throughput_tps"], 1)
-    assert v["INT4"]["per_h200"]["throughput_tps"] == round(3 * v["INT4"]["throughput_tps"], 1)
-    assert "not a measurement" in v["INT4"]["per_h200"]["note"]
+    assert v["INT4"]["int4_35"]["per_h200"]["throughput_tps"] == round(3 * 40.0, 1)
+    assert "not a measurement" in v["FP8"]["per_h200"]["note"]
     assert "not a measurement" in out["per_h200_note"]
-    assert "measured" not in v["INT4"]["per_h200"]  # nothing ran two 35 GB slices together
-    # FP8 ran on two slices of one card at 32 each: that point is a measurement and is labeled so
-    m = v["FP8"]["per_h200"]["measured"]
-    assert m["concurrency_per_slice"] == 32 and m["slices_loaded"] == 2
-    assert m["output_tokens_per_second"] == round(2 * 950 * 0.93, 1) and "measured" in m["note"]
-    assert m["files"] == ["sweeps/FP8/c32-two-slices-a.json", "sweeps/FP8/c32-two-slices-b.json"]
-    assert v["INT4"]["speed_vs_baseline"] == round(40.0 / 60.0, 3)  # per device, never the ×3 figure
+    assert v["INT4"]["speed_vs_baseline"] == round(52.0 / 60.0, 3)  # per device, never the x2 figure
 
 
-def test_int4_card_accuracy_from_the_71gb_run_with_that_run_as_a_footnote(built):
+def test_excluded_runs_carry_their_reason(built):
     _raw, out = built
     v = out["variants"]
-    int4, foot = v["INT4"], v["INT4"]["int4_71"]
-    assert int4["accuracy"]["gsm8k"]["task"] == "gsm8k_cot" and int4["accuracy"]["gsm8k"]["questions"] == 1319
-    assert int4["accuracy"]["mmlu_pro"]["questions"] == 280 and int4["accuracy"]["mmlu_pro"]["subjects"] == 14
-    assert "property of the checkpoint" in int4["accuracy_note"]
-    assert foot["device"] == {"name": "71 GB slice", "count": 1, "per_h200": 2}
-    assert foot["throughput_tps"] == 52.0
-    assert foot["speed_vs_baseline"] == round(52.0 / 60.0, 3)
-    assert foot["accuracy"] == int4["accuracy"]  # the run the evals actually ran on
-    assert "c64-failed.txt" in int4["sweep_note"] and "sharegpt-c64-failed.txt" in int4["sweep_note"]
-    assert "sweep_note" not in foot and "accuracy" not in v["SPEC_DECODE"]
-    assert int4["build"].startswith("Red Hat's LLM Compressor W4A16 build")
+    for key in ("BF16", "INT4"):
+        assert v[key]["at_temperature_0_7"] is None and v[key]["speed_vs_baseline_t0_7"] is None
+        assert v[key]["excluded_runs"][0]["file"] == f"sweeps/{key}/single-t0.7.json"
+        assert "MMLU-Pro eval" in v[key]["excluded_runs"][0]["reason"]
+    assert v["FP8"]["at_temperature_0_7"]["throughput_tps"] == 60.5
+    assert "excluded_runs" not in v["FP8"]
 
 
-def test_mtp_acceptance_per_temperature_and_k(built):
+def test_overlapping_runs_are_annotated(built):
+    _raw, out = built
+    runs = out["variants"]["FP8"]["sweep_runs"]
+    assert runs["c64.json"]["overlapped_with"] == [{"file": "sharegpt-c64.json", "concurrency": 64}]
+    assert runs["sharegpt-c64.json"]["overlapped_with"] == [{"file": "c64.json", "concurrency": 64}]
+    clean = [n for n, r in runs.items() if not r["overlapped_with"]]
+    assert len(clean) == len(runs) - 2
+    assert out["variants"]["FP8"]["overlap_note"].startswith("2 of 12 runs shared the pod")
+    assert "overlap_note" not in out["variants"]["BF16"]
+
+
+def test_int4_35_is_the_footnote_with_a_failed_point_kept(built):
+    _raw, out = built
+    v = out["variants"]
+    foot = v["INT4"]["int4_35"]
+    acc = v["INT4"]["accuracy"]
+    assert acc["gsm8k"]["task"] == "gsm8k_cot" and acc["gsm8k"]["questions"] == 1319
+    assert acc["mmlu_pro"]["questions"] == 280 and acc["mmlu_pro"]["subjects"] == 14
+    assert "accuracy" not in foot and "accuracy" not in v["SPEC_DECODE"]
+    assert foot["throughput_tps"] == 40.0 and foot["speed_vs_baseline"] == round(40.0 / 60.0, 3)
+    assert "c64-failed.txt" in foot["sweep_note"] and "sharegpt-c64-failed.txt" in foot["sweep_note"]
+    assert "eager mode" in foot["note"] and foot["build"].startswith("Red Hat's LLM Compressor W4A16 build")
+
+
+def test_mtp_acceptance_per_temperature_and_any_k(built):
     _raw, out = built
     spec = out["variants"]["SPEC_DECODE"]
     assert spec["spec_method"] == "mtp" and spec["spec_tokens_from_log"] == 4
     acc = spec["acceptance"]
-    assert set(acc) == {"t0-k1", "t0-k2", "t0-k4", "t0.7-k4", "t0-k8"}  # any K the run made, 8 included
+    assert set(acc) == {"t0-k1", "t0-k2", "t0-k4", "t0.7-k4", "t0-k8"}
     assert spec["spec_tokens_measured"] == [1, 2, 4, 8]
-    assert acc["t0-k8"]["rate"] == 0.55 and len(acc["t0-k8"]["accepted_per_position"]) == 8
-    assert spec["throughput_tps_k8"]
     assert acc["t0-k4"]["rate"] == 0.72 and acc["t0-k4"]["mean_acceptance_length"] == round(1 + 0.72 * 4, 2)
-    assert acc["t0-k1"]["rate"] == 0.9 and acc["t0.7-k4"]["rate"] == 0.64
+    assert acc["t0-k1"]["rate"] == 0.9 and acc["t0.7-k4"]["rate"] == 0.64 and acc["t0-k8"]["rate"] == 0.55
     assert len(acc["t0-k4"]["accepted_per_position"]) == 4
-    assert spec["draft_acceptance_rate"] == 0.72 and spec["throughput_tps_k1"] and spec["throughput_tps_k2"]
+    assert len(acc["t0-k8"]["accepted_per_position"]) == 8
+    assert acc["t0-k4"]["accepted_per_position"][0] == 0.72
+    assert spec["draft_acceptance_rate"] == 0.72
+    assert spec["throughput_tps_k1"] and spec["throughput_tps_k2"] and spec["throughput_tps_k8"]
 
 
 def test_counters_with_unknown_names_are_kept_raw(tmp_path):
@@ -120,7 +144,7 @@ def test_counters_with_unknown_names_are_kept_raw(tmp_path):
     assert got == {"spec_tokens": 4, "counters": {"something_new_total": 5}}
 
 
-def test_the_track_goes_ready_once_the_built_file_and_captures_exist(built, tmp_path, monkeypatch):
+def test_the_track_serves_the_built_file(built, tmp_path, monkeypatch):
     raw, out = built
     bench = tmp_path / "benchmark_results.qwen.json"
     bench.write_text(json.dumps(out))
@@ -132,25 +156,42 @@ def test_the_track_goes_ready_once_the_built_file_and_captures_exist(built, tmp_
         body = client.get("/api/config").json()
         assert body["track"]["status"] == "ready"
         int4 = next(v for v in body["variants"] if v["key"] == "INT4")
-        assert int4["label"] == "INT4 (LLM Compressor W4A16)" and int4["device"]["name"] == "35 GB slice"
+        assert int4["label"] == "INT4 (LLM Compressor W4A16)" and int4["device"]["name"] == "71 GB slice"
         assert int4["build"] == build_note("INT4")
         assert int4["build"] == "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ)"
         bm = body["benchmark"]
         assert bm["variants"]["INT4"]["label"] == "INT4 (LLM Compressor W4A16)"
-        assert bm["variants"]["FP8"]["device"]["name"] == "71 GB slice"
-        assert bm["variants"]["FP8"]["slices_per_h200"] == 2
-        assert bm["variants"]["INT4"]["int4_71"]["device"]["name"] == "71 GB slice"
-        # the INT4 card's load numbers are the 35 GB run's: c=32 is the last point under 50 ms, 480 tok/s
-        # per slice, and c=64 failed on the slice
-        best = bm["at_target"]["INT4"]
-        assert best["output_tokens_per_second_per_gpu"] == 480.0
-        assert best["output_tokens_per_second_per_h200"] == 1440.0 and best["slices_per_h200"] == 3
-        assert bm["load"]["INT4"][-1]["concurrency"] == 32
-        last = bm["load"]["BF16"][-1]
-        assert last["output_tokens_per_second_per_h200"] == last["output_tokens_per_second_per_gpu"]
-        # and its recordings come from captures/INT4_35
-        assert settings.captures_for("INT4") == "INT4_35"
+        assert bm["variants"]["INT4"]["int4_35"]["device"]["name"] == "35 GB slice"
+        assert bm["variants"]["INT4"]["int4_35"]["enforce_eager"] is True
+        # per slice on the cards, per H200 as labeled arithmetic beside it
+        best = bm["at_target"]["INT4"]  # c=64, the synthetic INT4's last point under 50 ms
+        assert best["output_tokens_per_second_per_gpu"] == 980.0
+        assert best["output_tokens_per_second_per_h200"] == 1960.0
+        assert best["slices_per_h200"] == 2 and best["lower_bound"] is False
+        # FP8's c64 shared its pod with the ShareGPT run: hollow on the chart, and the target line
+        # prefers the clean c32 point
+        fp8 = {p["concurrency"]: p for p in bm["load"]["FP8"]}
+        assert fp8[64]["overlapped_with"] == [{"file": "sharegpt-c64.json", "concurrency": 64}]
+        assert fp8[32]["overlapped_with"] == [] and bm["at_target"]["FP8"]["concurrency"] == 32
+        assert settings.captures_for("INT4") == "INT4"
         stream = client.post("/ask/INT4", json={"preset": "puzzle"}).text
         assert "Monday" in stream
+        assert len(body["presets"]) == 8  # every preset is recorded on this track
     tracks.select("llama")
     assert settings.captures_for("INT4") == "INT4_RH" and variant_label("INT4") == "INT4 (Red Hat W4A16)"
+
+
+def test_a_lower_bound_wins_only_when_nothing_clean_is_under_target():
+    from app.benchmark import at_target
+
+    shared = [{"file": "sharegpt-c8.json", "concurrency": 8}]
+
+    def point(c, tps, tail, overlapped):
+        return {"concurrency": c, "output_tokens_per_second_per_gpu": tps, "tpot_tail_ms": tail,
+                "tpot_tail_kind": "p95", "overlapped_with": overlapped}
+
+    pts = [point(8, 300.0, 20.0, shared), point(32, 800.0, 40.0, shared), point(64, 900.0, 70.0, [])]
+    best = at_target(pts, 50)
+    assert best["concurrency"] == 32 and best["lower_bound"] is True and best["overlapped_with"] == shared
+    pts[0]["overlapped_with"] = []
+    assert at_target(pts, 50)["concurrency"] == 8  # the clean point wins even though it's smaller

@@ -3,12 +3,14 @@
 
     python scripts/preflight.py
 
-For every setup the app would show, it checks the endpoint (/v1/models lists the served name, and a
-1-token completion answers), sends 3 warm-up requests so the first live answer on stage isn't cold,
-and confirms every preset has a recording to fall back on. A setup switched to recorded
-(MODEL_<VARIANT>_MODE=recorded) skips the endpoint checks and passes only if every preset is recorded.
-It ends with what the corner badge will say and one PASS/FAIL table, and exits 1 if anything failed.
-It needs no cluster credentials, only the endpoints in .env.
+For every track that has data, and every setup the app would show on it, it checks the endpoint
+(/v1/models lists the served name, and a 1-token completion answers), sends 3 warm-up requests so the
+first live answer on stage isn't cold, and confirms every preset has a recording to fall back on. A
+setup switched to recorded (MODEL_<VARIANT>_MODE=recorded, or QWEN_MODEL_<VARIANT>_MODE on the Qwen
+track, its default) skips the endpoint checks and passes only if every preset is recorded, so a fully
+recorded track passes on its recordings alone. It ends with what the corner badge will say on each
+track and one PASS/FAIL table, and exits 1 if anything failed. It needs no cluster credentials, only
+the endpoints in .env.
 """
 
 import sys
@@ -19,9 +21,12 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from app import tracks  # noqa: E402
 from app.ask import PRESETS  # noqa: E402
 from app.config import ALL_VARIANTS, settings, variant_label  # noqa: E402
 from app.quality import recorded_answer  # noqa: E402
+
+tracks.select_from_settings()  # the track in .env: its recordings, labels and captures folders
 
 WARMUPS = 3
 WARMUP_PROMPT = "Say hello in five words."
@@ -29,7 +34,7 @@ WARMUP_PROMPT = "Say hello in five words."
 
 def configured_variants() -> list[str]:
     """The setups the dashboard shows: the base three, plus FP8 when it has an endpoint or is recorded."""
-    fp8 = bool(settings.model_fp8_endpoint) or settings.mode_for("FP8") == "recorded"
+    fp8 = bool(settings.endpoint_for("FP8")) or settings.mode_for("FP8") == "recorded"
     return [k for k in ALL_VARIANTS if k != "FP8" or fp8]
 
 
@@ -46,10 +51,11 @@ def models_url(endpoint: str) -> str:
 
 def check_recordings(key: str) -> tuple[str, str]:
     captures = settings.captures_for(key)
+    where = tracks.active()._setting("quality_dir")
     missing = [label for scenario, label in PRESETS.values() if recorded_answer(captures, scenario) is None]
     if missing:
-        return "FAIL", f"no recording in quality/{captures}/ for: {', '.join(missing)}"
-    return "PASS", f"all {len(PRESETS)} presets recorded in quality/{captures}/"
+        return "FAIL", f"no recording in {where}/{captures}/ for: {', '.join(missing)}"
+    return "PASS", f"all {len(PRESETS)} presets recorded in {where}/{captures}/"
 
 
 def check_build(key: str) -> tuple[str, str] | None:
@@ -126,11 +132,26 @@ def run(client: httpx.Client) -> list[tuple[str, str, str, str]]:
     return rows
 
 
+def run_all(client: httpx.Client) -> list[tuple[str, str, str, str]]:
+    """Every track with data, one after the other, the setup column naming the track when there's more
+    than one. The track the app starts on is checked first and left selected."""
+    ready = [t for t in tracks.TRACKS.values() if t.status == "ready"]
+    start = tracks.active()
+    ordered = [start] + [t for t in ready if t is not start]
+    rows = []
+    for track in ordered:
+        tracks.select(track.key)
+        prefix = f"{track.short}: " if len(ready) > 1 else ""
+        rows += [(prefix + setup, check, result, detail) for setup, check, result, detail in run(client)]
+    tracks.select(start.key)
+    return rows
+
+
 def main() -> int:
     token = settings.openshift_ai_token
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     with httpx.Client(timeout=30.0, headers=headers) as client:
-        rows = run(client)
+        rows = run_all(client)
     widths = [max(len(r[i]) for r in rows + [("Setup", "Check", "Result", "Detail")]) for i in range(3)]
     print(f"{'Setup':{widths[0]}}  {'Check':{widths[1]}}  {'Result':{widths[2]}}  Detail")
     for setup, check, result, detail in rows:

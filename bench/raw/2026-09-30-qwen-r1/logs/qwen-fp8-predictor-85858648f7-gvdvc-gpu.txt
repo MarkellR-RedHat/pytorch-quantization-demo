@@ -1,0 +1,5 @@
+{"limits":{"nvidia.com/mig-3g.71gb":"1"},"requests":{"cpu":"4","memory":"32Gi","nvidia.com/mig-3g.71gb":"1"}}
+GPU 0: NVIDIA H200 (UUID: GPU-89972fce-b3a0-ee6c-1e01-bd39ffb62e2e)
+  MIG 3g.71gb     Device  0: (UUID: MIG-cabb10f8-3fed-5dc9-a33a-71167e9e1217)
+name, memory.total [MiB], memory.used [MiB]
+NVIDIA H200, [Insufficient Permissions], [Insufficient Permissions]

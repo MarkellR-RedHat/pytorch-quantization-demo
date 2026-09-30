@@ -1,0 +1,1 @@
+pod-qwen-mtp-predictor-67986cf5bf-47s94-6273a         reserved   <namespace>   True         22m
