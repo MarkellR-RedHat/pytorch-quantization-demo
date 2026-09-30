@@ -275,10 +275,10 @@ def build_round1(raw: Path = ROUND1) -> dict:
         "notes": (
             "Round 1, the afternoon of Sep 29: 5 requests per setup, one at a time, temperature 0, 256 "
             "output tokens each, through a port-forward from a laptop, so latencies include that network "
-            "hop. The raw files don't record the prompt. Spec Decode's 64.9 tok/s (about 1.4x BF16) came "
-            "from this one prompt and its first run was cold; round 2's 30 ShareGPT prompts give 1.25x, the "
-            "number used everywhere. Acceptance counters here are cumulative since pod start and include "
-            "the temperature 0.7 quality runs."
+            "hop. The raw files don't record the prompt. Spec Decode's 64.9 tok/s (one prompt; superseded "
+            "by 1.25x on 30 prompts) came from this one prompt and its first run was cold; round 2's 30 "
+            "ShareGPT prompts give 1.25x, the number used everywhere. Acceptance counters here are "
+            "cumulative since pod start and include the temperature 0.7 quality runs."
         ),
         "variants": variants,
         "spec_decode_enforce_eager": {
