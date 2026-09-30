@@ -27,6 +27,7 @@ PROMPTS = {
     "Ortiz from Acme Robotics. Can we meet on October 21 to review the pilot?\"",
 }
 MAX_TOKENS = 1024  # the same cap the dashboard's live Ask uses
+EXTRA_BODY = {}  # for example {"chat_template_kwargs": {"enable_thinking": False}} for Qwen3 models
 SAMPLED = "logic_puzzle"
 N_SAMPLES = 5
 
@@ -43,6 +44,7 @@ def ask(url: str, model: str, prompt: str, temperature: float) -> dict:
         "temperature": temperature,
         "stream": True,
         "stream_options": {"include_usage": True},
+        **EXTRA_BODY,
     }
     req = urllib.request.Request(url, json.dumps(body).encode(), {"Content-Type": "application/json"})
     start = time.perf_counter()
