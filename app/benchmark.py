@@ -11,7 +11,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_GPUS = {"FP16": 2, "FP8": 1, "INT4": 1, "SPEC_DECODE": 2}
+DEFAULT_GPUS = {"BF16": 2, "FP8": 1, "INT4": 1, "SPEC_DECODE": 2}
 Z95 = 1.6448536269514722
 SWEEP_LATENCY_KEYS = ("mean_e2el_ms", "median_e2el_ms")
 

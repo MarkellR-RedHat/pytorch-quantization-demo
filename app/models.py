@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-VariantKey = Literal["FP16", "FP8", "INT4", "SPEC_DECODE"]
+VariantKey = Literal["BF16", "FP8", "INT4", "SPEC_DECODE"]
 PromptId = Literal["chat", "reasoning", "code", "summary"]
 
 

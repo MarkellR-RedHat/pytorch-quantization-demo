@@ -1,5 +1,3 @@
-"""Application configuration"""
-
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -8,8 +6,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables"""
-
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -27,32 +23,30 @@ class Settings(BaseSettings):
     openshift_ai_token: str = ""
 
     # Model endpoints, one vLLM OpenAI-compatible chat completions URL per variant
-    model_fp16_endpoint: str = ""
+    model_bf16_endpoint: str = ""
     model_fp8_endpoint: str = ""
     model_int4_endpoint: str = ""
     model_spec_decode_endpoint: str = ""
 
     # Served model names (vLLM --served-model-name); empty means the variant key lowercased
-    model_fp16_name: str = ""
+    model_bf16_name: str = ""
     model_fp8_name: str = ""
     model_int4_name: str = ""
     model_spec_decode_name: str = ""
 
     # Per-setup backup switch: "recorded" never calls that endpoint and plays the preset recordings
     # instead, labeled as recorded. Use it when a setup's GPUs get pulled on the day.
-    model_fp16_mode: str = "live"
+    model_bf16_mode: str = "live"
     model_fp8_mode: str = "live"
     model_int4_mode: str = "live"
     model_spec_decode_mode: str = "live"
 
     # Which folder under quality/ holds the INT4 column's recordings: INT4 for the community AWQ
-    # build, INT4_RH for Red Hat's LLM Compressor build. It also names the build on screen.
+    # build, INT4_RH for Red Hat's W4A16 build. It also names the build on screen.
     model_int4_captures: str = "INT4_RH"
 
     # Demo
     simulation_mode: bool = False
-    enable_prometheus: bool = True
-    baseline_label: str = "BF16"
     presenter_key: str = ""
     trust_proxy: bool = False
 
@@ -70,7 +64,7 @@ class Settings(BaseSettings):
 
     # Data files (relative paths resolve against the repo root)
     benchmark_file: str = "benchmark_results.json"
-    bench_dir: str = "bench"
+    bench_dir: str = "bench/raw/2026-09-29-r2/sweeps"
     quality_dir: str = "quality"
     sim_time_scale: float = 1.0
 
@@ -95,8 +89,8 @@ class Settings(BaseSettings):
         return key
 
 
-BASE_VARIANTS = ["FP16", "INT4", "SPEC_DECODE"]
-ALL_VARIANTS = ["FP16", "FP8", "INT4", "SPEC_DECODE"]
+BASE_VARIANTS = ["BF16", "INT4", "SPEC_DECODE"]
+ALL_VARIANTS = ["BF16", "FP8", "INT4", "SPEC_DECODE"]
 # Kept for backwards compatibility with older imports
 MODEL_VARIANTS = BASE_VARIANTS
 
@@ -105,7 +99,7 @@ settings = Settings()
 
 INT4_BUILDS = {
     "INT4": "hugging-quants AWQ build",
-    "INT4_RH": "Red Hat LLM Compressor build",
+    "INT4_RH": "Red Hat W4A16 build (GPTQ)",
 }
 
 
@@ -119,7 +113,7 @@ def build_note(key: str) -> str | None:
 def variant_label(key: str) -> str:
     """The label of a live (or recorded) column, which follows the INT4 build it runs."""
     if key == "INT4" and settings.captures_for(key) == "INT4_RH":
-        return "INT4 (LLM Compressor)"
+        return "INT4 (Red Hat W4A16)"
     return benchmark_label(key)
 
 
@@ -127,7 +121,7 @@ def benchmark_label(key: str) -> str:
     """The label of a setup's benchmark numbers. The Sep 29 INT4 numbers are the AWQ build's,
     whatever the INT4 column runs today."""
     labels = {
-        "FP16": settings.baseline_label,
+        "BF16": "BF16",
         "FP8": "FP8",
         "INT4": "INT4 AWQ",
         "SPEC_DECODE": "Spec Decode",

@@ -6,8 +6,8 @@ metadata:
 data:
   SIMULATION_MODE: "false"
   TRUST_PROXY: "true"
-  MODEL_FP16_ENDPOINT: https://benchmark-bf16.apps.your-cluster.com/v1/chat/completions
-  MODEL_FP16_NAME: benchmark-bf16
+  MODEL_BF16_ENDPOINT: https://benchmark-bf16.apps.your-cluster.com/v1/chat/completions
+  MODEL_BF16_NAME: benchmark-bf16
   MODEL_SPEC_DECODE_ENDPOINT: https://benchmark-spec.apps.your-cluster.com/v1/chat/completions
   MODEL_SPEC_DECODE_NAME: benchmark-spec
   MODEL_FP8_ENDPOINT: https://benchmark-fp8.apps.your-cluster.com/v1/chat/completions

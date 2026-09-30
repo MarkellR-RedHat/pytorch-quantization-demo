@@ -17,8 +17,10 @@ import time
 from collections.abc import AsyncIterator
 from datetime import datetime
 
+import httpx
+
 from app.config import settings
-from app.openshift import openshift_client
+from app.openshift import VariantNotConfigured, openshift_client
 from app.quality import PROMPTS, recorded_answer
 
 logger = logging.getLogger(__name__)
@@ -249,7 +251,7 @@ async def live_stream(variant: str, prompt: str) -> AsyncIterator[bytes]:
                         yield event("delta", text=text)
         finally:
             await response.aclose()
-    except Exception as e:  # noqa: BLE001 - timeouts, HTTP errors and dropped connections alike
+    except (httpx.HTTPError, TimeoutError) as e:
         raise LiveFailed(chunks, e) from e
     end = time.perf_counter()
     tokens = int(usage_tokens or chunks)
@@ -275,7 +277,7 @@ async def ask_stream(
             try:
                 async for chunk in live_stream(variant, prompt):
                     yield chunk
-            except Exception as e:  # noqa: BLE001 - any live failure falls back for this column only
+            except (LiveFailed, VariantNotConfigured) as e:
                 logger.warning(f"Live ask for {variant} failed: {e}")
                 tokens = e.tokens if isinstance(e, LiveFailed) else 0
                 async for chunk in recorded_stream(variant, preset, tokens, benchmark):
@@ -283,6 +285,6 @@ async def ask_stream(
         else:
             async for chunk in replay_stream(variant, preset, benchmark):
                 yield chunk
-    except Exception as e:  # noqa: BLE001 - any failure becomes an error event for this column only
+    except Exception as e:  # the stream must end with an event, whatever went wrong
         logger.warning(f"Ask stream for {variant} failed: {e}")
         yield event("error", detail="this model didn't answer")

@@ -7,7 +7,7 @@
 
 ## What This Demo Does
 
-Llama 3.1 70B Instruct runs on vLLM in four setups on NVIDIA H200s: BF16 on two GPUs, FP8 on one, INT4 (Red Hat's LLM Compressor build) on one, and speculative decoding with an 8B draft model on two. During the demo Markell types a question from the room, it goes to all three at once, and the answers stream side by side with their timing and GPU count. The Numbers scene then shows what each setup gets you and when a router earns its keep.
+Llama 3.1 70B Instruct runs on vLLM in four setups on NVIDIA H200s: BF16 on two GPUs, FP8 on one, INT4 (Red Hat's validated W4A16 build (GPTQ)) on one, and speculative decoding with an 8B draft model on two. During the demo Markell types a question from the room, it goes to all three at once, and the answers stream side by side with their timing and GPU count. The Numbers scene then shows what each setup gets you and when a router earns its keep.
 
 What the audience sees, backed by data: one request at a time, INT4 runs at 89% of BF16's speed on half the GPUs and serves about the same output per GPU under load, and speculative decoding runs about 1.25× faster than BF16 on the same two GPUs (with a first token about 3× slower, and about half of BF16's tokens per GPU under load). FP8 matches BF16 one request at a time on one GPU and serves about 1.5× BF16's tokens per GPU under load, with no measurable accuracy loss, so on Hopper it's the everyday lane and INT4 is the lane for when 73 GB won't fit. GSM8K shows no loss for INT4 on 1,319 questions; on MMLU-Pro it scored 3 to 4 points lower on 280 questions, which is too few to call it, so the hard questions stay on BF16 until it's tested further.
 
@@ -18,8 +18,6 @@ The backend is FastAPI (`app/`). The presenter page (`/presenter`) has three sce
 The full method, the numbers, and the technical questions are in the README.
 
 ## The Talk Flow (10 Minutes)
-
-<!-- TALK FLOW: owned by the slides session; keep in sync with the speaker notes in slides.html -->
 
 The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`. Then finish on Numbers, the money slide: press `2` while the load test hasn't been recorded (Under load stays out of the numbered flow until `bench/<VARIANT>/c<N>.json` exists). Once it has, press `2` for Under load and `Space` to play the load run, then `3` for Numbers.
 
@@ -48,7 +46,7 @@ Five H200s on Oct 20, so three setups are live and one is recorded by plan:
 | BF16 Llama 3.1 70B, tensor parallel 2 | 2x H200, live | 65.7 GiB per GPU | No |
 | Speculative decoding (BF16 70B target + Llama 3.1 8B draft, both tensor parallel 2) | 2x H200, live | 73.2 GiB per GPU | No |
 | FP8 Llama 3.1 70B, Red Hat's build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8`) | 1x H200, live | 67.7 GiB (72.7 GB) | No, the weights alone are more than the slice |
-| INT4 Llama 3.1 70B, Red Hat's LLM Compressor build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16`) | none: recorded by plan | 37.1 GiB | Yes, with about 30 GB left for KV cache |
+| INT4 Llama 3.1 70B, Red Hat's validated W4A16 build (GPTQ) (`RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16`) | none: recorded by plan | 37.1 GiB | Yes, with about 30 GB left for KV cache |
 
 INT4's column plays the recordings made on Oct 19 (`MODEL_INT4_MODE=recorded`), labeled "Recorded <date>", and the corner badge says so. If INT4 were live it wouldn't need a full H200: a 71 GB MIG slice would do, and the full GPUs would stay free for other people's work. FP8 needs the full GPU.
 
@@ -59,8 +57,8 @@ INT4's column plays the recordings made on Oct 19 (`MODEL_INT4_MODE=recorded`), 
   ```bash
   SIMULATION_MODE=false
   PRESENTER_KEY=<a long random string>
-  MODEL_FP16_ENDPOINT=http://localhost:18001/v1/chat/completions
-  MODEL_FP16_NAME=benchmark-bf16
+  MODEL_BF16_ENDPOINT=http://localhost:18001/v1/chat/completions
+  MODEL_BF16_NAME=benchmark-bf16
   MODEL_SPEC_DECODE_ENDPOINT=http://localhost:18003/v1/chat/completions
   MODEL_SPEC_DECODE_NAME=benchmark-spec
   MODEL_FP8_ENDPOINT=http://localhost:18004/v1/chat/completions
@@ -88,7 +86,7 @@ Re-record every preset from the day's deployments, so the answers the fallback a
 3. Delete the INT4_RH InferenceService, deploy FP8 with `kubernetes/models/isvc-fp8.yaml` (Red Hat's FP8 checkpoint on one GPU, the same pattern the Sep 30 run used) on the freed GPU, wait for Ready and warm it up.
 4. Record the three live setups:
    ```bash
-   python3 scripts/capture_presets.py FP16        http://localhost:18001/v1/chat/completions benchmark-bf16
+   python3 scripts/capture_presets.py BF16        http://localhost:18001/v1/chat/completions benchmark-bf16
    python3 scripts/capture_presets.py SPEC_DECODE http://localhost:18003/v1/chat/completions benchmark-spec
    python3 scripts/capture_presets.py FP8         http://localhost:18004/v1/chat/completions benchmark-fp8
    ```

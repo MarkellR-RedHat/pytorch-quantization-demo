@@ -1,0 +1,21 @@
+{
+  "variant": "INT4_RH",
+  "model": "benchmark-int4-rh",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "summarization",
+  "prompt": "Summarize the key trade-offs of model quantization for production LLM deployments in 3 bullet points.",
+  "temperature": 0,
+  "response_text": "Here are three key trade-offs of model quantization for production Large Language Model (LLM) deployments:\n\n\u2022 **Accuracy vs. Model Size**: Quantization reduces the model size by representing weights and activations with lower precision data types (e.g., int8 instead of float32), which can lead to a loss of accuracy. The degree of accuracy loss depends on the quantization scheme, model architecture, and specific use case.\n\n\u2022 **Inference Speed vs. Quantization Scheme**: Different quantization schemes offer varying levels of inference speedup. For example, post-training quantization (PTQ) is generally faster than quantization-aware training (QAT), but QAT can provide better accuracy. The choice of quantization scheme depends on the specific deployment requirements and constraints.\n\n\u2022 **Hardware Compatibility vs. Quantization Format**: Quantized models may require specific hardware support to achieve optimal performance. For example, some hardware accelerators are optimized for int8 quantization, while others may support more exotic formats like bfloat16. The choice of quantization format depends on the target deployment hardware and the need for compatibility with different platforms.",
+  "usage": {
+    "prompt_tokens": 57,
+    "total_tokens": 283,
+    "completion_tokens": 226
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 404.5,
+  "total_ms": 5359.7,
+  "tokens_per_second": 42.2,
+  "captured_at": "2026-09-29T22:38:25-04:00"
+}

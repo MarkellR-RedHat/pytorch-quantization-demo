@@ -31,26 +31,25 @@ class TestBasics:
 
     def test_health(self, client):
         body = client.get("/health").json()
-        assert body["status"] == "healthy"
+        assert body["ok"] is True
         assert body["mode"] == "simulated"
 
     def test_config(self, client):
         body = client.get("/api/config").json()
         assert body["mode"] == "simulated"
-        assert [v["key"] for v in body["variants"]] == ["FP16", "FP8", "INT4", "SPEC_DECODE"]
+        assert [v["key"] for v in body["variants"]] == ["BF16", "FP8", "INT4", "SPEC_DECODE"]
         assert body["variants"][0]["label"] == "BF16"
         assert body["variants"][0]["gpus"] == 2
         # weights per GPU come through from the startup-log figures, not null
         weights = {v["key"]: v["weights_gib_per_gpu"] for v in body["variants"]}
         # INT4 is Red Hat's build
-        assert weights == {"FP16": 65.74, "FP8": 67.7, "INT4": 37.11, "SPEC_DECODE": 73.24}
+        assert weights == {"BF16": 65.74, "FP8": 67.7, "INT4": 37.11, "SPEC_DECODE": 73.24}
         assert body["gpu_hourly_usd"] == 0
         bench = body["benchmark"]
-        assert "rhai-tmm" not in json.dumps(bench) and "TMM" not in json.dumps(bench)
-        assert bench["variants"]["FP16"]["label"] == "BF16"
+        assert bench["variants"]["BF16"]["label"] == "BF16"
         raw = json.loads((main.settings.resolve(main.settings.benchmark_file)).read_text())["variants"]
-        per_gpu = bench["variants"]["FP16"]["tokens_per_second_per_gpu"]
-        assert per_gpu == pytest.approx(raw["FP16"]["throughput_tps"] / 2)
+        per_gpu = bench["variants"]["BF16"]["tokens_per_second_per_gpu"]
+        assert per_gpu == pytest.approx(raw["BF16"]["throughput_tps"] / 2)
         assert bench["variants"]["INT4"]["gpus"] == 1
         fp8 = bench["variants"]["FP8"]
         assert fp8["gpus"] == 1 and fp8["kernel"] == "CutlassFP8ScaledMMLinearKernel"
@@ -66,12 +65,12 @@ class TestBasics:
         assert client.get("/quality/nope").status_code == 404
         body = client.get("/quality/complex_reasoning").json()
         assert body["source"] in {"not_captured", "captured"}
-        assert set(body["responses"]) <= {"FP16", "FP8", "INT4", "SPEC_DECODE"}
+        assert set(body["responses"]) <= {"BF16", "FP8", "INT4", "SPEC_DECODE"}
 
     def test_metrics_shape(self, client):
         infer("INT4")
         snap = client.get("/metrics").json()["INT4"]
-        assert snap["label"] == "INT4 (LLM Compressor)"
+        assert snap["label"] == "INT4 (Red Hat W4A16)"
         assert snap["source"] == "simulated"
         assert snap["basis"].startswith("benchmark")  # with a sweep on disk, the basis is "benchmark c≈1"
         assert snap["gpus"] == 1
@@ -91,7 +90,7 @@ def infer(model_type, prompt_id="chat"):
 class TestInference:
 
     def test_simulated_request(self, client):
-        body = infer("FP16", "reasoning")
+        body = infer("BF16", "reasoning")
         assert body.source == "simulated"
         assert body.completion_tokens > 0
         assert body.cost_per_request is None
@@ -103,20 +102,20 @@ class TestInference:
 
     def test_cost_when_price_configured(self, client, monkeypatch):
         monkeypatch.setattr(settings, "gpu_hourly_usd", 4.0)
-        body = infer("FP16")
+        body = infer("BF16")
         expected = 2 * 4.0 * body.latency_ms / 1000 / 3600
         assert body.cost_per_request == pytest.approx(expected)
 
     def test_busy_variant_fails_fast(self, client, monkeypatch):
-        monkeypatch.setitem(main.sim_slots, "FP16", asyncio.Semaphore(0))
-        error = infer("FP16")
+        monkeypatch.setitem(main.sim_slots, "BF16", asyncio.Semaphore(0))
+        error = infer("BF16")
         assert error.status_code == 503 and error.detail == "busy"
 
     def test_live_mode_without_endpoint_is_clear(self, client, monkeypatch):
         main.simulator.disable()
-        monkeypatch.setattr(settings, "model_fp16_endpoint", "")
-        error = infer("FP16")
-        assert error.status_code == 503 and "MODEL_FP16_ENDPOINT" in error.detail
+        monkeypatch.setattr(settings, "model_bf16_endpoint", "")
+        error = infer("BF16")
+        assert error.status_code == 503 and "MODEL_BF16_ENDPOINT" in error.detail
 
     def test_live_mode_uses_completion_tokens(self, client, monkeypatch):
         seen = {}

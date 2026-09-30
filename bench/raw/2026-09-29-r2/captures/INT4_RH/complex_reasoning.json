@@ -1,0 +1,21 @@
+{
+  "variant": "INT4_RH",
+  "model": "benchmark-int4-rh",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "complex_reasoning",
+  "prompt": "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left? Explain your reasoning step by step.",
+  "temperature": 0,
+  "response_text": "To find out how many sheep the farmer has left, we need to subtract the number of sheep that ran away from the total number of sheep.\n\nStep 1: Identify the total number of sheep the farmer had initially.\nThe farmer had 17 sheep.\n\nStep 2: Identify the number of sheep that did not run away.\nIt is given that \"all but 9\" ran away, which means 9 sheep did not run away.\n\nStep 3: Since we already know the number of sheep that did not run away, we don't need to subtract. The number of sheep that did not run away is the answer.\nThe farmer has 9 sheep left.\n\nSo, the farmer has 9 sheep left.",
+  "usage": {
+    "prompt_tokens": 65,
+    "total_tokens": 211,
+    "completion_tokens": 146
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 344.8,
+  "total_ms": 3598.9,
+  "tokens_per_second": 40.6,
+  "captured_at": "2026-09-29T22:38:08-04:00"
+}

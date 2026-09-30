@@ -16,7 +16,7 @@ SCENARIO_ALIASES = {
 }
 
 VARIANT_DIRS = {
-    "FP16": ("FP16", "BF16", "fp16", "bf16"),
+    "BF16": ("BF16", "BF16", "bf16", "bf16"),
     "FP8": ("FP8", "fp8"),
     "INT4": ("INT4", "INT4_AWQ", "int4", "int4_awq"),
     "SPEC_DECODE": ("SPEC_DECODE", "SPEC", "spec_decode", "spec"),

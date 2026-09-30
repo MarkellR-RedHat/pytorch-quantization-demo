@@ -5,10 +5,10 @@
 
     // What each setup buys you. Wording matches the slides.
     const SETUPS = {
-        FP16: {
+        BF16: {
             color: '--v-bf16', role: 'The reference',
             gets: 'The reference the others are measured against',
-            best: 'Your hardest questions, until INT4 is tested on them',
+            best: 'Your hardest questions, until the others are tested on them',
             watch: 'Every replica needs two GPUs',
             route: 'A wrong answer is expensive',
             acc: '100%', accNote: 'the reference',
@@ -34,11 +34,11 @@
             color: '--v-fp8', role: 'One GPU, 8-bit',
             gets: 'BF16 speed on one GPU, and the most tokens per GPU under load',
             best: 'Everyday chat and easy questions, on Hopper or newer',
-            watch: 'Needs native FP8 (Hopper or newer) and 73 GB for the weights as vLLM loads them, so less room for KV cache than INT4',
+            watch: 'Needs FP8 tensor cores (Ada, Hopper and newer; on A100 vLLM falls back to a slower weight-only kernel) and 73 GB for the weights, so less KV cache room than INT4',
             route: 'Everyday questions',
         },
     };
-    const ORDER = ['FP16', 'FP8', 'INT4', 'SPEC_DECODE'];
+    const ORDER = ['BF16', 'FP8', 'INT4', 'SPEC_DECODE'];
 
     let config = null;
     let running = [];
@@ -83,7 +83,7 @@
 
     function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
     function variants() {
-        const have = new Set(config ? config.variants.map(v => v.key) : ['FP16', 'INT4', 'SPEC_DECODE']);
+        const have = new Set(config ? config.variants.map(v => v.key) : ['BF16', 'INT4', 'SPEC_DECODE']);
         return ORDER.filter(k => have.has(k));
     }
 
@@ -92,12 +92,12 @@
         const b = bench(key);
         return (b && b.label) || label(key);
     }
-    // "INT4 (LLM Compressor)" as just "INT4" where the sentence is about the setup, not the checkpoint
+    // "INT4 (Red Hat W4A16)" as just "INT4" where the sentence is about the setup, not the checkpoint
     const shortLabel = key => benchLabel(key).replace(/ \(.*\)$/, '');
 
     function label(key) {
         const v = config && config.variants.find(x => x.key === key);
-        return v ? v.label : ({ FP16: 'BF16', FP8: 'FP8', INT4: 'INT4 AWQ', SPEC_DECODE: 'Spec Decode' }[key] || key);
+        return v ? v.label : ({ BF16: 'BF16', FP8: 'FP8', INT4: 'INT4 AWQ', SPEC_DECODE: 'Spec Decode' }[key] || key);
     }
     function bench(key) { return (config && config.benchmark && config.benchmark.variants && config.benchmark.variants[key]) || null; }
     function gpus(key) {
@@ -117,10 +117,10 @@
     function route(q, hasFP8) {
         const t = q.toLowerCase();
         if (/\b(legal|contract|diagnos\w*|compliance|medical|financial|audit)\b/.test(t)) {
-            return { key: 'FP16', why: 'a wrong answer here is expensive' };
+            return { key: 'BF16', why: 'a wrong answer here is expensive' };
         }
         if (/\b(prove|step by step|how many|calculate|reason\w*|riddle|puzzle|logic|math)\b/.test(t)) {
-            return { key: 'FP16', why: 'it\'s multi-step reasoning, and the hardest questions stay on BF16' };
+            return { key: 'BF16', why: 'it\'s multi-step reasoning, and the hardest questions stay on BF16' };
         }
         if (/\b(explain|describe|essay|report|story|function|code|script)\b|\b\d{3,} words\b/.test(t)) {
             return { key: 'SPEC_DECODE', why: 'it\'s a long answer with someone waiting, and Spec Decode answers fastest' };
@@ -136,7 +136,7 @@
         const v = config && config.variants.find(x => x.key === key);
         const role = (SETUPS[key] || {}).role || '';
         // the build note is dropped when the label already names the build
-        return v && v.build && !label(key).includes('LLM Compressor') ? `${role}, ${v.build}` : role;
+        return v && v.build && !label(key).includes('W4A16') ? `${role}, ${v.build}` : role;
     }
 
     function buildAsk() {
@@ -337,7 +337,7 @@
     }
     function watchText(key, s, b, bf) {
         if (key === 'SPEC_DECODE' && b && bf && b.ttft_ms_avg && bf.ttft_ms_avg) {
-            const t = targetInfo(), sb = t.best.SPEC_DECODE, bb = t.best.FP16;
+            const t = targetInfo(), sb = t.best.SPEC_DECODE, bb = t.best.BF16;
             const share = sb && bb ? `about ${Math.round(100 * sb.output_tokens_per_second_per_gpu / bb.output_tokens_per_second_per_gpu)}%` : 'about half';
             return `First token about ${(b.ttft_ms_avg / bf.ttft_ms_avg).toFixed(0)}× slower than BF16's, and ${share} of BF16's tokens per GPU under load: it's a latency tool`;
         }
@@ -350,7 +350,7 @@
         grid.style.setProperty('--cols', keys.length);
         grid.classList.toggle('cols-4', keys.length >= 4);
         grid.innerHTML = '';
-        const bf = bench('FP16');
+        const bf = bench('BF16');
         for (const key of keys) {
             const s = SETUPS[key] || {}, b = bench(key), n = gpus(key);
             const tps = b ? b.throughput_tps : null;
@@ -381,15 +381,15 @@
             const sp = bench('SPEC_DECODE');
             const spTxt = sp && sp.throughput_tps ? `, and ${esc(shortLabel('SPEC_DECODE'))} <b>about ${(sp.throughput_tps / bf.throughput_tps).toFixed(2)}× faster</b> on the same GPUs` : '';
             const f8 = bench('FP8');
-            const f8Txt = f8 && f8.throughput_tps ? `${esc(shortLabel('FP8'))} <b>matches ${esc(shortLabel('FP16'))} on one GPU</b> (${(f8.throughput_tps / bf.throughput_tps).toFixed(2)}×), ` : '';
-            $('#takeaway').innerHTML = `One request at a time, ${f8Txt}${esc(shortLabel('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(shortLabel('FP16'))}'s speed on half the GPUs</b>${spTxt}.`
+            const f8Txt = f8 && f8.throughput_tps ? `${esc(shortLabel('FP8'))} <b>matches ${esc(shortLabel('BF16'))} on one GPU</b> (${(f8.throughput_tps / bf.throughput_tps).toFixed(2)}×), ` : '';
+            $('#takeaway').innerHTML = `One request at a time, ${f8Txt}${esc(shortLabel('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(shortLabel('BF16'))}'s speed on half the GPUs</b>${spTxt}.`
                 + (loadData().keys.length ? costLine() : ' <span class="pending-note">Under heavy batching on high-end GPUs, Red Hat\'s study found 8-bit (W8A8) more cost-efficient than 4-bit, and the load test shows where these three land.</span>');
         }
         const strip = $('#routerStrip');
         strip.className = 'card router-strip';
         const hasFP8 = keys.includes('FP8');
-        strip.innerHTML = `<h3>Big, mixed traffic? Route it</h3>` + ['FP16', 'FP8', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k)).map(k =>
-            // the lane names the setup, not the checkpoint, so "INT4 (LLM Compressor)" shows as INT4 here
+        strip.innerHTML = `<h3>Big, mixed traffic? Route it</h3>` + ['BF16', 'FP8', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k)).map(k =>
+            // the lane names the setup, not the checkpoint, so "INT4 (Red Hat W4A16)" shows as INT4 here
             `<div class="route">${esc(hasFP8 && SETUPS[k].routeWithFP8 || SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k).replace(/ \(.*\)$/, ''))}</b></div>`).join('');
         const bm = (config && config.benchmark) || {};
         const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -400,14 +400,14 @@
         const ss = bm.single_stream || {};
         const q4 = bench('INT4') || {};
         $('#benchNote').textContent = `Llama 3.1 70B Instruct on NVIDIA H200, vLLM ${bm.vllm_version || ''}, measured ${when} inside the pods with vllm bench serve: ${ss.prompts || 30} ${ss.dataset || 'ShareGPT'} prompts per setup, one at a time, temperature 0.`
-            + (q4.build ? ` INT4 is ${q4.build.replace('Red Hat LLM Compressor build', 'Red Hat\'s LLM Compressor build')}${q4.kernel ? ` on vLLM's ${q4.kernel.replace('LinearKernel', '')} kernel` : ''}.` : '')
+            + (q4.build ? ` INT4 is ${q4.build.replace('Red Hat W4A16', 'Red Hat\'s validated W4A16')}${q4.kernel ? ` on vLLM's ${q4.kernel.replace('LinearKernel', '')} kernel` : ''}.` : '')
             + (keys.includes('FP8') ? '' : ' FP8 (one H200, 99.9% of BF16 on OpenLLM v1 in Red Hat\'s tests) is the next to measure.');
     }
 
     // The accuracy footnote, with the sample sizes and the standard error, so the claim is exactly as
     // strong as the data: GSM8K on all 1,319 questions, MMLU-Pro on 280.
     function accuracyFoot() {
-        const bf = bench('FP16'), q = bench('INT4');
+        const bf = bench('BF16'), q = bench('INT4');
         const a = bf && bf.accuracy, qa = q && q.accuracy;
         if (!a || !qa) return '';
         const ref = q.reference;
@@ -589,29 +589,29 @@
     // Spec Decode with BF16 at the same load, since they run on the same 2 GPUs.
     function loadResult() {
         const { load, levels } = loadData();
-        const bfPts = load.FP16 || [], qPts = load.INT4 || [], spPts = load.SPEC_DECODE || [];
+        const bfPts = load.BF16 || [], qPts = load.INT4 || [], spPts = load.SPEC_DECODE || [];
         const parts = [];
-        const gb = gpus('FP16'), gq = gpus('INT4');
+        const gb = gpus('BF16'), gq = gpus('INT4');
         const pair = [...levels].reverse().map(c => ({ c, bf: pointAt(bfPts, c), q: pointAt(qPts, c * gq / gb) })).find(o => o.bf && o.q);
         if (pair) {
             const perGpu = pair.c / gb;
             const r = pair.q.output_tokens_per_second_per_gpu / pair.bf.output_tokens_per_second_per_gpu;
-            parts.push(`At ${perGpu} requests per GPU, ${esc(benchLabel('INT4'))} serves <b>${one(r)}× the output tokens per GPU</b> of ${esc(benchLabel('FP16'))}`);
+            parts.push(`At ${perGpu} requests per GPU, ${esc(benchLabel('INT4'))} serves <b>${one(r)}× the output tokens per GPU</b> of ${esc(benchLabel('BF16'))}`);
         }
         const same = [...levels].reverse().map(c => ({ c, bf: pointAt(bfPts, c), sp: pointAt(spPts, c) })).find(o => o.bf && o.sp && o.bf.latency_ms && o.sp.latency_ms);
         if (same) {
             const r = same.sp.latency_ms / same.bf.latency_ms;
             const kind = same.bf.latency_kind === 'mean' ? 'mean' : 'median';
             const verdict = Math.abs(r - 1) < 0.03 ? 'about the same as' : r < 1 ? `<b>${Math.round(100 * (1 - r))}% lower</b> than` : `<b>${Math.round(100 * (r - 1))}% higher</b> than`;
-            parts.push(`at ${same.c} requests on the same 2 GPUs, ${esc(benchLabel('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(benchLabel('FP16'))}'s`);
+            parts.push(`at ${same.c} requests on the same 2 GPUs, ${esc(benchLabel('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(benchLabel('BF16'))}'s`);
         }
         // what sets cost: output tokens per GPU while the tail time per token stays under the target
-        const t = targetInfo(), bfBest = t.best.FP16;
+        const t = targetInfo(), bfBest = t.best.BF16;
         const cost = ['FP8', 'INT4', 'SPEC_DECODE'].filter(k => bfBest && t.best[k]).map(k =>
             `${esc(shortLabel(k))} <b>${one(t.best[k].output_tokens_per_second_per_gpu / bfBest.output_tokens_per_second_per_gpu)}×</b>`);
         if (cost.length) {
             // with a latency target, the per-GPU comparison at the target replaces the equal-load one
-            const lead = `Within a ${t.ms} ms ${t.kind || 'tail'} time per token, output tokens per GPU against ${esc(shortLabel('FP16'))}: ${cost.join(', ')}.`;
+            const lead = `Within a ${t.ms} ms ${t.kind || 'tail'} time per token, output tokens per GPU against ${esc(shortLabel('BF16'))}: ${cost.join(', ')}.`;
             $('#loadResult').innerHTML = lead + (same ? ` ${parts[parts.length - 1].replace(/^at/, 'At')}.` : '');
             return;
         }

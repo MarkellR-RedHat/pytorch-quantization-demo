@@ -1,4 +1,3 @@
-"""Main FastAPI application"""
 
 import asyncio
 import logging
@@ -71,7 +70,7 @@ def active_variants() -> list[str]:
 def bench_label(key: str) -> str:
     """The benchmark's own label for a setup, which for INT4 follows the checkpoint that was measured."""
     if key == "INT4" and "RedHatAI" in str(benchmark_data.variant(key).get("checkpoint") or ""):
-        return "INT4 (LLM Compressor)"
+        return "INT4 (Red Hat W4A16)"
     return benchmark_label(key)
 
 
@@ -221,8 +220,8 @@ def stop_auto_traffic():
 async def metrics_broadcast_task():
     while True:
         try:
-            await connection_manager.broadcast_metrics(metrics_payload())
-            await connection_manager.broadcast_state(state_payload())
+            await connection_manager.broadcast({"type": "metrics_update", "data": metrics_payload()})
+            await connection_manager.broadcast({"type": "state_update", "data": state_payload()})
         except Exception as e:  # keep the loop alive no matter what one tick does
             logger.error(f"Error in metrics broadcast task: {e!r}")
         await asyncio.sleep(0.5)
@@ -367,10 +366,10 @@ async def toggle_simulation():
     logger.info(message)
     if demo_state.is_running:
         start_auto_traffic()
-    await connection_manager.notify_presenter(
-        "simulation_toggled", {"enabled": simulator.is_enabled(), "message": message}
+    await connection_manager.broadcast(
+        {"type": "simulation_toggled", "data": {"enabled": simulator.is_enabled(), "message": message}}
     )
-    await connection_manager.broadcast_state(state_payload())
+    await connection_manager.broadcast({"type": "state_update", "data": state_payload()})
     return JSONResponse({"message": message, "enabled": simulator.is_enabled()})
 
 
@@ -381,7 +380,7 @@ async def start_demo():
     metrics_collector.reset()
     start_auto_traffic()
     logger.info(f"Demo started ({current_mode()} mode, auto-traffic {'on' if auto_traffic_tasks else 'off'})")
-    await connection_manager.broadcast_state(state_payload())
+    await connection_manager.broadcast({"type": "state_update", "data": state_payload()})
     return JSONResponse(
         {"message": "Demo started", "auto_traffic": bool(auto_traffic_tasks), "mode": current_mode()}
     )
@@ -392,7 +391,7 @@ async def stop_demo():
     demo_state.is_running = False
     stop_auto_traffic()
     logger.info("Demo stopped")
-    await connection_manager.broadcast_state(state_payload())
+    await connection_manager.broadcast({"type": "state_update", "data": state_payload()})
     return JSONResponse({"message": "Demo stopped"})
 
 
@@ -403,7 +402,7 @@ async def reset_demo():
     stop_auto_traffic()
     metrics_collector.reset()
     logger.info("Demo reset")
-    await connection_manager.broadcast_state(state_payload())
+    await connection_manager.broadcast({"type": "state_update", "data": state_payload()})
     return JSONResponse({"message": "Demo reset"})
 
 
@@ -419,13 +418,7 @@ async def get_state():
 
 @app.get("/health")
 async def health_check():
-    return {
-        "status": "healthy",
-        "mode": current_mode(),
-        "simulation_mode": simulator.is_enabled(),
-        "presenter_connections": connection_manager.get_presenter_count(),
-        "total_requests": metrics_collector.total_requests(),
-    }
+    return {"ok": True, "mode": current_mode()}
 
 
 if __name__ == "__main__":

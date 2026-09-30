@@ -27,7 +27,7 @@ class TestSimulator:
         sim.disable()
         assert sim.is_enabled() is False
 
-    @pytest.mark.parametrize("variant", ["FP16", "INT4", "SPEC_DECODE"])
+    @pytest.mark.parametrize("variant", ["BF16", "INT4", "SPEC_DECODE"])
     def test_samples_match_benchmark_mean_and_p95(self, sim, variant):
         rng = random.Random(7)
         latencies = sorted(sim.sample(variant, 1, rng)[0] for _ in range(20000))
@@ -35,7 +35,7 @@ class TestSimulator:
         assert statistics.mean(latencies) == pytest.approx(expected["avg_latency_ms"], rel=0.02)
         assert latencies[int(0.95 * len(latencies))] == pytest.approx(expected["p95_latency_ms"], rel=0.03)
 
-    @pytest.mark.parametrize("variant", ["FP16", "INT4", "SPEC_DECODE"])
+    @pytest.mark.parametrize("variant", ["BF16", "INT4", "SPEC_DECODE"])
     def test_tokens_track_benchmark(self, sim, variant):
         rng = random.Random(3)
         avg = BENCH["variants"][variant]["avg_tokens_per_request"]
@@ -48,23 +48,23 @@ class TestSimulator:
         assert tps == pytest.approx(tokens / (latency_ms / 1000))
 
     def test_basis_is_single_stream_without_sweeps(self, sim):
-        assert sim.sample("FP16", 5)[2] == "benchmark · 1 stream"
+        assert sim.sample("BF16", 5)[2] == "benchmark · 1 stream"
 
     def test_unknown_variant_raises(self, sim):
         with pytest.raises(ValueError):
             sim.sample("NOPE")
 
     def test_sweep_scales_latency_with_concurrency(self, tmp_path):
-        folder = tmp_path / "bench" / "FP16"
+        folder = tmp_path / "bench" / "FP16"  # the sweep folder keeps the name it was delivered with
         folder.mkdir(parents=True)
         (folder / "c1.json").write_text(json.dumps({"mean_e2el_ms": 5000.0}))
         (folder / "c32.json").write_text(json.dumps({"median_e2el_ms": 9000.0}))
         (folder / "notes.json").write_text("{}")
         data = BenchmarkData(REPO_ROOT / "benchmark_results.json", tmp_path / "bench")
-        assert data.latency_model("FP16", 1)[0] == 5000.0
-        mean, _, basis = data.latency_model("FP16", 16)
+        assert data.latency_model("BF16", 1)[0] == 5000.0
+        mean, _, basis = data.latency_model("BF16", 16)
         assert 5000.0 < mean < 9000.0 and basis == "benchmark c≈16"
-        assert data.latency_model("FP16", 64)[0] == 9000.0
+        assert data.latency_model("BF16", 64)[0] == 9000.0
 
     def test_lognormal_sigma_edge_cases(self):
         assert lognormal_sigma(100, 90) == 0.05
@@ -73,5 +73,5 @@ class TestSimulator:
 
     def test_missing_benchmark_file_is_not_fatal(self, tmp_path):
         data = BenchmarkData(tmp_path / "missing.json", tmp_path)
-        assert data.has("FP16") is False
-        assert data.gpus("FP16") == 2
+        assert data.has("BF16") is False
+        assert data.gpus("BF16") == 2

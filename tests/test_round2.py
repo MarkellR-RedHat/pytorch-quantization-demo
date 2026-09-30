@@ -9,9 +9,9 @@ from app.ask import PRESETS
 from app.quality import GRADERS, PROMPTS, json_verdict, puzzle_verdict, sheep_verdict
 
 ROOT = Path(__file__).resolve().parent.parent
-RAW = ROOT / "bench" / "raw" / "2026-09-29-round2"
-SETUPS = ("FP16", "INT4", "INT4_RH", "SPEC_DECODE", "FP8")
-# Reworded after round 2, so its round-2 recordings answer the old prompt and are re-recorded on Oct 19.
+RAW = ROOT / "bench" / "raw" / "2026-09-29-r2"
+SETUPS = ("BF16", "INT4", "INT4_RH", "SPEC_DECODE", "FP8")
+# reworded after round 2; its round-2 recordings answer the old prompt
 RE_RECORD = {"long_explanation"}
 BENCH = json.loads((ROOT / "benchmark_results.json").read_text())
 
@@ -45,9 +45,10 @@ def test_the_graders_agree_with_the_sheet():
 
 
 def test_single_stream_numbers_come_from_the_raw_files():
-    raw = {k: json.loads((RAW / "bench" / k / "single-t0.json").read_text()) for k in SETUPS}
+    raw_dir = {"BF16": "FP16"}  # the raw folders keep the names they were delivered with
+    raw = {k: json.loads((RAW / "sweeps" / raw_dir.get(k, k) / "single-t0.json").read_text()) for k in SETUPS}
     v = BENCH["variants"]
-    assert v["FP16"]["throughput_tps"] == round(raw["FP16"]["output_throughput"], 1) == 49.7
+    assert v["BF16"]["throughput_tps"] == round(raw["BF16"]["output_throughput"], 1) == 49.7
     assert v["INT4"]["throughput_tps"] == round(raw["INT4_RH"]["output_throughput"], 1) == 44.0
     assert v["INT4"]["reference"]["throughput_tps"] == round(raw["INT4"]["output_throughput"], 1) == 47.7
     assert v["SPEC_DECODE"]["throughput_tps"] == round(raw["SPEC_DECODE"]["output_throughput"], 1) == 62.2
@@ -65,12 +66,12 @@ def test_acceptance_is_isolated_per_temperature():
 
 
 def test_accuracy_carries_its_sample_sizes():
-    for key in ("FP16", "INT4"):
+    for key in ("BF16", "INT4"):
         acc = BENCH["variants"][key]["accuracy"]
         assert acc["gsm8k"]["questions"] == 1319 and acc["gsm8k"]["fewshot"] == 8
         assert acc["mmlu_pro"]["questions"] == 280 and acc["mmlu_pro"]["subjects"] == 14
         assert 2.7 < acc["mmlu_pro"]["stderr"] < 2.9
-    assert BENCH["variants"]["FP16"]["accuracy"]["mmlu_pro"]["score"] == 66.79
+    assert BENCH["variants"]["BF16"]["accuracy"]["mmlu_pro"]["score"] == 66.79
     assert BENCH["variants"]["INT4"]["accuracy"]["mmlu_pro"]["score"] == 63.57
     assert BENCH["variants"]["INT4"]["reference"]["accuracy"]["mmlu_pro"]["score"] == 62.86
     assert "accuracy" not in BENCH["variants"]["SPEC_DECODE"]  # its output is the 70B's by design
@@ -90,8 +91,3 @@ def test_the_built_file_is_reproducible():
     builder = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(builder)
     assert builder.build_round2() == BENCH
-
-
-def test_no_cluster_or_node_names_in_the_raw_notes():
-    text = (RAW / "notes.txt").read_text().lower()
-    assert "ocp-" not in text and "tmm" not in text

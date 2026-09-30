@@ -17,8 +17,8 @@ node = shutil.which("node")
 # BF16 = the hardest questions, the everyday lane = FP8 on Hopper when it's deployed (INT4 where 73 GB of
 # weights won't fit), Spec = latency-sensitive long answers
 LANES = {
-    "reasoning": "FP16",
-    "puzzle": "FP16",
+    "reasoning": "BF16",
+    "puzzle": "BF16",
     "summary": "EVERYDAY",
     "decline": "EVERYDAY",
     "fact": "EVERYDAY",
@@ -67,10 +67,10 @@ def test_badge_names_live_and_recorded_setups():
         out = subprocess.run([node, "-e", src], capture_output=True, text=True, check=True)
         return json.loads(out.stdout)
 
-    three = [{"label": "BF16", "mode": "live"}, {"label": "INT4 (LLM Compressor)", "mode": "live"},
+    three = [{"label": "BF16", "mode": "live"}, {"label": "INT4 (Red Hat W4A16)", "mode": "live"},
              {"label": "Spec Decode", "mode": "live"}]
     assert badge({"mode": "live", "variants": three}) == {"kind": "live", "text": "Live models"}
     three[2]["mode"] = "recorded"
     assert badge({"mode": "live", "variants": three}) == {
-        "kind": "mixed", "text": "Live: BF16, INT4 (LLM Compressor) · Recorded: Spec Decode"}
+        "kind": "mixed", "text": "Live: BF16, INT4 (Red Hat W4A16) · Recorded: Spec Decode"}
     assert badge({"mode": "simulated", "variants": three}) == {"kind": "sim", "text": "Replay"}

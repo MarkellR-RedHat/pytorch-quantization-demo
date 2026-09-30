@@ -3,12 +3,12 @@
 
 Every number the dashboard shows comes from here, so nothing is typed in by hand:
 
-    python scripts/build_benchmark_file.py            # round 2 (bench/raw/2026-09-29-round2): the file
+    python scripts/build_benchmark_file.py            # round 2 (bench/raw/2026-09-29-r2): the file
     python scripts/build_benchmark_file.py --round1   # the Sep 29 afternoon run, kept under "history"
 
 Round 2 ran `vllm bench serve` inside each pod: 30 ShareGPT prompts one at a time at temperature 0 and
 0.7, the concurrency sweeps, lm_eval for GSM8K and MMLU-Pro, and the spec decode counters read before
-and after each single-stream run. The INT4 setup on screen is Red Hat's LLM Compressor build; the
+and after each single-stream run. The INT4 setup on screen is Red Hat's validated W4A16 build (GPTQ); the
 community AWQ build that was the naive pick is kept as a reference under it.
 """
 
@@ -19,21 +19,21 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ROUND1 = ROOT / "bench" / "raw" / "2026-09-29"
-ROUND2 = ROOT / "bench" / "raw" / "2026-09-29-round2"
+ROUND1 = ROOT / "bench" / "raw" / "2026-09-29-r1"
+ROUND2 = ROOT / "bench" / "raw" / "2026-09-29-r2"
 MODEL = "meta-llama/Meta-Llama-3.1-70B-Instruct"
 
 # Column key -> raw folder. The INT4 column is Red Hat's build; the AWQ build is its reference.
 SETUPS = {
-    "FP16": {
+    "BF16": {
         "raw": "FP16", "pod": "benchmark-bf16", "gpus": 2, "tensor_parallel_size": 2,
         "quantization": None, "dtype": "bfloat16", "checkpoint": MODEL,
     },
     "INT4": {
         "raw": "INT4_RH", "pod": "benchmark-int4-rh", "gpus": 1, "tensor_parallel_size": 1,
-        "quantization": "gptq_marlin (compressed-tensors, W4A16)", "dtype": "float16",
+        "quantization": "gptq_marlin (AutoGPTQ format, W4A16)", "dtype": "float16",
         "checkpoint": "RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16",
-        "build": "Red Hat LLM Compressor build",
+        "build": "Red Hat W4A16 build (GPTQ)",
     },
     "SPEC_DECODE": {
         "raw": "SPEC_DECODE", "pod": "benchmark-spec", "gpus": 2, "tensor_parallel_size": 2,
@@ -91,7 +91,7 @@ def versions(raw: Path, pod: str) -> dict:
 
 
 def single_stream(raw: Path, folder: str, temperature: str) -> dict:
-    d = load(raw / "bench" / folder / f"single-t{temperature}.json")
+    d = load(raw / "sweeps" / folder / f"single-t{temperature}.json")
     assert d["failed"] == 0 and d["max_concurrency"] == 1
     return {
         "prompts": d["completed"],
@@ -110,8 +110,8 @@ def single_stream(raw: Path, folder: str, temperature: str) -> dict:
 
 
 def accuracy(raw: Path, folder: str) -> dict:
-    [gsm] = raw.glob(f"eval/{folder}/*/results_*.json")
-    [mmlu] = raw.glob(f"eval/{folder}-mmlu_pro/*/results_*.json")
+    [gsm] = raw.glob(f"evals/{folder}/*/results_*.json")
+    [mmlu] = raw.glob(f"evals/{folder}-mmlu_pro/*/results_*.json")
     g, m = load(gsm), load(mmlu)
     gr, mr = g["results"]["gsm8k_cot_llama"], m["results"]["mmlu_pro"]
     subjects = sorted(k for k in m["results"] if k != "mmlu_pro")
@@ -159,7 +159,7 @@ def setup(raw: Path, spec: dict) -> dict:
     out["at_temperature_0_7"] = t07
     out.update(startup_log(raw, spec["pod"]))
     out["versions"] = versions(raw, spec["pod"])
-    if (raw / "eval" / spec["raw"]).is_dir():
+    if (raw / "evals" / spec["raw"]).is_dir():
         out["accuracy"] = accuracy(raw, spec["raw"])
     if "draft_model" in spec:
         out["acceptance"] = {t: acceptance(raw, t) for t in ("0", "0.7")}
@@ -177,7 +177,7 @@ def build_round2(raw: Path = ROUND2) -> dict:
         "with prefix caching on; its first-token times are far below every other setup's at 64 in flight, "
         "so that point isn't used for any claim."
     )
-    bf = variants["FP16"]
+    bf = variants["BF16"]
     bf_tps, bf_tps_07 = bf["_tps"], bf["at_temperature_0_7"]["_tps"]
     for v in list(variants.values()) + [variants["INT4"]["reference"]]:
         v["speed_vs_baseline"] = round(v["_tps"] / bf_tps, 3)
@@ -202,8 +202,8 @@ def build_round2(raw: Path = ROUND2) -> dict:
             "tokens per second over the whole run. Accuracy is lm_eval through a port-forward: GSM8K 8-shot "
             "CoT on all 1,319 questions and MMLU-Pro 5-shot on the first 20 questions of each of 14 subjects "
             "(280). Spec decode counters were read before and after each single-stream run, so acceptance is "
-            "per temperature. The INT4 setup is Red Hat's LLM Compressor build; the community AWQ build is "
-            "under reference. The round-1 numbers are under history."
+            "per temperature. The INT4 setup is Red Hat's validated W4A16 build (GPTQ); the community AWQ "
+            "build is under reference. The round-1 numbers are under history."
         ),
         "single_stream": {"dataset": "ShareGPT", "prompts": 30, "concurrency": 1, "where": "inside the pod"},
         "variants": variants,
@@ -215,7 +215,7 @@ def build_round2(raw: Path = ROUND2) -> dict:
 
 # Reported by the vLLM startup logs of each deployment on Sep 29, 2026 (those logs weren't exported).
 STARTUP_LOGS_ROUND1 = {
-    "FP16": {"weights_gib_per_gpu": 65.74, "kv_cache_tokens": 367280},
+    "BF16": {"weights_gib_per_gpu": 65.74, "kv_cache_tokens": 367280},
     "INT4": {"weights_gib_per_gpu": 37.87, "kv_cache_tokens": 280112, "kernel": "MacheteLinearKernel"},
     "SPEC_DECODE": {"weights_gib_per_gpu": 73.24, "kv_cache_tokens": 218064},
 }
@@ -242,12 +242,12 @@ def build_round1(raw: Path = ROUND1) -> dict:
     metrics = load(raw / "spec-decode-metrics.json")["acceptance_rate"]
     natural = load(raw / "benchmark-natural-length.json")
     variants = {
-        "FP16": {
+        "BF16": {
             "gpus": 2, "tensor_parallel_size": 2, "quantization": None, "dtype": "bfloat16",
             **summarize_runs(single["bf16"]["runs"]),
             "ttft_ms_avg": ttft["bf16_ttft"]["avg_ms"],
             "natural_length_tokens_avg": natural["bf16"]["avg"],
-            **STARTUP_LOGS_ROUND1["FP16"],
+            **STARTUP_LOGS_ROUND1["BF16"],
         },
         "INT4": {
             "gpus": 1, "tensor_parallel_size": 1, "quantization": "awq_marlin", "dtype": "float16",

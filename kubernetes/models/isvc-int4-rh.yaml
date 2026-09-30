@@ -1,17 +1,11 @@
-# INT4, Red Hat's LLM Compressor build (GPTQ, W4A16) on one GPU. Measured footprint: 37.1 GiB of
-# weights, so it fits a 71 GB MIG slice (for example nvidia.com/mig-3g.71gb on H200) with about 30 GB
-# left for KV cache; on a full H200 it had 283K tokens of cache. This is the INT4 setup on screen.
+# INT4, Red Hat's validated W4A16 build (GPTQ), one GPU. Startup log: bench/raw/2026-09-29-r2/logs/benchmark-int4-rh-*-startup.txt
+# ServingRuntime not included yet; see README.
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
   name: benchmark-int4-rh
-  namespace: <your-namespace>
   annotations:
-    # Plain Deployment behind a Service, no Knative; drop it if your KServe defaults to raw already.
     serving.kserve.io/deploymentMode: RawDeployment
-  labels:
-    # Our cluster hands out GPUs through Kueue; drop this label if yours doesn't.
-    kueue.x-k8s.io/queue-name: reserved
 spec:
   predictor:
     minReplicas: 1
@@ -19,10 +13,6 @@ spec:
     model:
       modelFormat:
         name: vLLM
-      # A ServingRuntime on our cluster that wraps the same vLLM image the other files pin, on one GPU;
-      # KServe passes the downloaded weights as --model=/mnt/models and the service name as
-      # --served-model-name. Point this at your cluster's vLLM runtime, or use the raw-container
-      # form in isvc-fp8.yaml with --model=RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16.
       runtime: vllm-gpu-benchmark
       storageUri: hf://RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16
       resources:
@@ -31,6 +21,4 @@ spec:
           memory: 48Gi
           nvidia.com/gpu: 1
         limits:
-          cpu: 8
-          memory: 96Gi
           nvidia.com/gpu: 1

@@ -26,8 +26,6 @@ Step-by-step guide for presenting "Not Every Question Needs Two GPUs" at PyTorch
 
 ## Demo Flow (10 Minutes)
 
-<!-- TALK FLOW: owned by the slides session; keep in sync with the speaker notes in slides.html -->
-
 The talk flow and the full speaker script live in the speaker notes of `slides.html` (press `N` while presenting). The demo slide calls for a question from the room: press `1` for Ask, type the question, and press `Enter`. Then finish on Numbers, the money slide: press `2` while the load test hasn't been recorded (Under load stays out of the numbered flow until `bench/<VARIANT>/c<N>.json` exists). Once it has, press `2` for Under load and `Space` to play the load run, then `3` for Numbers.
 
 ## Presenter Shortcuts

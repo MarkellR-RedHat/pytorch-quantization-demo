@@ -48,14 +48,5 @@ class ConnectionManager:
             if ws is not None:
                 self.disconnect(ws)
 
-    async def broadcast_metrics(self, metrics: dict):
-        await self.broadcast({"type": "metrics_update", "data": metrics})
-
-    async def broadcast_state(self, state: dict):
-        await self.broadcast({"type": "state_update", "data": state})
-
-    async def notify_presenter(self, event_type: str, data: dict):
-        await self.broadcast({"type": event_type, "data": data})
-
     def get_presenter_count(self) -> int:
         return len(self.presenters)

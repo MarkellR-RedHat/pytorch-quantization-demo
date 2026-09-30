@@ -1,0 +1,21 @@
+{
+  "variant": "INT4",
+  "model": "benchmark-int4",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "json_extraction",
+  "prompt": "Extract the name, company and meeting date from this message as JSON: \"Hi, this is Sam Ortiz from Acme Robotics. Can we meet on October 21 to review the pilot?\"",
+  "temperature": 0,
+  "response_text": "```json\n{\n  \"name\": \"Sam Ortiz\",\n  \"company\": \"Acme Robotics\",\n  \"meeting_date\": \"October 21\"\n}\n```",
+  "usage": {
+    "prompt_tokens": 73,
+    "total_tokens": 107,
+    "completion_tokens": 34
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 409.0,
+  "total_ms": 1145.9,
+  "tokens_per_second": 29.7,
+  "captured_at": "2026-09-29T21:26:04-04:00"
+}

@@ -6,7 +6,7 @@ import pytest
 
 from app.quality import PROMPTS, get_comparison, json_verdict, puzzle_verdict, sheep_verdict
 
-VARIANTS = ["FP16", "INT4", "SPEC_DECODE"]
+VARIANTS = ["BF16", "INT4", "SPEC_DECODE"]
 
 
 @pytest.mark.parametrize(
@@ -55,11 +55,11 @@ def test_uncaptured_preset_reports_not_captured():
 
 
 def test_a_capture_of_a_different_prompt_is_ignored(tmp_path):
-    (tmp_path / "FP16").mkdir()
-    (tmp_path / "FP16" / "quick_fact.json").write_text(json.dumps({
+    (tmp_path / "BF16").mkdir()
+    (tmp_path / "BF16" / "quick_fact.json").write_text(json.dumps({
         "prompt": "What is the capital of Australia?", "response_text": "Canberra.",
     }))
-    assert get_comparison("quick_fact", ["FP16"], tmp_path)["source"] == "not_captured"
+    assert get_comparison("quick_fact", ["BF16"], tmp_path)["source"] == "not_captured"
 
 
 def test_capture_script_sends_the_same_prompts():
@@ -118,8 +118,8 @@ def test_captured_output_is_used(tmp_path):
     result = get_comparison("complex_reasoning", VARIANTS, tmp_path)
     assert result["source"] == "captured"
     assert result["temperature"] == 0
-    assert set(result["responses"]) == {"FP16"}
-    assert result["responses"]["FP16"] == {
+    assert set(result["responses"]) == {"BF16"}
+    assert result["responses"]["BF16"] == {
         "text": "The farmer has 9 sheep left.",
         "model": "meta-llama/Llama-3.1-70B-Instruct",
         "usage": {"completion_tokens": 8},

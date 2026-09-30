@@ -16,14 +16,14 @@ spec = importlib.util.spec_from_file_location("preflight", ROOT / "scripts" / "p
 preflight = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(preflight)
 
-NAMES = {"FP16": "benchmark-bf16", "INT4": "benchmark-int4-rh", "SPEC_DECODE": "benchmark-spec"}
+NAMES = {"BF16": "benchmark-bf16", "INT4": "benchmark-int4-rh", "SPEC_DECODE": "benchmark-spec"}
 
 
 @pytest.fixture
 def setups(monkeypatch, tmp_path):
     """Three live setups on a mock vLLM, with every preset recorded (INT4 from Red Hat's build)."""
     for key, name in NAMES.items():
-        port = {"FP16": 1, "INT4": 2, "SPEC_DECODE": 3}[key]
+        port = {"BF16": 1, "INT4": 2, "SPEC_DECODE": 3}[key]
         monkeypatch.setattr(settings, f"model_{key.lower()}_endpoint", f"http://vllm{port}.test/v1/chat/completions")
         monkeypatch.setattr(settings, f"model_{key.lower()}_name", name)
         folder = tmp_path / ("INT4_RH" if key == "INT4" else key)
@@ -41,7 +41,7 @@ def setups(monkeypatch, tmp_path):
 def vllm(down=()):
     def handler(request):
         host = request.url.host
-        key = {"vllm1.test": "FP16", "vllm2.test": "INT4", "vllm3.test": "SPEC_DECODE"}[host]
+        key = {"vllm1.test": "BF16", "vllm2.test": "INT4", "vllm3.test": "SPEC_DECODE"}[host]
         if key in down:
             return httpx.Response(503)
         if request.url.path.endswith("/models"):
@@ -58,7 +58,7 @@ def test_all_live_and_recorded_passes(setups):
     rows = preflight.run(vllm())
     assert all(r[2] == "PASS" for r in rows), rows
     assert rows[-1][3] == '"Live models"'
-    assert results(rows)[("INT4 (LLM Compressor)", "warm-up")] == "PASS"
+    assert results(rows)[("INT4 (Red Hat W4A16)", "warm-up")] == "PASS"
 
 
 def test_a_down_endpoint_fails(setups):
@@ -67,7 +67,7 @@ def test_a_down_endpoint_fails(setups):
 
 
 def test_a_missing_recording_fails(setups):
-    (setups / "FP16" / "logic_puzzle.json").unlink()
+    (setups / "BF16" / "logic_puzzle.json").unlink()
     rows = preflight.run(vllm())
     row = next(r for r in rows if r[:2] == ("BF16", "recordings"))
     assert row[2] == "FAIL" and "Logic puzzle" in row[3]
@@ -78,7 +78,7 @@ def test_a_recorded_setup_skips_its_endpoint_and_shows_in_the_badge(setups, monk
     rows = preflight.run(vllm(down={"SPEC_DECODE"}))
     got = results(rows)
     assert got[("Spec Decode", "mode")] == "PASS" and ("Spec Decode", "models list") not in got
-    assert rows[-1][3] == '"Live: BF16, INT4 (LLM Compressor) · Recorded: Spec Decode"'
+    assert rows[-1][3] == '"Live: BF16, INT4 (Red Hat W4A16) · Recorded: Spec Decode"'
 
 
 def test_int4_build_mismatch_warns(setups, monkeypatch):
@@ -111,14 +111,14 @@ def test_the_day_of_env_passes_with_int4_recorded(setups, monkeypatch):
         if request.url.host == "vllm2.test":
             raise AssertionError("the recorded INT4 setup must not be called")
         if request.url.path.endswith("/models"):
-            key = {"vllm1.test": "FP16", "vllm3.test": "SPEC_DECODE"}[request.url.host]
+            key = {"vllm1.test": "BF16", "vllm3.test": "SPEC_DECODE"}[request.url.host]
             return httpx.Response(200, json={"data": [{"id": NAMES[key]}]})
         return httpx.Response(200, json={"choices": [{"message": {"content": "hi"}}]})
 
     rows = preflight.run(httpx.Client(transport=httpx.MockTransport(handler)))
     assert all(r[2] == "PASS" for r in rows), [r for r in rows if r[2] != "PASS"]
     got = results(rows)
-    int4 = "INT4 (LLM Compressor)"
+    int4 = "INT4 (Red Hat W4A16)"
     assert got[(int4, "mode")] == "PASS" and (int4, "models list") not in got
     assert got[("FP8", "warm-up")] == "PASS"
-    assert rows[-1][3] == '"Live: BF16, FP8, Spec Decode · Recorded: INT4 (LLM Compressor)"'
+    assert rows[-1][3] == '"Live: BF16, FP8, Spec Decode · Recorded: INT4 (Red Hat W4A16)"'

@@ -7,7 +7,7 @@ same number of tokens and the comparison is fair. Warmup requests are discarded.
 
 Usage:
     python scripts/benchmark.py --endpoint http://int4-llama70b:8080 --variant INT4 --model llama-70b-int4
-    BENCH_ENDPOINT=http://... python scripts/benchmark.py --variant FP16 --model llama-70b-fp16
+    BENCH_ENDPOINT=http://... python scripts/benchmark.py --variant BF16 --model llama-70b-bf16
 
 This measures one stream at a time. For behaviour under load use `vllm bench serve` (printed at the end).
 """
@@ -133,7 +133,7 @@ def run_benchmark(
 def main():
     parser = argparse.ArgumentParser(description="Single-stream benchmark for one vLLM endpoint")
     parser.add_argument("--endpoint", default=os.environ.get("BENCH_ENDPOINT"), help="vLLM base URL")
-    parser.add_argument("--variant", required=True, choices=["FP16", "FP8", "INT4", "SPEC_DECODE"])
+    parser.add_argument("--variant", required=True, choices=["BF16", "FP8", "INT4", "SPEC_DECODE"])
     parser.add_argument("--model", required=True, help="served model name")
     parser.add_argument("--requests", type=int, default=20)
     parser.add_argument("--warmup", type=int, default=3)

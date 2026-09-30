@@ -1,0 +1,21 @@
+{
+  "variant": "INT4_RH",
+  "model": "benchmark-int4-rh",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "logic_puzzle",
+  "prompt": "Alice, Bob and Carol each have one meeting, on Monday, Tuesday or Wednesday, each on a different day. Alice's isn't on Monday. Bob's is the day after Alice's. Which day is Carol's? Explain step by step.",
+  "temperature": 0,
+  "response_text": "To determine Carol's meeting day, let's break down the information step by step:\n\n1. Alice's meeting isn't on Monday.\n2. This means Alice's meeting can be on either Tuesday or Wednesday.\n3. Bob's meeting is the day after Alice's.\n4. If Alice's meeting is on Tuesday, then Bob's meeting would be on Wednesday.\n5. Since each person has a meeting on a different day, and Alice and Bob have meetings on Tuesday and Wednesday, Carol's meeting must be on Monday.\n\nSo, Carol's meeting is on Monday.",
+  "usage": {
+    "prompt_tokens": 85,
+    "total_tokens": 200,
+    "completion_tokens": 115
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 317.8,
+  "total_ms": 2869.5,
+  "tokens_per_second": 40.1,
+  "captured_at": "2026-09-29T22:38:32-04:00"
+}

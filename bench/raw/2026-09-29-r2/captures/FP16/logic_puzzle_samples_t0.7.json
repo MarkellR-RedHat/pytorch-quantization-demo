@@ -1,0 +1,81 @@
+{
+  "variant": "FP16",
+  "model": "benchmark-bf16",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "logic_puzzle",
+  "prompt": "Alice, Bob and Carol each have one meeting, on Monday, Tuesday or Wednesday, each on a different day. Alice's isn't on Monday. Bob's is the day after Alice's. Which day is Carol's? Explain step by step.",
+  "temperature": 0.7,
+  "n": 5,
+  "responses": [
+    "To find out the day of Carol's meeting, let's analyze the given information step by step:\n\n1. Alice's meeting isn't on Monday. This means it can be either on Tuesday or Wednesday.\n\n2. Bob's meeting is the day after Alice's. If Alice's meeting is on Tuesday, then Bob's meeting is on Wednesday. If Alice's meeting is on Wednesday, then Bob's meeting would be on Thursday (which is not possible since the meetings are only on Monday, Tuesday, or Wednesday).\n\n   So, the only possibility is that Alice's meeting is on Tuesday and Bob's meeting is on Wednesday.\n\n3. Since Alice's meeting is on Tuesday and Bob's meeting is on Wednesday, Carol's meeting must be on Monday (the only remaining day).\n\nTherefore, Carol's meeting is on Monday.",
+    "To determine the day of Carol's meeting, let's break down the information given:\n\n1. Alice's meeting isn't on Monday. This leaves Tuesday and Wednesday as possibilities for Alice.\n\n2. Bob's meeting is the day after Alice's. If Alice's meeting is on Tuesday, Bob's meeting would be on Wednesday. If Alice's meeting is on Wednesday, Bob's meeting would be on Thursday (which isn't possible since the meetings are on Monday, Tuesday, or Wednesday). Therefore, Alice's meeting must be on Tuesday, and Bob's meeting must be on Wednesday.\n\n3. Since Alice's meeting is on Tuesday and Bob's meeting is on Wednesday, the only remaining day is Monday. Therefore, Carol's meeting must be on Monday.\n\nSo, Carol's meeting is on Monday.",
+    "Let's break down the information:\n\n1. Alice's meeting is not on Monday.\n2. There are three days: Monday, Tuesday, and Wednesday.\n3. Since Alice's meeting is not on Monday, it must be on either Tuesday or Wednesday.\n4. Bob's meeting is the day after Alice's.\n   - If Alice's meeting is on Tuesday, then Bob's meeting is on Wednesday (the day after Tuesday).\n   - If Alice's meeting is on Wednesday, then Bob's meeting cannot be the day after Wednesday (because there's no Thursday option), so this scenario is impossible.\n5. Given that Alice's meeting must be on Tuesday (from step 4), Bob's meeting is on Wednesday.\n6. Since Alice's meeting is on Tuesday and Bob's meeting is on Wednesday, Carol's meeting must be on the remaining day: Monday.\n\nSo, Carol's meeting is on Monday.",
+    "To determine the day of Carol's meeting, let's analyze the given information step by step.\n\n1. Alice's meeting isn't on Monday.\n2. Bob's meeting is the day after Alice's.\n3. There are three days in total: Monday, Tuesday, and Wednesday.\n\nSince Alice's meeting isn't on Monday, it can be either on Tuesday or Wednesday.\n\n- If Alice's meeting is on Tuesday, then Bob's meeting would be on Wednesday (the day after Alice's).\n- If Alice's meeting is on Wednesday, then Bob's meeting would be on Thursday, which is not possible since the meetings are only on Monday, Tuesday, or Wednesday.\n\nSo, Alice's meeting must be on Tuesday, and Bob's meeting must be on Wednesday.\n\nNow, considering that each person has a meeting on a different day, Carol's meeting must be on the only remaining day: Monday.\n\nTherefore, Carol's meeting is on Monday.",
+    "Let's analyze the information step by step:\n\n1. Alice's meeting isn't on Monday.\n   This means Alice's meeting can be on either Tuesday or Wednesday.\n\n2. Bob's meeting is the day after Alice's.\n   If Alice's meeting is on Tuesday, Bob's meeting will be on Wednesday.\n   If Alice's meeting is on Wednesday, Bob's meeting will be on Thursday (but this is not possible, as the meetings are only on Monday, Tuesday, or Wednesday).\n\n   So, the only possible combination for Alice and Bob is:\n   - Alice's meeting on Tuesday\n   - Bob's meeting on Wednesday\n\n3. Now, considering the possible days for Carol's meeting (Monday, Tuesday, or Wednesday), we can eliminate Tuesday (Alice's day) and Wednesday (Bob's day).\n   The only remaining day for Carol's meeting is Monday.\n\nTherefore, Carol's meeting is on Monday."
+  ],
+  "runs": [
+    {
+      "response_text": "To find out the day of Carol's meeting, let's analyze the given information step by step:\n\n1. Alice's meeting isn't on Monday. This means it can be either on Tuesday or Wednesday.\n\n2. Bob's meeting is the day after Alice's. If Alice's meeting is on Tuesday, then Bob's meeting is on Wednesday. If Alice's meeting is on Wednesday, then Bob's meeting would be on Thursday (which is not possible since the meetings are only on Monday, Tuesday, or Wednesday).\n\n   So, the only possibility is that Alice's meeting is on Tuesday and Bob's meeting is on Wednesday.\n\n3. Since Alice's meeting is on Tuesday and Bob's meeting is on Wednesday, Carol's meeting must be on Monday (the only remaining day).\n\nTherefore, Carol's meeting is on Monday.",
+      "usage": {
+        "prompt_tokens": 85,
+        "total_tokens": 250,
+        "completion_tokens": 165
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 439.4,
+      "total_ms": 3754.4,
+      "tokens_per_second": 43.9
+    },
+    {
+      "response_text": "To determine the day of Carol's meeting, let's break down the information given:\n\n1. Alice's meeting isn't on Monday. This leaves Tuesday and Wednesday as possibilities for Alice.\n\n2. Bob's meeting is the day after Alice's. If Alice's meeting is on Tuesday, Bob's meeting would be on Wednesday. If Alice's meeting is on Wednesday, Bob's meeting would be on Thursday (which isn't possible since the meetings are on Monday, Tuesday, or Wednesday). Therefore, Alice's meeting must be on Tuesday, and Bob's meeting must be on Wednesday.\n\n3. Since Alice's meeting is on Tuesday and Bob's meeting is on Wednesday, the only remaining day is Monday. Therefore, Carol's meeting must be on Monday.\n\nSo, Carol's meeting is on Monday.",
+      "usage": {
+        "prompt_tokens": 85,
+        "total_tokens": 245,
+        "completion_tokens": 160
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 388.9,
+      "total_ms": 3607.0,
+      "tokens_per_second": 44.4
+    },
+    {
+      "response_text": "Let's break down the information:\n\n1. Alice's meeting is not on Monday.\n2. There are three days: Monday, Tuesday, and Wednesday.\n3. Since Alice's meeting is not on Monday, it must be on either Tuesday or Wednesday.\n4. Bob's meeting is the day after Alice's.\n   - If Alice's meeting is on Tuesday, then Bob's meeting is on Wednesday (the day after Tuesday).\n   - If Alice's meeting is on Wednesday, then Bob's meeting cannot be the day after Wednesday (because there's no Thursday option), so this scenario is impossible.\n5. Given that Alice's meeting must be on Tuesday (from step 4), Bob's meeting is on Wednesday.\n6. Since Alice's meeting is on Tuesday and Bob's meeting is on Wednesday, Carol's meeting must be on the remaining day: Monday.\n\nSo, Carol's meeting is on Monday.",
+      "usage": {
+        "prompt_tokens": 85,
+        "total_tokens": 268,
+        "completion_tokens": 183
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 364.0,
+      "total_ms": 4044.1,
+      "tokens_per_second": 45.3
+    },
+    {
+      "response_text": "To determine the day of Carol's meeting, let's analyze the given information step by step.\n\n1. Alice's meeting isn't on Monday.\n2. Bob's meeting is the day after Alice's.\n3. There are three days in total: Monday, Tuesday, and Wednesday.\n\nSince Alice's meeting isn't on Monday, it can be either on Tuesday or Wednesday.\n\n- If Alice's meeting is on Tuesday, then Bob's meeting would be on Wednesday (the day after Alice's).\n- If Alice's meeting is on Wednesday, then Bob's meeting would be on Thursday, which is not possible since the meetings are only on Monday, Tuesday, or Wednesday.\n\nSo, Alice's meeting must be on Tuesday, and Bob's meeting must be on Wednesday.\n\nNow, considering that each person has a meeting on a different day, Carol's meeting must be on the only remaining day: Monday.\n\nTherefore, Carol's meeting is on Monday.",
+      "usage": {
+        "prompt_tokens": 85,
+        "total_tokens": 275,
+        "completion_tokens": 190
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 392.0,
+      "total_ms": 4131.7,
+      "tokens_per_second": 46.0
+    },
+    {
+      "response_text": "Let's analyze the information step by step:\n\n1. Alice's meeting isn't on Monday.\n   This means Alice's meeting can be on either Tuesday or Wednesday.\n\n2. Bob's meeting is the day after Alice's.\n   If Alice's meeting is on Tuesday, Bob's meeting will be on Wednesday.\n   If Alice's meeting is on Wednesday, Bob's meeting will be on Thursday (but this is not possible, as the meetings are only on Monday, Tuesday, or Wednesday).\n\n   So, the only possible combination for Alice and Bob is:\n   - Alice's meeting on Tuesday\n   - Bob's meeting on Wednesday\n\n3. Now, considering the possible days for Carol's meeting (Monday, Tuesday, or Wednesday), we can eliminate Tuesday (Alice's day) and Wednesday (Bob's day).\n   The only remaining day for Carol's meeting is Monday.\n\nTherefore, Carol's meeting is on Monday.",
+      "usage": {
+        "prompt_tokens": 85,
+        "total_tokens": 270,
+        "completion_tokens": 185
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 305.6,
+      "total_ms": 4029.7,
+      "tokens_per_second": 45.9
+    }
+  ],
+  "captured_at": "2026-09-29T21:25:23-04:00"
+}

@@ -1,0 +1,21 @@
+{
+  "variant": "INT4",
+  "model": "benchmark-int4",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "quick_fact",
+  "prompt": "What is the capital of Australia, and why isn't it Sydney? Answer in two sentences.",
+  "temperature": 0,
+  "response_text": "The capital of Australia is Canberra, which was specifically designed and built to serve as the country's capital. Sydney is not the capital because, at the time of Australia's federation in 1901, there was a rivalry between Sydney and Melbourne, the two largest cities, and Canberra was chosen as a compromise location, roughly equidistant from both cities.",
+  "usage": {
+    "prompt_tokens": 54,
+    "total_tokens": 126,
+    "completion_tokens": 72
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 392.2,
+  "total_ms": 1867.5,
+  "tokens_per_second": 38.6,
+  "captured_at": "2026-09-29T21:25:49-04:00"
+}

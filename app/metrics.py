@@ -1,5 +1,3 @@
-"""Metrics aggregation and tracking"""
-
 import math
 import time
 from collections import defaultdict, deque

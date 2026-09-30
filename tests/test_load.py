@@ -23,11 +23,11 @@ def sweep(folder, points, tail="p99"):
 @pytest.fixture
 def bench(tmp_path, monkeypatch):
     bench = BenchmarkData(settings.resolve(settings.benchmark_file), tmp_path)
-    sweep(tmp_path / "FP16", {1: (45, 21, 24), 16: (600, 26, 31), 64: (1700, 37, 48)})
-    # the INT4 column reads the folder its benchmark entry points at (Red Hat's build)
-    int4_dir = bench.variant("INT4").get("sweep_dir") or "INT4"
-    sweep(tmp_path / int4_dir, {1: (44, 22, 25), 16: (470, 33, 40), 64: (950, 65, 88)})
-    sweep(tmp_path / "SPEC_DECODE", {1: (65, 15, 19), 16: (620, 25, 34), 64: (1200, 52, 71)}, tail="p95")
+    # each column reads the folder its benchmark entry points at
+    folder = lambda key: tmp_path / (bench.variant(key).get("sweep_dir") or key)  # noqa: E731
+    sweep(folder("BF16"), {1: (45, 21, 24), 16: (600, 26, 31), 64: (1700, 37, 48)})
+    sweep(folder("INT4"), {1: (44, 22, 25), 16: (470, 33, 40), 64: (950, 65, 88)})
+    sweep(folder("SPEC_DECODE"), {1: (65, 15, 19), 16: (620, 25, 34), 64: (1200, 52, 71)}, tail="p95")
     monkeypatch.setattr(settings, "tpot_target_ms", 50.0)
     return bench
 
@@ -41,7 +41,7 @@ def test_points_carry_median_and_tail_time_per_token(bench):
 
 def test_throughput_counts_only_under_the_target(bench):
     best = bench.meta()["at_target"]
-    assert best["FP16"]["concurrency"] == 64 and best["FP16"]["output_tokens_per_second_per_gpu"] == 850.0
+    assert best["BF16"]["concurrency"] == 64 and best["BF16"]["output_tokens_per_second_per_gpu"] == 850.0
     # INT4 at 64 in flight serves more per GPU, but its tail time per token breaks 50 ms
     assert best["INT4"]["concurrency"] == 16 and best["INT4"]["output_tokens_per_second_per_gpu"] == 470.0
     assert best["SPEC_DECODE"]["concurrency"] == 16 and best["SPEC_DECODE"]["tpot_tail_kind"] == "p95"
@@ -64,4 +64,4 @@ def test_config_exposes_the_target_without_a_sweep():
     with TestClient(main.app) as client:
         bm = client.get("/api/config").json()["benchmark"]
     assert bm["tpot_target_ms"] == settings.tpot_target_ms
-    assert bm["at_target"] == {} or set(bm["at_target"]) <= {"FP16", "INT4", "SPEC_DECODE", "FP8"}
+    assert bm["at_target"] == {} or set(bm["at_target"]) <= {"BF16", "INT4", "SPEC_DECODE", "FP8"}

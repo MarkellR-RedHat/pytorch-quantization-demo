@@ -11,7 +11,6 @@ target-version = "py311"
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
-# kept byte-identical to the copy pasted into the work laptop's run list
 "scripts/capture_presets.py" = ["E501"]
 
 [tool.pytest.ini_options]

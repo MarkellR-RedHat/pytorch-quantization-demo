@@ -1,20 +1,10 @@
-# Speculative decoding: the BF16 70B target with Llama 3.1 8B as the draft, 5 tokens per step,
-# both tensor parallel 2. Measured footprint: 73.2 GiB per GPU (target plus draft), so two full H200s,
-# with 218K tokens of KV cache left (the draft takes its share).
-# --max-model-len 131072 is what was measured (the model's full context); 32768 is plenty for a demo
-# and leaves more of the GPU for KV cache. --port 8080 because KServe expects the predictor there
-# and vLLM's default is 8000.
+# Speculative decoding, BF16 70B target with an 8B draft, TP2. Startup log: bench/raw/2026-09-29-r2/logs/benchmark-spec-*-startup.txt
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
   name: benchmark-spec
-  namespace: <your-namespace>
   annotations:
-    # Plain Deployment behind a Service, no Knative; drop it if your KServe defaults to raw already.
     serving.kserve.io/deploymentMode: RawDeployment
-  labels:
-    # Our cluster hands out GPUs through Kueue; drop this label if yours doesn't.
-    kueue.x-k8s.io/queue-name: reserved
 spec:
   predictor:
     minReplicas: 1
@@ -23,18 +13,16 @@ spec:
       - name: kserve-container
         image: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:dd65c7ed88a9369b962f1299ed19c6c8819ff0a64595c10e32f1e82ab0750e27
         args:
+          - --port=8080
           - --model=meta-llama/Meta-Llama-3.1-70B-Instruct
           - --served-model-name=benchmark-spec
           - --tensor-parallel-size=2
           - --dtype=bfloat16
           - --max-model-len=131072
-          - --port=8080
           - '--speculative-config={"model": "meta-llama/Llama-3.1-8B-Instruct", "num_speculative_tokens": 5}'
         env:
-          # the pod runs as a random UID, so the cache can't live under $HOME
           - name: HF_HOME
             value: /tmp/hf_home
-          # Llama 3.1 is gated on the Hub
           - name: HF_TOKEN
             valueFrom:
               secretKeyRef:
@@ -42,10 +30,8 @@ spec:
                 key: HF_TOKEN
         resources:
           requests:
-            cpu: 4
-            memory: 48Gi
-            nvidia.com/gpu: 2
-          limits:
             cpu: 8
             memory: 96Gi
+            nvidia.com/gpu: 2
+          limits:
             nvidia.com/gpu: 2

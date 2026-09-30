@@ -6,8 +6,8 @@
   "driver_version": "580.126.20",
   "date": "2026-09-29",
   "cluster": "Red Hat internal H200 cluster",
-  "source": "built by scripts/build_benchmark_file.py from bench/raw/2026-09-29-round2",
-  "notes": "Round 2, the evening of Sep 29, 2026 (FP8 ran last, into the early hours of Sep 30). Single stream: vllm bench serve inside each pod, 30 ShareGPT prompts one at a time (max_concurrency 1), at temperature 0 (the headline numbers) and 0.7, enforce_eager off everywhere, so no network hop is included. throughput_tps is output tokens per second over the whole run. Accuracy is lm_eval through a port-forward: GSM8K 8-shot CoT on all 1,319 questions and MMLU-Pro 5-shot on the first 20 questions of each of 14 subjects (280). Spec decode counters were read before and after each single-stream run, so acceptance is per temperature. The INT4 setup is Red Hat's LLM Compressor build; the community AWQ build is under reference. The round-1 numbers are under history.",
+  "source": "built by scripts/build_benchmark_file.py from bench/raw/2026-09-29-r2",
+  "notes": "Round 2, the evening of Sep 29, 2026 (FP8 ran last, into the early hours of Sep 30). Single stream: vllm bench serve inside each pod, 30 ShareGPT prompts one at a time (max_concurrency 1), at temperature 0 (the headline numbers) and 0.7, enforce_eager off everywhere, so no network hop is included. throughput_tps is output tokens per second over the whole run. Accuracy is lm_eval through a port-forward: GSM8K 8-shot CoT on all 1,319 questions and MMLU-Pro 5-shot on the first 20 questions of each of 14 subjects (280). Spec decode counters were read before and after each single-stream run, so acceptance is per temperature. The INT4 setup is Red Hat's validated W4A16 build (GPTQ); the community AWQ build is under reference. The round-1 numbers are under history.",
   "single_stream": {
     "dataset": "ShareGPT",
     "prompts": 30,
@@ -15,7 +15,7 @@
     "where": "inside the pod"
   },
   "variants": {
-    "FP16": {
+    "BF16": {
       "gpus": 2,
       "tensor_parallel_size": 2,
       "quantization": null,
@@ -84,10 +84,10 @@
     "INT4": {
       "gpus": 1,
       "tensor_parallel_size": 1,
-      "quantization": "gptq_marlin (compressed-tensors, W4A16)",
+      "quantization": "gptq_marlin (AutoGPTQ format, W4A16)",
       "dtype": "float16",
       "checkpoint": "RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16",
-      "build": "Red Hat LLM Compressor build",
+      "build": "Red Hat W4A16 build (GPTQ)",
       "prompts": 30,
       "throughput_tps": 44.0,
       "avg_latency_ms": 4482.2,
@@ -355,10 +355,10 @@
   "history": {
     "round1_2026_09_29_afternoon": {
       "date": "2026-09-29",
-      "source": "built from bench/raw/2026-09-29",
+      "source": "built from bench/raw/2026-09-29-r1",
       "notes": "Round 1, the afternoon of Sep 29: 5 requests per setup, one at a time, temperature 0, 256 output tokens each, through a port-forward from a laptop, so latencies include that network hop. The raw files don't record the prompt. Spec Decode's 64.9 tok/s (about 1.4x BF16) came from this one prompt and its first run was cold; round 2's 30 ShareGPT prompts give 1.25x, the number used everywhere. Acceptance counters here are cumulative since pod start and include the temperature 0.7 quality runs.",
       "variants": {
-        "FP16": {
+        "BF16": {
           "gpus": 2,
           "tensor_parallel_size": 2,
           "quantization": null,
