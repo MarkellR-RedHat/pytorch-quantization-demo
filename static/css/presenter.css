@@ -155,13 +155,7 @@ kbd {
 .strip i.ok { background: var(--v-spec); }
 .strip i.fix { background: var(--surface); outline: 2px solid var(--v-spec); outline-offset: -2px; }
 
-.join { display: grid; grid-template-columns: 124px 1fr; gap: 20px; align-items: center; padding: 16px 24px; }
-.qr { width: 124px; height: 124px; border-radius: 12px; background: #fff; padding: 8px; border: 1px solid var(--line); }
-.join-text h2 { margin: 0 0 6px; font-family: var(--display); font-weight: 700; font-size: 21px; }
-.join-text p { margin: 0 0 8px; font-size: 15px; line-height: 1.4; color: var(--ink-2); }
-.join-text code { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--brand-ink); word-break: break-all; }
-
-/* audience events float over the top-left of the course */
+/* booth arena: throw events float over the top-left of the course */
 .feed {
     position: absolute; left: 20px; top: 20px; right: 45%;
     list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;

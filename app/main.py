@@ -46,13 +46,12 @@ SIM_MAX_INFLIGHT = 1000
 demo_state = DemoState(
     is_running=False,
     simulation_mode=settings.simulation_mode,
-    participant_count=0,
     total_requests=0,
 )
 if settings.simulation_mode:
     simulator.enable()
 
-connection_manager = ConnectionManager(max_connections=settings.max_connections)
+connection_manager = ConnectionManager()
 
 live_slots = {k: asyncio.Semaphore(settings.max_inflight_per_variant) for k in ALL_VARIANTS}
 sim_slots = {k: asyncio.Semaphore(SIM_MAX_INFLIGHT) for k in ALL_VARIANTS}
@@ -71,7 +70,6 @@ def current_mode() -> str:
 
 
 def state_payload() -> dict:
-    demo_state.participant_count = connection_manager.get_connection_count()
     demo_state.total_requests = metrics_collector.total_requests()
     demo_state.simulation_mode = simulator.is_enabled()
     return demo_state.model_dump(mode="json")
@@ -334,7 +332,7 @@ async def presenter_websocket(websocket: WebSocket):
         if not key_matches(key):
             await websocket.close(code=1008)
             return
-    await connection_manager.connect(websocket, is_presenter=True)
+    await connection_manager.connect(websocket)
     try:
         while True:
             message = await websocket.receive()  # messages from the screen are ignored
@@ -412,7 +410,7 @@ async def health_check():
         "status": "healthy",
         "mode": current_mode(),
         "simulation_mode": simulator.is_enabled(),
-        "active_connections": connection_manager.get_connection_count(),
+        "presenter_connections": connection_manager.get_presenter_count(),
         "total_requests": metrics_collector.total_requests(),
     }
 

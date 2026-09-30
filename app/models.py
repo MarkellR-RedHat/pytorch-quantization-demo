@@ -47,7 +47,6 @@ class MetricsSnapshot(BaseModel):
 class DemoState(BaseModel):
     is_running: bool
     simulation_mode: bool
-    participant_count: int
     total_requests: int
     start_time: datetime | None = None
 

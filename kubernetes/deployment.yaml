@@ -5,8 +5,8 @@ metadata:
   labels:
     app: pytorch-quantization-demo
 spec:
-  # One replica on purpose: metrics, votes and websocket fan-out live in process memory,
-  # so a second replica would split the audience across two dashboards.
+  # One replica on purpose: metrics and websocket fan-out live in process memory,
+  # so a second replica would split the presenter screen's metrics across two pods.
   replicas: 1
   selector:
     matchLabels:

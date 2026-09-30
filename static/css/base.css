@@ -1,4 +1,4 @@
-/* Shared tokens for the presenter stage and the audience phone view.
+/* Shared tokens for the presenter stage and the booth arena.
    Fonts are bundled (static/fonts, SIL OFL 1.1) so nothing depends on conference wifi. */
 
 @font-face { font-family: 'Red Hat Display'; src: url('/static/fonts/RedHatDisplay-VF.woff2') format('woff2'); font-weight: 300 900; font-display: block; }

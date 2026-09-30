@@ -50,7 +50,6 @@ class Settings(BaseSettings):
     auto_traffic: bool = True
     auto_traffic_rps: float = 0.5
     max_inflight_per_variant: int = 32
-    max_connections: int = 2000
 
     # Cost model: hourly price of one GPU. 0 hides cost everywhere.
     gpu_hourly_usd: float = 0.0
