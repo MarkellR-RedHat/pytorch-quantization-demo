@@ -81,13 +81,6 @@ h2 .soft { color: var(--ink-3); }
 .hl { color: var(--red); }
 .t-bf16 { color: var(--bf16-tx); } .t-int4 { color: var(--int4-tx); } .t-spec { color: var(--spec-tx); } .t-fp8 { color: var(--fp8-tx); }
 
-/* pending: a claim that needs a test result before the talk; shows until the data lands */
-.pending { position: relative; outline: 3px dashed #d9534f; outline-offset: 8px; border-radius: 6px; }
-.pending::after {
-  content: attr(data-pending); position: absolute; top: -22px; right: -8px;
-  background: #d9534f; color: #fff; font: 700 15px/1 var(--mono); letter-spacing: .5px;
-  padding: 6px 9px; border-radius: 4px; white-space: nowrap; z-index: 5;
-}
 
 /* ── Nav bar ── */
 .nav {
@@ -129,8 +122,9 @@ h2 .soft { color: var(--ink-3); }
 .byline strong { color: var(--ink); font-family: var(--display); font-size: 28px; display: block; }
 .quant-panel { background: var(--bg-soft); border: 1.5px solid var(--line); border-radius: 28px; padding: 34px; position: relative; }
 .quant-panel canvas { display: block; width: 100%; height: 520px; border-radius: 14px; }
-.quant-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
-.chip { font: 700 20px var(--mono); padding: 9px 16px; border-radius: 999px; letter-spacing: .5px; transition: background .5s, color .5s; }
+.quant-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; }
+.quant-head .foot { white-space: nowrap; }
+.chip { white-space: nowrap; font: 700 20px var(--mono); padding: 9px 16px; border-radius: 999px; letter-spacing: .5px; transition: background .5s, color .5s; }
 .chip.bf16 { background: var(--bf16-tint); color: var(--bf16-tx); }
 .chip.int4 { background: var(--int4-tint); color: var(--int4-tx); }
 .quant-cap { margin-top: 20px; font-size: 21px; color: var(--ink-3); }
@@ -204,17 +198,6 @@ h2 .soft { color: var(--ink-3); }
 .guess .q { font: 700 32px var(--display); white-space: nowrap; }
 .guess .foot { text-align: right; max-width: 640px; }
 
-/* spec decode token strip */
-.tokstrip { margin-top: 18px; }
-.tokrow { display: flex; gap: 8px; align-items: center; min-height: 48px; }
-.toklab { font: 700 15px var(--mono); color: var(--ink-3); width: 58px; flex-shrink: 0; letter-spacing: .5px; }
-.tok { font: 500 19px var(--mono); padding: 7px 10px; border-radius: 8px; background: var(--bg-soft); border: 1.5px solid var(--line); color: var(--ink-2); opacity: 0; transform: translateY(8px); transition: all .35s var(--ease); position: relative; }
-.tok.in { opacity: 1; transform: none; }
-.tok.acc { background: var(--ok-tint); border-color: #9fcca1; color: var(--ok); }
-.tok.rej { background: var(--bad-tint); border-color: #f1a9a2; color: var(--bad); text-decoration: line-through; }
-.tok.dis { opacity: .35; text-decoration: line-through; }
-.tok.fix { background: var(--spec-tint); border-color: var(--spec); color: var(--spec-tx); font-weight: 700; }
-.tokcap { font-size: 19px; color: var(--ink-3); margin-top: 10px; line-height: 1.4; min-height: 54px; }
 
 /* ════════ Slide 6: find out ════════ */
 .center { align-items: center; text-align: center; }
@@ -246,12 +229,6 @@ h2 .soft { color: var(--ink-3); }
 .prompt-box { display: flex; align-items: center; justify-content: space-between; gap: 30px; margin-top: 30px; padding: 20px 30px; border-radius: 16px; background: var(--bg-soft); border: 1.5px solid var(--line); overflow: hidden; }
 .prompt-box .p { font: 500 29px/1.35 var(--display); color: var(--ink); }
 .prompt-box .p .lab { display: block; font: 700 16px var(--mono); letter-spacing: 1.5px; color: var(--ink-3); margin-bottom: 6px; }
-.flock-wrap { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
-.flock { display: grid; grid-template-columns: repeat(9, 44px); grid-auto-rows: 38px; gap: 4px 6px; width: 460px; height: 80px; transition: height .6s var(--ease) 0s; }
-.slide.revealed .flock { height: 38px; transition-delay: 2.1s; }
-.flock svg { width: 44px; height: 38px; transition: transform 1.2s var(--ease), opacity 1.2s var(--ease); }
-.slide.revealed .flock svg.runs { transform: translateX(380px); opacity: 0; transition-delay: calc(.3s + var(--i) * 80ms); }
-.flock-n { font: 900 44px/1 var(--display); color: var(--ok); min-width: 50px; text-align: right; }
 .answers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 30px; }
 .ans { border: 1.5px solid var(--line); border-radius: 18px; padding: 22px 26px 20px; background: #fff; display: flex; flex-direction: column; }
 .ans-h { display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; border-bottom: 1.5px solid var(--line); margin-bottom: 16px; }
@@ -492,7 +469,7 @@ h1, h2 { word-spacing: .08em; }
     </div>
     <div class="quant-panel rise" style="--d:2">
       <div class="quant-head">
-        <span class="chip bf16" id="qchip">BF16 &middot; 65,536 levels</span>
+        <span class="chip bf16" id="qchip">BF16 &middot; 65,536 values</span>
         <span class="foot" id="qbits">16 bits per weight</span>
       </div>
       <canvas id="quantgrid" width="1440" height="1040"></canvas>
@@ -617,7 +594,7 @@ h1, h2 { word-spacing: .08em; }
       <h3><span class="emo">🟣</span> Speculative decode</h3><div class="sub">70B + SMALL 8B DRAFT</div>
       <div class="chips-row"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s, same as BF16</span></div>
       <div class="kv-rows">
-        <div class="kv2"><span>Buys you</span><b>About 1.4× faster answers, with BF16 quality</b><em class="caveat">One request at a time, on our benchmark prompt</em></div>
+        <div class="kv2"><span>Buys you</span><b>About 1.4× faster answers, with BF16 quality</b><em class="caveat">One request at a time, temperature 0</em></div>
         <div class="kv2"><span>Best for</span><b>Latency-sensitive, low-traffic work</b></div>
       </div>
     </div>
@@ -650,8 +627,8 @@ h1, h2 { word-spacing: .08em; }
       <div class="dest rise" style="--d:8; --c:var(--spec); --ct:var(--spec-tx)"><h3>Spec decode</h3><p>2 GPUs, ~1.4× faster</p></div>
     </div>
   </div>
-  <div class="plugs step"><span class="lab"><span class="emo">🔌</span> Also plugs into the same router</span><span class="chipset"><span>FP8</span><span>INT8 (W8A8)</span><span>GPTQ</span><span>EAGLE-3 speculators</span><span>A smaller 8B for easy questions</span></span></div>
-  <p class="moral step">Only the hard questions go to BF16, so she needs far fewer GPUs overall. Marcus closes the ticket <span class="emo">✅</span> and Dana sends another <span class="emo">🎉</span></p>
+  <div class="plugs step"><span class="lab"><span class="emo">🔌</span> Also plugs into the same router</span><span class="chipset"><span>FP8</span><span>INT8 (W8A8)</span><span>GPTQ</span><span>EAGLE-3 draft heads</span><span>A smaller 8B for easy questions</span></span></div>
+  <p class="moral step">Only the hard questions go to BF16, so she needs fewer GPUs than running everything on BF16. Marcus closes the ticket <span class="emo">✅</span> and Dana sends another <span class="emo">🎉</span></p>
 </section>
 
 <!-- ═══════════ 9 · WRAP-UP ═══════════ -->
@@ -742,34 +719,7 @@ function playCount(slide) {
   });
 }
 
-// ═══ Speculative decoding token strip (slide 5) ═══
-let tokTimers = [];
-function playTokens() {
-  tokTimers.forEach(clearTimeout); tokTimers = [];
-  const drafts = [...document.querySelectorAll('#tokstrip .tokrow:first-child .tok')];
-  const fix = document.getElementById('tokfix'), cap = document.getElementById('tokcap');
-  const T = (ms, fn) => tokTimers.push(setTimeout(fn, ms));
-  drafts.forEach(t => t.className = 'tok'); fix.className = 'tok fix';
-  cap.textContent = 'The 8B guesses five tokens ahead.';
-  drafts.forEach((t, i) => T(900 + i * 260, () => t.classList.add('in')));
-  T(2500, () => { cap.textContent = 'The 70B checks all five in a single forward pass.'; });
-  [0, 1, 2].forEach(i => T(3000 + i * 220, () => drafts[i].classList.add('acc')));
-  T(3800, () => drafts[3].classList.add('rej'));
-  T(4100, () => drafts[4].classList.add('dis'));
-  T(4500, () => { fix.classList.add('in'); cap.textContent = 'Three kept, "8" rejected, and the 70B writes "9" itself. Four tokens for one 70B pass.'; });
-  T(11000, playTokens);
-}
 
-// ═══ Flock (slide 8): 17 sheep, all but 9 run away ═══
-const SHEEP = '<svg viewBox="0 0 34 29"><path d="M10 21v6M15 21v6M21 21v6M25 21v6" stroke="#3c3f42" stroke-width="2" stroke-linecap="round"/><g fill="#3c3f42" stroke="#3c3f42" stroke-width="3"><circle cx="9" cy="14" r="5.5"/><circle cx="14" cy="9.5" r="5.5"/><circle cx="20" cy="9.5" r="5.5"/><circle cx="23" cy="15" r="5.5"/><circle cx="16" cy="17" r="6"/><circle cx="10" cy="18" r="4.5"/></g><g fill="#fff"><circle cx="9" cy="14" r="5.5"/><circle cx="14" cy="9.5" r="5.5"/><circle cx="20" cy="9.5" r="5.5"/><circle cx="23" cy="15" r="5.5"/><circle cx="16" cy="17" r="6"/><circle cx="10" cy="18" r="4.5"/></g><g fill="#3c3f42"><ellipse cx="28.5" cy="12" rx="4" ry="5"/><ellipse cx="25.3" cy="8.4" rx="2.4" ry="1.3" transform="rotate(-30 25.3 8.4)"/></g><circle cx="29.6" cy="11" r=".9" fill="#fff"/></svg>';
-
-
-let flockTimers = [];
-function playFlock() {
-  flockTimers.forEach(clearTimeout); flockTimers = [];
-  const n = document.getElementById('flockN'); n.textContent = '17';
-  for (let k = 1; k <= 8; k++) flockTimers.push(setTimeout(() => { n.textContent = String(17 - k); }, 600 + k * 80 + 400));
-}
 
 // ═══ QR (repo link) ═══
 document.getElementById('qr').innerHTML = `<path stroke="#0a0f1e" d="M0 0.5h7m1 0h1m2 0h1m1 0h1m2 0h2m1 0h3m1 0h1m2 0h7M0 1.5h1m5 0h1m1 0h6m3 0h1m4 0h3m1 0h1m5 0h1M0 2.5h1m1 0h3m1 0h1m3 0h1m1 0h1m2 0h2m1 0h2m4 0h1m1 0h1m1 0h3m1 0h1M0 3.5h1m1 0h3m1 0h1m1 0h1m1 0h1m3 0h2m1 0h1m4 0h1m3 0h1m1 0h3m1 0h1M0 4.5h1m1 0h3m1 0h1m2 0h1m2 0h1m1 0h1m2 0h1m1 0h1m4 0h1m1 0h1m1 0h3m1 0h1M0 5.5h1m5 0h1m3 0h1m2 0h2m2 0h1m1 0h1m1 0h2m1 0h1m1 0h1m5 0h1M0 6.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M8 7.5h1m1 0h3m2 0h3m5 0h1M0 8.5h1m1 0h2m1 0h3m1 0h2m1 0h1m1 0h2m1 0h3m1 0h2m1 0h1m1 0h1m2 0h1m1 0h2M3 9.5h1m1 0h1m2 0h4m3 0h7m1 0h1m2 0h2m1 0h4M0 10.5h1m4 0h3m4 0h1m1 0h1m1 0h1m1 0h1m4 0h1m1 0h1m1 0h3m1 0h2M0 11.5h1m1 0h1m7 0h5m3 0h3m5 0h2m1 0h1M1 12.5h2m3 0h2m9 0h1m1 0h2m1 0h2m1 0h1m1 0h3M2 13.5h2m1 0h1m1 0h2m1 0h2m3 0h2m2 0h1m1 0h1m2 0h2m1 0h1m3 0h1M0 14.5h3m3 0h1m1 0h1m1 0h1m1 0h1m4 0h1m1 0h3m2 0h1m1 0h1m1 0h1M2 15.5h1m4 0h1m3 0h2m2 0h2m4 0h1m3 0h2m3 0h1M0 16.5h1m1 0h1m1 0h4m1 0h1m1 0h5m2 0h1m1 0h3m2 0h2m1 0h3M2 17.5h1m1 0h2m1 0h1m1 0h3m1 0h1m1 0h3m1 0h8m1 0h2m1 0h2M2 18.5h2m1 0h7m2 0h2m1 0h1m2 0h1m1 0h1m1 0h1m2 0h2m1 0h2M2 19.5h1m1 0h2m3 0h2m1 0h2m1 0h1m1 0h1m1 0h1m3 0h2m3 0h1m3 0h1M1 20.5h1m1 0h1m2 0h4m2 0h3m1 0h2m3 0h1m5 0h1m1 0h4M0 21.5h4m3 0h2m3 0h2m2 0h1m1 0h7m1 0h1m2 0h1m2 0h1M2 22.5h1m2 0h3m1 0h1m1 0h2m1 0h1m1 0h3m1 0h2m1 0h1m1 0h3m2 0h3M1 23.5h5m1 0h1m1 0h2m3 0h1m3 0h1m7 0h1m2 0h1m1 0h1M0 24.5h1m2 0h2m1 0h1m2 0h1m1 0h2m2 0h3m1 0h1m2 0h8m1 0h2M8 25.5h4m4 0h1m2 0h2m3 0h1m3 0h2m2 0h1M0 26.5h7m1 0h1m1 0h3m1 0h1m1 0h1m1 0h3m2 0h2m1 0h1m1 0h1M0 27.5h1m5 0h1m1 0h6m1 0h2m3 0h2m1 0h2m3 0h3M0 28.5h1m1 0h3m1 0h1m3 0h1m2 0h3m2 0h2m1 0h8m1 0h3M0 29.5h1m1 0h3m1 0h1m1 0h3m1 0h1m1 0h2m1 0h1m2 0h4m3 0h1m4 0h1M0 30.5h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h1m2 0h1m4 0h1m1 0h1m3 0h2m2 0h1M0 31.5h1m5 0h1m4 0h1m1 0h1m2 0h2m2 0h1m1 0h3m1 0h3m3 0h1M0 32.5h7m1 0h3m2 0h1m2 0h3m2 0h1m1 0h1m2 0h1m1 0h3"/>`;
@@ -795,7 +745,7 @@ document.getElementById('qr').innerHTML = `<path stroke="#0a0f1e" d="M0 0.5h7m1 
   setInterval(() => {
     target = target ? 0 : 1;
     chip.className = 'chip ' + (target ? 'int4' : 'bf16');
-    chip.innerHTML = target ? 'INT4 &middot; 16 levels' : 'BF16 &middot; 65,536 levels';
+    chip.innerHTML = target ? 'INT4 &middot; 16 levels' : 'BF16 &middot; 65,536 values';
     bits.textContent = target ? '4 bits per weight' : '16 bits per weight';
   }, 3200);
   function draw(t) {
@@ -862,13 +812,12 @@ function go(n) {
   if (s.querySelector('.size-bar')) playSizes(s);
   if (s.querySelector('.mem')) playMem(s);
   if (s.querySelector('[data-count]')) playCount(s);
-  if (s.querySelector('#tokstrip')) playTokens(); else { tokTimers.forEach(clearTimeout); }
   const key = isBk ? 'B' + (n - mainCount + 1) : String(n + 1);
   document.getElementById('notes').innerHTML = SCRIPT[key] ? `<b>SLIDE ${key}</b>` + SCRIPT[key].replace(/^\[[^\]]*\]\s*/, '').replace(/\n/g, '<br>') : '';
 }
 function next() {
   const hidden = slides[cur].querySelector('.step:not(.shown)');
-  if (hidden) { hidden.classList.add('shown'); slides[cur].classList.add('revealed'); if (slides[cur].querySelector('#flock')) playFlock(); const sh = slides[cur].querySelector('#shout'); if (sh) sh.style.opacity = '.35'; return; }
+  if (hidden) { hidden.classList.add('shown'); slides[cur].classList.add('revealed'); const sh = slides[cur].querySelector('#shout'); if (sh) sh.style.opacity = '.35'; return; }
   go(cur + 1);
 }
 function toggleAuto() {
@@ -922,7 +871,7 @@ Priya's a little naive, so she grabs the first fix everyone reaches for and quan
 Two weeks later Marcus files this. Let the room read it. Did the model get worse? His analysis answers have felt off since the switch. [Click] Quick show of hands, who has quantized a model and then just hoped the quality was fine? Yeah. Priya didn't know either, and guessing is how she got here, so this time she measured.
 
 [6 The options | 2:45 to 3:45]
-So Priya started investigating less naive ways to improve inference, and here are her three options, apples to apples. [Click] BF16 is two H200s and the reference answer, and it's where your hardest questions stay until INT4 has been tested on them. [Click] INT4 is one H200. On our runs it hit 97% of BF16's speed for one request, and it kept pace all the way up to 8 requests at once, 34.5 tokens a second each versus 35.1, on half the GPUs. On H200 vLLM runs it with the Machete kernel, the Hopper successor to Marlin. Under heavy batching on high-end GPUs, Red Hat's study found 8-bit (W8A8) more cost-efficient than 4-bit, and we haven't tested past 8 at once yet. [Click] Speculative decoding still needs the same two H200s as BF16, and what it buys you is speed. A smaller 8B model drafts five tokens ahead and the 70B checks them in one pass, and on average the 70B kept about four and a half tokens per pass. Because the 70B checks every token, you keep BF16 quality. With enforce_eager off, so torch.compile and CUDA graphs are on, it ran about 1.4 times faster than BF16 on our benchmark prompt. Quick vote before the demo, hands up if you think BF16 is fastest. INT4? Spec decode? Let's find out.
+So Priya started investigating less naive ways to improve inference, and here are her three options, apples to apples. [Click] BF16 is two H200s and the reference answer, and it's where your hardest questions stay until INT4 has been tested on them. [Click] INT4 is one H200. On our runs it hit 97% of BF16's speed for one request, and it kept pace all the way up to 8 requests at once, 34.5 tokens a second each versus 35.1, on half the GPUs. On H200 vLLM runs it with the Machete kernel, the Hopper successor to Marlin. Under heavy batching on high-end GPUs, Red Hat's study found 8-bit (W8A8) more cost-efficient than 4-bit, and we haven't tested past 8 at once yet. [Click] Speculative decoding still needs the same two H200s as BF16, and what it buys you is speed. A smaller 8B model drafts five tokens ahead and the 70B checks them in one pass, and on average the 70B kept about four and a half tokens per pass. Because the 70B checks every token, you keep BF16 quality. With enforce_eager off, so torch.compile and CUDA graphs are on, it ran about 1.4 times faster than BF16, one request at a time at temperature 0. If a vLLM engineer asks: that's 5 runs of one prompt at temperature 0 with the cold first run included, so 64.9 versus 46.9 tokens a second, and 1.47 times on the four warm runs only. Quick vote before the demo, hands up if you think BF16 is fastest. INT4? Spec decode? Let's find out.
 
 [7 Let's find out | 3:45 to 7:00]
 Call out a question and I'll send it to all three setups at once. Switch to the dashboard.
@@ -931,10 +880,10 @@ Scene 2, Under load. Only if the 32 and 64 run was recorded; otherwise skip it a
 Scene 3, Numbers, the money slide. BF16 46.9 tokens a second on two GPUs, INT4 45.3 on one, spec decode about 65 on two. INT4 wins on GPUs, spec decode wins on speed, and BF16 is the reference.
 
 [8 Priya adds a router | 7:00 to 7:50]
-So there wasn't one winner, and Priya added a router. Easy questions go to INT4, latency-critical work goes to spec decode, and the hardest questions stay on BF16 until INT4 has been tested on them. It started as one BF16 replica, got popular, and every new replica cost two more H200s. [Click] And these three aren't the only options. FP8, INT8, GPTQ, EAGLE-style speculators, or a smaller 8B for the easy questions all plug into the same router, I just didn't have time for all of them today. [Click] Only the hard questions go to BF16 now, so she needs far fewer GPUs overall. Marcus closes his ticket, and Dana sends another party emoji.
+So there wasn't one winner, and Priya added a router. [The router here is the design. The demo shows an example routing rule, not a deployed gateway.] Easy questions go to INT4, latency-critical work goes to spec decode, and the hardest questions stay on BF16 until INT4 has been tested on them. It started as one BF16 replica, got popular, and every new replica cost two more H200s. [Click] And these three aren't the only options. FP8, INT8, GPTQ, EAGLE-3 draft heads, or a smaller 8B for the easy questions all plug into the same router, I just didn't have time for all of them today. EAGLE-3 heads exist for Llama 3.3 70B, not for 3.1 70B, so that one would mean moving to 3.3. [Click] Only the hard questions go to BF16 now, so she needs fewer GPUs than running everything on BF16. Marcus closes his ticket, and Dana sends another party emoji.
 
 [9 Wrap-up | 7:50 to 9:25]
-Four points to take home, one click each. INT4 is a cost tool, half the GPUs at about the same speed up to 8 requests at once. Spec decode is a latency tool, about 1.4 times faster on the same GPUs. Measure, don't guess, because INT4 held up on our questions and that's exactly why you test it on yours. And a router lets each one run where it's best, once your traffic is big and mixed enough. If you're small, three pools of GPUs is overkill, so pick the one that fits most of your questions. A few things to think about are how much of your traffic really needs full precision, whether your target is cost per token or time to answer, and whether you have an eval set built from real prompts. If technical questions come up and we're short on time, point to the link at the bottom, where the repo answers them. If asked why spec decode was slow in the first run: it had enforce_eager on, which in vLLM 0.18 turns off torch.compile and CUDA graphs, and it also used temperature 0.7, so we can't pin the difference on one cause. If asked about identical output: greedy spec decode matched BF16 word for word on the sheep riddle and split on a near-tie word after 100-plus matching tokens on two other prompts, which is the hardware-numerics caveat vLLM documents. FP8 fits on one H200 and keeps 99.9% of the score on Red Hat's build. Smaller models lose more under quantization, 97.4% kept for the 70B vs 96.1% for the 8B in Red Hat's study. If asked why vLLM 0.18, it's the Red Hat AI build the cluster runs.
+Four points to take home, one click each. INT4 is a cost tool, half the GPUs at about the same speed up to 8 requests at once. Spec decode is a latency tool, about 1.4 times faster on the same GPUs. Measure, don't guess, because INT4 held up on our questions and that's exactly why you test it on yours. And a router lets each one run where it's best, once your traffic is big and mixed enough. If you're small, three pools of GPUs is overkill, so pick the one that fits most of your questions. A few things to think about are how much of your traffic really needs full precision, whether your target is cost per token or time to answer, and whether you have an eval set built from real prompts. If technical questions come up and we're short on time, point to the link at the bottom, where the repo answers them. If asked why spec decode was slow in the first run: it had enforce_eager on, which in vLLM 0.18 turns off torch.compile and CUDA graphs, and it also used temperature 0.7, so we can't pin the difference on one cause. If asked about identical output: greedy spec decode matched BF16 word for word on the sheep riddle and diverged after roughly 100 to 150 tokens on two other prompts, a wording change in the summary and a different edge-case check in the code, which is the hardware-numerics caveat vLLM documents. FP8 fits on one H200 and keeps 99.9% of the score on Red Hat's build. Smaller models lose more under quantization, 97.4% kept for the 70B vs 96.1% for the 8B in Red Hat's study. If asked why vLLM 0.18, it's the Red Hat AI build the cluster runs.
 
 [10 Close | 9:25 to 10:00]
 Here's all the source code I used. If you want to see how I did this, it's all in the repo. Thank you.
