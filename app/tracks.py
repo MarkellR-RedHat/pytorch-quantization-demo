@@ -89,8 +89,7 @@ SLICE_35 = "35 GB slice"  # nvidia.com/mig-2g.35gb, three per H200
 # ("bestWithFP8" when FP8 is on screen), "acc" / "accNote" when the accuracy cell isn't a measured score,
 # and for spec decode what drafts ("drafter"), what checks ("pass") and the long form for the footnote.
 # Lines that carry a ratio are computed from the benchmark in the page instead, so words never drift
-# from the numbers under them. The Llama copy is the approved Sep 29 wording; the Qwen copy is a DRAFT
-# that states only what the setup is, pending the measured numbers and b7's approval.
+# from the numbers under them.
 LLAMA_COPY = {
     "BF16": {
         "role": "The reference",
@@ -130,15 +129,15 @@ QWEN_COPY = {
         "role": "The reference, one full H200",
         "gets": "The reference the others are measured against",
         "best": "Your hardest questions, until the others are tested on them",
-        "watch": "Needs a full H200: 52 GiB of weights at 32K context",
+        "watch": "Needs a full H200: 51.1 GiB of weights at 32K context",
         "acc": "100%", "accNote": "the reference",
     },
     "INT4": {
         "role": "A 71 GB slice, two per H200",
-        "gets": "4-bit weights on the same 71 GB slice as FP8, with the most room left for KV cache",
+        "gets": "4-bit weights and an FP8 KV cache on the same 71 GB slice as FP8",
         "best": "Long contexts and big batches on a slice; it fits a 35 GB slice too (see the footnote)",
-        "watch": "Slower than FP8 on the same slice for one request; the slices were borrowed on a "
-                 "shared node, so their load numbers are noisier than the full card's",
+        "watch": "Slower than FP8 on the same slice for one request; its 1.24M-token KV cache is mostly "
+                 "the build's FP8 KV cache at work (37.7 KB per token against 70.6)",
     },
     "SPEC_DECODE": {
         "role": "Same H200, the model's own MTP head",
@@ -199,11 +198,12 @@ TRACKS = {
             "BF16": (H200, 1, 1), "FP8": (SLICE_71, 1, 2), "INT4": (SLICE_71, 1, 2),
             "SPEC_DECODE": (H200, 1, 1),
         },
+        # BF16 and spec decode are different deployments (a plain BF16 pod, an MTP pod), so both lanes stand
         lanes={
-            "BF16": "A wrong answer is expensive",
+            "BF16": "Batch work where nobody waits",
             "FP8": "Everyday questions",
             "INT4": "Long contexts on a slice",
-            "SPEC_DECODE": "Latency-sensitive, low traffic",
+            "SPEC_DECODE": "Anyone waiting on the answer",
         },
         paths={
             "benchmark_file": "qwen_benchmark_file",

@@ -551,7 +551,7 @@
         if (!keys.length) {
             play.hidden = true;
             $('#loadSetup').textContent = 'A replay of the load test, one setup at a time, as more and more questions arrive at once.';
-            stage.innerHTML = '<div class="load-empty"><p>Coming soon: how each setup holds up when 1, 8, 32, then 64 questions arrive at once.</p></div>';
+            stage.innerHTML = '<div class="load-empty"><p>Coming soon: how each setup holds up when 1, 8, 16, 32, then 64 questions arrive at once.</p></div>';
             return;
         }
         play.hidden = false;
