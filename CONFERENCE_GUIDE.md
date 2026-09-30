@@ -41,14 +41,31 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 
 ### GPUs per setup
 
-- BF16 Llama 3.1 70B: 2x H200 (tensor parallel)
-- INT4 Llama 3.1 70B, Red Hat's LLM Compressor build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16`): 1x H200
-- Speculative decoding (Llama 3.1 70B BF16 target + Llama 3.1 8B draft, both tensor parallel 2): 2x H200
+Five H200s on Oct 20, so three setups are live and one is recorded by plan:
+
+- BF16 Llama 3.1 70B: 2x H200 (tensor parallel), live
+- Speculative decoding (Llama 3.1 70B BF16 target + Llama 3.1 8B draft, both tensor parallel 2): 2x H200, live
+- FP8 Llama 3.1 70B, Red Hat's build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8`): 1x H200, live
+- INT4 Llama 3.1 70B, Red Hat's LLM Compressor build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16`): not deployed on the day. Its column plays the recordings made on Oct 19 (`MODEL_INT4_MODE=recorded`), labeled "Recorded <date>", and the corner badge says so.
 
 ### Pre-Demo Checklist (Day Before)
 
 - All model variants deployed and answering (`/v1/models` on each vLLM endpoint)
-- The demo app runs on the presenter laptop, the same laptop that's plugged into the projector. From the repo root: `./scripts/setup.sh` once, then a `.env` copied from `.env.example` with `SIMULATION_MODE=false`, the three endpoints pointing at the port-forwards (or the VPN routes) and their served names, `MODEL_INT4_CAPTURES=INT4_RH`, and a `PRESENTER_KEY`. Start it with `source venv/bin/activate && python -m uvicorn app.main:app --port 8000`.
+- The demo app runs on the presenter laptop, the same laptop that's plugged into the projector. From the repo root: `./scripts/setup.sh` once, then this `.env` (port-forwards on 18001, 18003 and 18004, or the VPN routes in their place):
+  ```bash
+  SIMULATION_MODE=false
+  PRESENTER_KEY=<a long random string>
+  MODEL_FP16_ENDPOINT=http://localhost:18001/v1/chat/completions
+  MODEL_FP16_NAME=benchmark-bf16
+  MODEL_SPEC_DECODE_ENDPOINT=http://localhost:18003/v1/chat/completions
+  MODEL_SPEC_DECODE_NAME=benchmark-spec
+  MODEL_FP8_ENDPOINT=http://localhost:18004/v1/chat/completions
+  MODEL_FP8_NAME=benchmark-fp8
+  # INT4 is recorded by plan on the day: no endpoint, the column plays quality/INT4_RH/
+  MODEL_INT4_MODE=recorded
+  MODEL_INT4_CAPTURES=INT4_RH
+  ```
+  Start it with `source venv/bin/activate && python -m uvicorn app.main:app --port 8000`.
 - The laptop opened `http://localhost:8000/presenter?key=<value>` once, so the Ask box works
 - One typed question and all eight presets answered live on the laptop
 - The backup, the same app behind an OpenShift Route (see Deploying to OpenShift in the README), is deployed with the same `.env` values and answers `/presenter`
@@ -57,16 +74,22 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 
 ### Oct 19: final testing and fresh recordings
 
-Once the setups are up (BF16 on 2 H200s, spec decode on 2, Red Hat's INT4 on 1, and FP8 on 1 if it's deployed; without an FP8 endpoint the FP8 column shows only when `MODEL_FP8_MODE=recorded`) and warm, re-record every preset from the day's deployments, so the answers the fallback plays are warm and from the exact models on stage. From a folder with the port-forwards up:
+Re-record every preset from the day's deployments, so the answers the fallback and the INT4 column play are warm and from the exact models on stage. INT4 isn't live on the day, so it borrows the fifth GPU first, in this order:
 
-```bash
-python3 scripts/capture_presets.py FP16        http://localhost:18001/v1/chat/completions benchmark-bf16
-python3 scripts/capture_presets.py INT4_RH     http://localhost:18002/v1/chat/completions benchmark-int4-rh
-python3 scripts/capture_presets.py SPEC_DECODE http://localhost:18003/v1/chat/completions benchmark-spec
-python3 scripts/capture_presets.py FP8         http://localhost:18004/v1/chat/completions benchmark-fp8
-```
+1. Deploy BF16 (2 GPUs), spec decode (2) and INT4_RH (1) with `kubernetes/models/isvc-bf16-tp2.yaml`, `isvc-spec-decode.yaml` and `isvc-int4-rh.yaml`. Wait until all three are Ready, then send each a couple of warm-up requests (`python scripts/preflight.py` does that).
+2. With the port-forwards up, record INT4_RH:
+   ```bash
+   python3 scripts/capture_presets.py INT4_RH     http://localhost:18002/v1/chat/completions benchmark-int4-rh
+   ```
+3. Delete the INT4_RH InferenceService, deploy FP8 with `kubernetes/models/isvc-fp8.yaml` (Red Hat's FP8 checkpoint on one GPU, the same pattern the Sep 30 run used) on the freed GPU, wait for Ready and warm it up.
+4. Record the three live setups:
+   ```bash
+   python3 scripts/capture_presets.py FP16        http://localhost:18001/v1/chat/completions benchmark-bf16
+   python3 scripts/capture_presets.py SPEC_DECODE http://localhost:18003/v1/chat/completions benchmark-spec
+   python3 scripts/capture_presets.py FP8         http://localhost:18004/v1/chat/completions benchmark-fp8
+   ```
 
-About 5 minutes per setup. It writes `results-2/quality/<VARIANT>/`; copy those folders over `quality/<VARIANT>/` in the repo, run `python scripts/preflight.py`, then commit the new `quality/` files. Until this is done, the "Explain KV cache" preset has no usable recording: its prompt was reworded on Sep 30 (to say "in a transformer LLM", because every setup had explained a generic key-value store), and preflight fails that preset on purpose. The round-2 recording of the sheep riddle on spec decode was also a cold first request (first token 1.1 s), which this step replaces.
+About 5 minutes per setup. It writes `results-2/quality/<VARIANT>/`; copy those folders over `quality/<VARIANT>/` in the repo, run `python scripts/preflight.py` with the day-of `.env` (it passes INT4 on its recordings alone, since that column is recorded by plan), then commit the new `quality/` files. If Oct 19 runs short, the Sep 29 INT4_RH recordings already in `quality/INT4_RH/` are acceptable for the INT4 column, all except "Explain KV cache". Until this is done, the "Explain KV cache" preset has no usable recording: its prompt was reworded on Sep 30 (to say "in a transformer LLM", because every setup had explained a generic key-value store), and preflight fails that preset on purpose. The round-2 recording of the sheep riddle on spec decode was also a cold first request (first token 1.1 s), which this step replaces.
 
 ### 30 Minutes Before
 
@@ -76,7 +99,7 @@ About 5 minutes per setup. It writes `results-2/quality/<VARIANT>/`; copy those 
   ```
   For each setup it checks that `/v1/models` lists the served name, that a 1-token completion answers, sends 3 warm-up requests so the first live answer isn't cold, and confirms all eight presets have a recording to fall back on. It ends with what the corner badge will say and one PASS/FAIL table, and exits 1 if anything failed. It uses only the endpoints in `.env`, so it needs no cluster login.
 - Start the port-forwards (or connect the VPN), start the app on the laptop, and open `http://localhost:8000/presenter` full screen (`F`)
-- Check the badge in the top right says Live models
+- Check the badge in the top right says "Live: BF16, FP8, Spec Decode · Recorded: INT4"
 - Silence notifications and close other apps
 
 ## Backup Plans

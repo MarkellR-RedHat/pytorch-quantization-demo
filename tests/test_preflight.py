@@ -89,3 +89,36 @@ def test_int4_build_mismatch_warns(setups, monkeypatch):
 def test_replay_badge_fails(setups, monkeypatch):
     monkeypatch.setattr(settings, "simulation_mode", True)
     assert preflight.run(vllm())[-1][2] == "FAIL"
+
+
+def test_the_day_of_env_passes_with_int4_recorded(setups, monkeypatch):
+    """Oct 20: BF16, spec decode and FP8 live on five H200s, INT4 recorded by plan from quality/INT4_RH/."""
+    monkeypatch.setattr(settings, "model_int4_endpoint", "")
+    monkeypatch.setattr(settings, "model_int4_name", "")
+    monkeypatch.setattr(settings, "model_int4_mode", "recorded")
+    monkeypatch.setattr(settings, "model_fp8_endpoint", "http://vllm4.test/v1/chat/completions")
+    monkeypatch.setattr(settings, "model_fp8_name", "benchmark-fp8")
+    (setups / "FP8").mkdir()
+    for scenario, _label in PRESETS.values():
+        record = {"prompt": PROMPTS[scenario], "response_text": "ok"}
+        (setups / "FP8" / f"{scenario}.json").write_text(json.dumps(record))
+
+    def handler(request):
+        if request.url.host == "vllm4.test":
+            if request.url.path.endswith("/models"):
+                return httpx.Response(200, json={"data": [{"id": "benchmark-fp8"}]})
+            return httpx.Response(200, json={"choices": [{"message": {"content": "hi"}}]})
+        if request.url.host == "vllm2.test":
+            raise AssertionError("the recorded INT4 setup must not be called")
+        if request.url.path.endswith("/models"):
+            key = {"vllm1.test": "FP16", "vllm3.test": "SPEC_DECODE"}[request.url.host]
+            return httpx.Response(200, json={"data": [{"id": NAMES[key]}]})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "hi"}}]})
+
+    rows = preflight.run(httpx.Client(transport=httpx.MockTransport(handler)))
+    assert all(r[2] == "PASS" for r in rows), [r for r in rows if r[2] != "PASS"]
+    got = results(rows)
+    int4 = "INT4 (LLM Compressor)"
+    assert got[(int4, "mode")] == "PASS" and (int4, "models list") not in got
+    assert got[("FP8", "warm-up")] == "PASS"
+    assert rows[-1][3] == '"Live: BF16, FP8, Spec Decode · Recorded: INT4 (LLM Compressor)"'

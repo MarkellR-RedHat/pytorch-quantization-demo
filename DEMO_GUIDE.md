@@ -9,7 +9,7 @@ Step-by-step guide for presenting "Not Every Question Needs Two GPUs" at PyTorch
 ### Day Before (Oct 19)
 
 - [ ] All model variants deployed and answering on OpenShift AI
-- [ ] Demo app running on the presenter laptop: `./scripts/setup.sh`, a `.env` with the endpoints and `PRESENTER_KEY`, then `source venv/bin/activate && python -m uvicorn app.main:app --port 8000`
+- [ ] Demo app running on the presenter laptop: `./scripts/setup.sh`, the day-of `.env` from CONFERENCE_GUIDE (BF16, spec decode and FP8 live on 5 H200s, `MODEL_INT4_MODE=recorded` with `MODEL_INT4_CAPTURES=INT4_RH`), then `source venv/bin/activate && python -m uvicorn app.main:app --port 8000`
 - [ ] Laptop opened `http://localhost:8000/presenter?key=<value>` once
 - [ ] One typed question and all eight presets answered live
 - [ ] Backup deployed behind an OpenShift Route with the same `.env` values
@@ -20,7 +20,7 @@ Step-by-step guide for presenting "Not Every Question Needs Two GPUs" at PyTorch
 
 - [ ] `python scripts/preflight.py` passes
 - [ ] Port-forwards (or VPN) up, app started on the laptop, `http://localhost:8000/presenter` open full screen
-- [ ] Badge in the top right says Live models
+- [ ] Badge in the top right says "Live: BF16, FP8, Spec Decode · Recorded: INT4"
 - [ ] One warm-up question asked
 - [ ] Notifications silenced, other apps closed
 

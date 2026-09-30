@@ -53,8 +53,9 @@ def check_recordings(key: str) -> tuple[str, str]:
 
 
 def check_build(key: str) -> tuple[str, str] | None:
-    """Warn when the INT4 endpoint and the INT4 recordings are different builds."""
-    if key != "INT4":
+    """Warn when the INT4 endpoint and the INT4 recordings are different builds. A recorded INT4 has
+    no endpoint to disagree with its recordings."""
+    if key != "INT4" or settings.mode_for(key) == "recorded":
         return None
     name = settings.served_name_for(key).lower()
     captures = settings.captures_for(key)
