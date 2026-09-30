@@ -182,6 +182,8 @@ If you don't have H200s, the same comparison should work with Llama 3.1 8B as th
 
 ## Deploying to OpenShift
 
+For the talk the app runs on the presenter laptop with `.env` pointing at the vLLM endpoints (see Running with real models), and this deployment is the backup:
+
 ```bash
 podman build -t quay.io/<your-org>/pytorch-quantization-demo:latest .
 podman push quay.io/<your-org>/pytorch-quantization-demo:latest

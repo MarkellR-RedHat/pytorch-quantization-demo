@@ -48,9 +48,10 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 ### Pre-Demo Checklist (Day Before)
 
 - All model variants deployed and answering (`/v1/models` on each vLLM endpoint)
-- Demo app deployed behind an OpenShift Route with `PRESENTER_KEY` set
-- Presenter laptop opened `/presenter?key=<value>` once, so the Ask box works
-- One typed question and all eight presets answered live on the demo laptop
+- The demo app runs on the presenter laptop, the same laptop that's plugged into the projector. From the repo root: `./scripts/setup.sh` once, then a `.env` copied from `.env.example` with `SIMULATION_MODE=false`, the three endpoints pointing at the port-forwards (or the VPN routes) and their served names, `MODEL_INT4_CAPTURES=INT4_RH`, and a `PRESENTER_KEY`. Start it with `source venv/bin/activate && python -m uvicorn app.main:app --port 8000`.
+- The laptop opened `http://localhost:8000/presenter?key=<value>` once, so the Ask box works
+- One typed question and all eight presets answered live on the laptop
+- The backup, the same app behind an OpenShift Route (see Deploying to OpenShift in the README), is deployed with the same `.env` values and answers `/presenter`
 - `/presenter?mode=sim` tested as the fallback
 - Backup video recorded and on a USB drive
 
@@ -73,7 +74,7 @@ About 5 minutes per setup. It writes `results-2/quality/<VARIANT>/`; copy those 
   python scripts/preflight.py
   ```
   For each setup it checks that `/v1/models` lists the served name, that a 1-token completion answers, sends 3 warm-up requests so the first live answer isn't cold, and confirms all eight presets have a recording to fall back on. It ends with what the corner badge will say and one PASS/FAIL table, and exits 1 if anything failed. It uses only the endpoints in `.env`, so it needs no cluster login.
-- Open the presenter dashboard full screen (`F`)
+- Start the port-forwards (or connect the VPN), start the app on the laptop, and open `http://localhost:8000/presenter` full screen (`F`)
 - Check the badge in the top right says Live models
 - Silence notifications and close other apps
 
@@ -85,7 +86,7 @@ About 5 minutes per setup. It writes `results-2/quality/<VARIANT>/`; copy those 
 
 **If a setup's GPUs get pulled before the talk:** set `MODEL_<VARIANT>_MODE=recorded` for it (for example `MODEL_SPEC_DECODE_MODE=recorded`) and restart the app. That column never calls its endpoint, plays its recorded preset answers labeled "Recorded <date>", and the corner badge says which setups are live and which are recorded.
 
-**If the venue network is bad:** run the app on the demo laptop with `./scripts/run-local.sh`. Fonts and everything else are bundled, so the screen renders correctly with no network.
+**If the laptop app breaks:** open the backup, the OpenShift Route (`https://<route>/presenter?key=<value>`), in the same browser. It runs the same code with the same recordings. If the venue network is bad, stay on the laptop: fonts and everything else are bundled, so the screen renders with no network, and `R` plays the recordings.
 
 **If nobody calls out a question:** use the eight preset buttons under the question box. Sheep riddle and Logic puzzle go to BF16, the four everyday ones go to INT4, and Python function and Explain KV cache go to Spec Decode. Explain KV cache is the long-answer, latency case, where Spec Decode's speed shows most.
 

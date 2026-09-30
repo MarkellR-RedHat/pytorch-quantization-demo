@@ -9,15 +9,17 @@ Step-by-step guide for presenting "Not Every Question Needs Two GPUs" at PyTorch
 ### Day Before (Oct 19)
 
 - [ ] All model variants deployed and answering on OpenShift AI
-- [ ] Demo app deployed with `PRESENTER_KEY` set
-- [ ] Presenter laptop opened `/presenter?key=<value>` once
+- [ ] Demo app running on the presenter laptop: `./scripts/setup.sh`, a `.env` with the endpoints and `PRESENTER_KEY`, then `source venv/bin/activate && python -m uvicorn app.main:app --port 8000`
+- [ ] Laptop opened `http://localhost:8000/presenter?key=<value>` once
 - [ ] One typed question and all eight presets answered live
+- [ ] Backup deployed behind an OpenShift Route with the same `.env` values
 - [ ] `/presenter?mode=sim` tested as the fallback
 - [ ] Backup video recorded
 
 ### 30 Minutes Before
 
-- [ ] Presenter dashboard open full screen: `{your-url}/presenter`
+- [ ] `python scripts/preflight.py` passes
+- [ ] Port-forwards (or VPN) up, app started on the laptop, `http://localhost:8000/presenter` open full screen
 - [ ] Badge in the top right says Live models
 - [ ] One warm-up question asked
 - [ ] Notifications silenced, other apps closed
@@ -48,7 +50,7 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 
 **If all the models stop responding:** press `R` (or open `/presenter?mode=sim`). The Numbers scene doesn't change, because it shows the measured benchmark. In Ask, a "Replay" badge appears and each column plays its recorded answer at the speed that setup measured. Press `R` again to go back to live.
 
-**If the venue network is bad:** run the app on the demo laptop with `./scripts/run-local.sh`. Fonts and everything else are bundled, so the screen renders correctly with no network.
+**If the laptop app breaks:** open the backup, the OpenShift Route (`https://<route>/presenter?key=<value>`), in the same browser. It runs the same code with the same recordings. If the venue network is bad, stay on the laptop: fonts and everything else are bundled, and `R` plays the recordings.
 
 **If nobody calls out a question:** use the eight preset buttons under the question box. Sheep riddle and Logic puzzle go to BF16, the four everyday ones go to INT4, and Python function and Explain KV cache go to Spec Decode. Explain KV cache is the long-answer, latency case, where Spec Decode's speed shows most.
 
