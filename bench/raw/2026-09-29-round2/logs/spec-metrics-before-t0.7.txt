@@ -1,0 +1,3 @@
+vllm:spec_decode_num_drafts_total{engine="0",model_name="benchmark-spec"} 1916.0
+vllm:spec_decode_num_draft_tokens_total{engine="0",model_name="benchmark-spec"} 9580.0
+vllm:spec_decode_num_accepted_tokens_total{engine="0",model_name="benchmark-spec"} 6811.0

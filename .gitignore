@@ -59,3 +59,4 @@ npm-debug.log
 
 # Simulation data
 simulation_data.json
+!bench/raw/**/logs/
