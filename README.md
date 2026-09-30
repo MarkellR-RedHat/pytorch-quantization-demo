@@ -210,7 +210,7 @@ Not every setup needs a full H200 either. From the vLLM startup logs ("Model loa
 | INT4, Red Hat's build | 37.1 GiB | 1 GPU | Yes, with about 30 GB left for KV cache |
 | INT4, AWQ build | 37.9 GiB | 1 GPU | Yes |
 
-The measurements here ran on full H200s (INT4 had 283K tokens of KV cache on one), and the manifests request whole GPUs so the startup logs match. On a MIG-partitioned cluster the INT4 files would request `nvidia.com/mig-3g.71gb` instead and leave the full GPUs to the two-GPU setups. Every file uses `--max-model-len 131072`, the model's full context and what was measured; 32768 is plenty for a demo and leaves more room for KV cache.
+The measurements here ran on full H200s (INT4 had 283K tokens of KV cache on one), and the manifests request whole GPUs so the startup logs match. On a MIG-partitioned cluster the INT4 files would request the slice's resource instead (for example `nvidia.com/mig-3g.71gb` on H200) and leave the full GPUs to the two-GPU setups. Every file uses `--max-model-len 131072`, the model's full context and what was measured; 32768 is plenty for a demo and leaves more room for KV cache.
 
 The deployment runs one replica on purpose. Metrics and websocket connections live in memory, so a second replica would split the presenter screen's metrics across two pods.
 

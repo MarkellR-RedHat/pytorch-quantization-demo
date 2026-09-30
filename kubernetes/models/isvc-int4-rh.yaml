@@ -1,6 +1,6 @@
 # INT4, Red Hat's LLM Compressor build (GPTQ, W4A16) on one GPU. Measured footprint: 37.1 GiB of
-# weights, so it fits a 71 GB MIG slice (nvidia.com/mig-3g.71gb on H200) with about 30 GB left for
-# KV cache; on a full H200 it had 283K tokens of cache. This is the INT4 setup on screen.
+# weights, so it fits a 71 GB MIG slice (for example nvidia.com/mig-3g.71gb on H200) with about 30 GB
+# left for KV cache; on a full H200 it had 283K tokens of cache. This is the INT4 setup on screen.
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:

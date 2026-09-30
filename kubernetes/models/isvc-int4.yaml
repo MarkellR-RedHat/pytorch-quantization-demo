@@ -1,6 +1,6 @@
 # INT4, the community AWQ build on one GPU: the naive pick the talk starts from, kept as the reference.
-# Measured footprint: 37.9 GiB of weights, so it fits a 71 GB MIG slice (nvidia.com/mig-3g.71gb on
-# H200) with about 30 GB left for KV cache; on a full H200 it had 280K tokens of cache.
+# Measured footprint: 37.9 GiB of weights, so it fits a 71 GB MIG slice (for example
+# nvidia.com/mig-3g.71gb on H200) with about 30 GB left for KV cache; on a full H200 it had 280K tokens.
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
