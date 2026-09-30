@@ -100,7 +100,10 @@ def test_mtp_acceptance_per_temperature_and_k(built):
     spec = out["variants"]["SPEC_DECODE"]
     assert spec["spec_method"] == "mtp" and spec["spec_tokens_from_log"] == 4
     acc = spec["acceptance"]
-    assert set(acc) == {"t0-k1", "t0-k2", "t0-k4", "t0.7-k4"}
+    assert set(acc) == {"t0-k1", "t0-k2", "t0-k4", "t0.7-k4", "t0-k8"}  # any K the run made, 8 included
+    assert spec["spec_tokens_measured"] == [1, 2, 4, 8]
+    assert acc["t0-k8"]["rate"] == 0.55 and len(acc["t0-k8"]["accepted_per_position"]) == 8
+    assert spec["throughput_tps_k8"]
     assert acc["t0-k4"]["rate"] == 0.72 and acc["t0-k4"]["mean_acceptance_length"] == round(1 + 0.72 * 4, 2)
     assert acc["t0-k1"]["rate"] == 0.9 and acc["t0.7-k4"]["rate"] == 0.64
     assert len(acc["t0-k4"]["accepted_per_position"]) == 4

@@ -172,6 +172,16 @@ def acceptance(raw: Path, temperature: str, k: int) -> dict | None:
     return out
 
 
+def snapshot_keys(raw: Path) -> set[tuple[str, int]]:
+    """(temperature, K) for every before/after pair of spec counter snapshots in logs/."""
+    keys = set()
+    for path in (raw / "logs").glob("spec-metrics-before-t*-k*.txt"):
+        m = re.fullmatch(r"spec-metrics-before-t([\d.]+)-k(\d+)\.txt", path.name)
+        if m and (raw / "logs" / f"spec-metrics-after-t{m.group(1)}-k{m.group(2)}.txt").is_file():
+            keys.add((m.group(1), int(m.group(2))))
+    return keys
+
+
 def sweep_note(raw: Path, folder: str) -> str | None:
     failed = sorted(p.name for p in (raw / "sweeps" / folder).glob("*-failed.txt"))
     if not failed:
@@ -202,19 +212,22 @@ def setup(raw: Path, spec: dict) -> dict:
                 "property of the checkpoint, not the slice"
             )
     if "speculation" in spec:
+        # every -t<T>-k<K> snapshot pair the run made, whatever the K values (RUN-QWEN asks for 1, 2 and
+        # 4; an extra pass at 8 or any other K is picked up the same way), and the single-stream file
+        # for every K other than the main one (single-t0.json is the main K's run)
+        main_k = spec["num_speculative_tokens"]
         out["acceptance"] = {}
-        for k in (1, 2, 4):
-            for t in ("0", "0.7"):
-                if a := acceptance(raw, t, k):
-                    out["acceptance"][f"t{t}-k{k}"] = a
-        main = out["acceptance"].get("t0-k4")
+        for t, k in sorted(snapshot_keys(raw)):
+            if a := acceptance(raw, t, k):
+                out["acceptance"][f"t{t}-k{k}"] = a
+        main = out["acceptance"].get(f"t0-k{main_k}")
         if main and "rate" in main:
             out["draft_acceptance_rate"] = main["rate"]
             out["mean_acceptance_length"] = main["mean_acceptance_length"]
-        for k in (1, 2):
-            path = raw / "sweeps" / spec["raw"] / f"single-t0-k{k}.json"
-            if path.is_file():
-                out[f"throughput_tps_k{k}"] = round(load(path)["output_throughput"], 1)
+        out["spec_tokens_measured"] = sorted({k for _t, k in snapshot_keys(raw)} | {main_k})
+        for path in sorted((raw / "sweeps" / spec["raw"]).glob("single-t0-k*.json")):
+            k = int(re.fullmatch(r"single-t0-k(\d+)\.json", path.name).group(1))
+            out[f"throughput_tps_k{k}"] = round(load(path)["output_throughput"], 1)
     if note := sweep_note(raw, spec["raw"]):
         out["sweep_note"] = note
     out["sweep_dir"] = spec["raw"]

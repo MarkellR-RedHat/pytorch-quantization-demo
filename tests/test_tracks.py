@@ -112,6 +112,13 @@ def test_the_badge_and_title_name_the_track(client, qwen_data):
     assert body["track"]["model"] == "Qwen3.8-27B"
 
 
+def test_router_note_names_the_track_next_lanes(client, qwen_data):
+    assert "INT4 + spec decode" in client.get("/api/config").json()["track"]["router_note"]
+    client.post("/track/qwen")
+    note = client.get("/api/config").json()["track"]["router_note"]
+    assert "DSpark" in note and "vLLM 0.29+" in note and "NVFP4" in note and "untested here" in note
+
+
 def test_both_tracks_share_the_title(client):
     body = client.get("/api/config").json()
     assert body["track"]["title"] == tracks.TITLE

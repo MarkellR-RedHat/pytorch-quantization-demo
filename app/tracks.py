@@ -32,6 +32,7 @@ class Track:
     labels: dict[str, str] = field(default_factory=dict)  # setup -> on-screen label, when not the default
     builds: dict[str, str] = field(default_factory=dict)  # setup -> which build it runs, when worth saying
     copy: dict[str, dict[str, str]] = field(default_factory=dict)  # setup -> the card wording (see COPY)
+    router_note: str = ""  # the line under the router strip: the next lanes, untested here
     _cache: dict = field(default_factory=dict, compare=False, repr=False)
 
     def _setting(self, name: str) -> str:
@@ -171,6 +172,11 @@ TRACKS = {
             "SPEC_DECODE": "Latency-sensitive, low traffic",
         },
         copy=LLAMA_COPY,
+        router_note=(
+            "A router pays off once your traffic is big and mixed enough to run more than one pool. With "
+            "small traffic, pick the one setup that fits most of your questions. INT4 + spec decode, a draft "
+            "model on an INT4 target, is the obvious next lane, untested here."
+        ),
     ),
     "qwen": Track(
         key="qwen",
@@ -202,6 +208,16 @@ TRACKS = {
         labels={"INT4": "INT4 (LLM Compressor W4A16)"},
         builds={"INT4": "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ)"},
         copy=QWEN_COPY,
+        # the DSpark card (RedHatAI/Qwen3.8-27B-speculator.dspark, evaluated on vLLM 0.29.0) says DSpark
+        # "consistently delivers higher throughput and better interactivity than MTP with the same eight
+        # speculative tokens"; the NVFP4 card evaluates on a B200 and recommends the DSpark draft on top
+        router_note=(
+            "A router pays off once your traffic is big and mixed enough to run more than one pool. With "
+            "small traffic, pick the one setup that fits most of your questions. Two next lanes, untested "
+            "here, from Red Hat's model cards: the DSpark speculator (vLLM 0.29+), which Red Hat reports "
+            "ahead of native MTP at the same eight speculative tokens, and NVFP4 on Blackwell, which stacks "
+            "with it."
+        ),
     ),
 }
 
@@ -258,5 +274,6 @@ def describe(track: Track | None = None) -> dict:
         "status": t.status,
         "lanes": t.lanes,
         "copy": t.copy,
+        "router_note": t.router_note,
         "tracks": listing(),
     }

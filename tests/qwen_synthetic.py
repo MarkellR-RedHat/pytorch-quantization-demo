@@ -83,7 +83,7 @@ def write(root: Path) -> Path:
                 for side in ("a", "b"):
                     (sweeps / f"c{c}-two-slices-{side}.json").write_text(json.dumps(bench_json(isvc, tput * 0.93, TPOT[c] + 3, n, c)))
         if key == "SPEC_DECODE":
-            for k, rate in ((1, 0.90), (2, 0.82), (4, 0.72)):
+            for k, rate in ((1, 0.90), (2, 0.82), (4, 0.72), (8, 0.55)):
                 for t in ("0", "0.7") if k == 4 else ("0",):
                     r = rate if t == "0" else rate - 0.08
                     drafts, draft_tokens = 1300, 1300 * k

@@ -430,7 +430,8 @@
         const sd = bench('SPEC_DECODE') || {};
         $('#numbersFoot').textContent = accuracyFoot() + specFoot(sd);
         // the same lane idea combined, as on the router slide: not measured here
-        $('#routerNote').textContent = 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions. INT4 + spec decode, a draft model on an INT4 target, is the obvious next lane, untested here.';
+        $('#routerNote').textContent = (config && config.track && config.track.router_note)
+            || 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions. INT4 + spec decode, a draft model on an INT4 target, is the obvious next lane, untested here.';
         const ss = bm.single_stream || {};
         const q4 = bench('INT4') || {};
         const modelName = (config && config.track && config.track.model) || 'Llama 3.1 70B Instruct';
@@ -484,9 +485,11 @@
         const a0 = acc['0'] || acc[`t0-k${k}`], a7 = acc['0.7'] || acc[`t0.7-k${k}`];
         if (!a0 || !a7 || a0.rate == null || a7.rate == null) return '';
         let text = `Spec Decode's ${drafter} proposes ${k} tokens per step: ${(100 * a0.rate).toFixed(1)}% accepted at temperature 0 (${(100 * a7.rate).toFixed(1)}% at 0.7), ${one(a0.mean_acceptance_length)} tokens per ${pass} (${one(a7.mean_acceptance_length)}), over ${a0.drafts.toLocaleString('en-US')} and ${a7.drafts.toLocaleString('en-US')} drafts.`;
-        const fewer = [1, 2].map(kk => ({ kk, a: acc[`t0-k${kk}`], tps: sd[`throughput_tps_k${kk}`] })).filter(o => o.a && o.a.rate != null);
-        if (fewer.length) {
-            text += ` With ${fewer.map(o => o.kk).join(' and ')} speculative tokens (temperature 0): ${fewer.map(o => `${(100 * o.a.rate).toFixed(1)}% accepted${o.tps ? `, ${one(o.tps)} tokens/s` : ''}`).join('; ')} (${one(sd.throughput_tps)} with ${k}).`;
+        const others = Object.keys(acc).map(key => key.match(/^t0-k(\d+)$/)).filter(m => m && Number(m[1]) !== k).map(m => Number(m[1])).sort((a, b) => a - b)
+            .map(kk => ({ kk, a: acc[`t0-k${kk}`], tps: sd[`throughput_tps_k${kk}`] })).filter(o => o.a && o.a.rate != null);
+        if (others.length) {
+            const list = others.map(o => o.kk), ks = list.length > 1 ? `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}` : `${list[0]}`;
+            text += ` With ${ks} speculative tokens (temperature 0): ${others.map(o => `${o.kk}: ${(100 * o.a.rate).toFixed(1)}% accepted${o.tps ? `, ${one(o.tps)} tokens/s` : ''}`).join('; ')} (${one(sd.throughput_tps)} with ${k}).`;
         }
         return text;
     }

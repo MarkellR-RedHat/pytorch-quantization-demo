@@ -80,6 +80,9 @@ The recipe is model-agnostic: the manifests, the tests and the dashboard take an
 **Can I route per request, and with what?**
 The router on screen is an example rule, not a gateway. To build one, [vLLM Semantic Router](https://github.com/vllm-project/semantic-router) classifies each request and picks the model, and [llm-d Router](https://github.com/llm-d/llm-d-router) (formerly the llm-d inference scheduler) picks the replica within a pool, preferring one with the prompt's prefix cached. INT4 plus spec decode, a draft on an INT4 target, is the obvious next lane and untested here.
 
+**On the Qwen track, why native MTP and not Red Hat's DSpark speculator?**
+Because MTP runs on the build we ship. Qwen3.8-27B carries its own multi-token-prediction head and vLLM 0.24 (the Red Hat AI build the track ran on) serves it with `--spec-method=mtp`; the [DSpark speculator](https://huggingface.co/RedHatAI/Qwen3.8-27B-speculator.dspark) needs vLLM 0.29 or newer, which no build on our cluster has. Red Hat's card, evaluated on 0.29.0, says DSpark "consistently delivers higher throughput and better interactivity than MTP with the same eight speculative tokens", strongest at low to medium concurrency; that is a different vLLM, eight speculative tokens and Red Hat's hardware, so it isn't a ratio against our MTP run at four tokens on one H200. The card also recommends running DSpark on [RedHatAI/Qwen3.8-27B-NVFP4](https://huggingface.co/RedHatAI/Qwen3.8-27B-NVFP4), which Red Hat evaluates on a B200; both are the next lanes on the Qwen router strip, untested here.
+
 **Where's PyTorch in all this?**
 vLLM is a PyTorch Foundation project and compiles its models with torch.compile, LLM Compressor calibrates in PyTorch, and the arena's networks are trained and quantized in PyTorch.
 
