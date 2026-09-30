@@ -89,7 +89,7 @@ def startup_log(raw: Path, pod: str) -> dict:
         "pod": pod,
         "weights_gib_per_gpu": float(find(r"Model loading took ([\d.]+) GiB")),
         "kv_cache_tokens": int(find(r"GPU KV cache size: ([\d,]+) tokens").replace(",", "")),
-        "attention": f"FlashAttention {find(r'Using FlashAttention version (\d)')}",
+        "attention": "FlashAttention " + str(find(r"Using FlashAttention version (\d)")),
         "kernels": sorted(set(re.findall(r"\b(\w+Kernel)\b", text))),
         "non_default_args": args,
         # eager mode means no CUDA graphs: the MIG slices that hit the NVML profiling bug ran this way
