@@ -526,7 +526,7 @@ python3 scripts/preflight.py > results-qwen/live/preflight-$PHASE.txt
 python3 screenshot_presenter.py --url http://localhost:8000 --out results-qwen/live --phase $PHASE
 ```
 
-`screenshot_presenter.py` is in this folder (`~/Downloads/pytorch-quant-tests/screenshot_presenter.py`, copy it into the package's `scripts/`); it clicks every preset, saves `<phase>-<preset>.png`, `<phase>-badge.txt`, `<phase>-recorded-mode.png` after pressing R, and `errors.txt`. If main doesn't have the selector when the pods are up, write "live check deferred to Oct 19" in `notes.txt` and move on; the Llama-track app can still take one Qwen pod in its BF16 slot (`MODEL_BF16_ENDPOINT=http://localhost:18011/v1/chat/completions`, `MODEL_BF16_NAME=qwen-bf16`) for a quick "it streams" screenshot.
+`screenshot_presenter.py` is in this folder (`<local folder>/screenshot_presenter.py`, copy it into the package's `scripts/`); it clicks every preset, saves `<phase>-<preset>.png`, `<phase>-badge.txt`, `<phase>-recorded-mode.png` after pressing R, and `errors.txt`. If main doesn't have the selector when the pods are up, write "live check deferred to Oct 19" in `notes.txt` and move on; the Llama-track app can still take one Qwen pod in its BF16 slot (`MODEL_BF16_ENDPOINT=http://localhost:18011/v1/chat/completions`, `MODEL_BF16_NAME=qwen-bf16`) for a quick "it streams" screenshot.
 
 ## F. Before zipping
 
