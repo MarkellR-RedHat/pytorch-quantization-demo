@@ -65,8 +65,16 @@ def scenario_for(preset: str | None) -> str | None:
     return found[0] if found else None
 
 
-def preset_list() -> list[dict]:
-    return [{"key": key, "label": label, "prompt": PROMPTS[sc]} for key, (sc, label) in PRESETS.items()]
+def preset_list(variants: list[str] = (), replay: bool = False) -> list[dict]:
+    """The preset buttons. A preset is on screen only if every setup that would answer it from a
+    recording (all of them in replay, the recorded-by-plan ones when live) has one, so no button leads
+    to a "not captured" note. Live setups answer anything, so with everything live all presets show."""
+    needs = [v for v in variants if replay or settings.mode_for(v) == "recorded"]
+    return [
+        {"key": key, "label": label, "prompt": PROMPTS[sc]}
+        for key, (sc, label) in PRESETS.items()
+        if all(recorded_answer(settings.captures_for(v), sc) for v in needs)
+    ]
 
 
 def replay_text(variant: str, preset: str | None) -> tuple[str, str, dict | None]:

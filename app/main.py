@@ -350,7 +350,7 @@ async def get_config(request: Request):
         "gpu_hourly_usd": settings.gpu_hourly_usd,
         "auto_traffic": settings.auto_traffic and settings.auto_traffic_rps > 0,
         "benchmark": bench().meta(bench_label),
-        "presets": preset_list(),
+        "presets": preset_list(active_variants(), simulator.is_enabled()),
     }
 
 

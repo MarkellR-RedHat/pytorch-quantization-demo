@@ -50,8 +50,8 @@ def test_preset_stream(client, no_captures):
 
 def test_replay_recorded_timing(client):
     """The round-2 recordings carry their own first-token time, speed and total, and replay says so."""
-    ev = events(client.post("/ask/SPEC_DECODE", json={"preset": "reasoning"}))
-    rec = captured("SPEC_DECODE")
+    ev = events(client.post("/ask/SPEC_DECODE", json={"preset": "puzzle"}))
+    rec = captured("SPEC_DECODE", "logic_puzzle")
     done = ev[-1]
     assert done["ttft_ms"] == rec["ttft_ms"] and done["ttft_basis"] == "recorded"
     assert done["tokens_per_second"] == round(rec["tokens_per_second"], 1) and done["tps_basis"] == "recorded"
@@ -250,10 +250,35 @@ def test_preset_prompts(client):
     from app.quality import PROMPTS
 
     presets = client.get("/api/config").json()["presets"]
-    assert len(presets) == 8
     for p in presets:
         assert p["prompt"] == PROMPTS[ask_module.PRESETS[p["key"]][0]]
         assert client.post("/ask/BF16", json={"preset": p["key"]}).status_code == 200
+
+
+def test_replay_shows_only_presets_every_setup_has_recorded(client, no_captures, monkeypatch):
+    """In replay every button must play a recording on every column: the reworded KV cache preset has
+    none until Oct 19, so it isn't offered; with no recordings at all, no buttons; live, all eight."""
+    assert client.get("/api/config").json()["presets"] == []
+    monkeypatch.setattr(settings, "quality_dir", "quality")
+    keys = [p["key"] for p in client.get("/api/config").json()["presets"]]
+    assert "explain" not in keys and len(keys) == 7 and keys[0] == "reasoning"
+    main.simulator.disable()  # live with no endpoints: every setup is live, so nothing is filtered
+    monkeypatch.setattr(settings, "model_int4_mode", "live")
+    assert len(client.get("/api/config").json()["presets"]) == 8
+    monkeypatch.setattr(settings, "model_int4_mode", "recorded")  # recorded by plan: INT4 needs the recording
+    assert "explain" not in [p["key"] for p in client.get("/api/config").json()["presets"]]
+    main.simulator.enable()
+
+
+def test_spec_sheep_replay_is_paced_at_the_benchmark_speed(client):
+    """The Sep 29 evening recording of the sheep riddle on spec decode was a cold first request
+    (37 tokens/s, against 62 in the benchmark). Until the Oct 19 re-record, quality/ holds the
+    afternoon capture of the same answer, which has no timings, so replay uses the benchmark's speed
+    and first-token time and labels them as the benchmark's."""
+    done = events(client.post("/ask/SPEC_DECODE", json={"preset": "reasoning"}))[-1]
+    assert done["tps_basis"] == "benchmark" and done["ttft_basis"] == "benchmark"
+    assert done["tokens_per_second"] == main.benchmark_data.variant("SPEC_DECODE")["throughput_tps"]
+    assert done["completion_tokens"] == 136 and done["total_ms"] is None
 
 
 # a setup recorded by plan for the day

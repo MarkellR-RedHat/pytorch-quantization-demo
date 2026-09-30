@@ -82,7 +82,7 @@ Re-record every preset from the day's deployments, so the answers the fallback a
    ```
 5. `python scripts/preflight.py` with the day-of `.env` (INT4 passes on its recordings alone), then commit `quality/`.
 
-About 5 minutes per setup. If the day runs short, the Sep 29 recordings already in `quality/` are acceptable, all except "Explain KV cache": that prompt was reworded on Sep 30 (to say "in a transformer LLM", because every setup had explained a generic key-value store) and has no recording until this step, so preflight fails it on purpose. The Sep 29 recording of the sheep riddle on spec decode was a cold first request, which this step replaces.
+About 5 minutes per setup. If the day runs short, the Sep 29 recordings already in `quality/` are acceptable, all except "Explain KV cache": that prompt was reworded on Sep 30 (to say "in a transformer LLM", because every setup had explained a generic key-value store) and has no recording until this step, so preflight fails it on purpose. The Sep 29 evening recording of the sheep riddle on spec decode was a cold first request, so `quality/` plays the afternoon capture of the same answer (paced at the benchmark speed, labeled so) until this step replaces it. In replay, and for a recorded-by-plan setup, a preset button is only offered when every setup on screen has a recording for it.
 
 ### The day before
 
