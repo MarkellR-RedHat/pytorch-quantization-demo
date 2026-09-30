@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Not Every Question Needs Two GPUs | PyTorch Conference 2026</title>
+<title>Not Every Question Needs the Whole GPU | PyTorch Conference 2026</title>
 <style>
 /* Red Hat fonts bundled in static/fonts (SIL OFL 1.1) so the deck renders fully offline */
 @font-face { font-family: 'RH Display'; src: url('static/fonts/RedHatDisplay-VF.woff2') format('woff2'); font-weight: 300 900; font-display: block; }
@@ -42,6 +42,15 @@ body { font-family: var(--text); color: var(--ink); -webkit-font-smoothing: anti
 .v-int4 { --c: var(--int4); --ct: var(--int4-tx); --tint: var(--int4-tint); }
 .v-spec { --c: var(--spec); --ct: var(--spec-tx); --tint: var(--spec-tint); }
 .v-red  { --c: var(--red); }
+/* Tracks: the stage carries data-track, and a block tagged for the other track is hidden */
+.stage[data-track="llama"] [data-track="qwen"], .stage[data-track="qwen"] [data-track="llama"] { display: none !important; }
+/* Pending: a Qwen number that has no raw file yet; the box stays until the data lands */
+.pending { position: relative; outline: 3px dashed #d9534f; outline-offset: 6px; border-radius: 6px; }
+.pending::after { content: attr(data-pending); position: absolute; top: -20px; right: -6px; background: #d9534f; color: #fff; font: 700 15px/1 var(--mono); letter-spacing: .5px; padding: 5px 8px; border-radius: 4px; white-space: nowrap; z-index: 5; }
+/* give a badge room when the pending text sits right under a label or another pending line */
+.kv2 span:has(+ .pending) { margin-bottom: 20px; }
+.kv2 .pending + .caveat.pending { margin-top: 24px; }
+.pts li .pending { display: block; margin-top: 10px; }
 /* Stage: authored at 1920x1080, scaled to fit any screen so nothing ever clips */
 .stage {
   position: absolute; left: 50%; top: 50%;
@@ -95,6 +104,8 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 .nav .dot.backup { border-radius: 3px; width: 10px; height: 10px; background: #e2e4e7; }
 .nav .dot.on { background: var(--red); transform: scale(1.35); }
 .counter { position: absolute; right: 72px; bottom: 32px; font: 700 20px var(--display); color: var(--ink-3); z-index: 30; letter-spacing: 1px; }
+.counter .trk { margin-right: 14px; padding: 4px 10px; border-radius: 999px; background: var(--bg-soft); border: 1.5px solid var(--line); color: var(--ink-2); }
+.counter .trk.pend { background: #fdecea; border-color: #d9534f; color: #a60000; }
 /* Notes overlay (N) and blackout (B) */
 .notes {
   position: absolute; left: 120px; right: 120px; bottom: 110px; z-index: 40;
@@ -114,6 +125,17 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 .hero .lead { font-size: 32px; max-width: 820px; margin-top: 34px; }
 .byline { margin-top: 56px; font-size: 24px; color: var(--ink-3); line-height: 1.45; }
 .byline strong { color: var(--ink); font-family: var(--display); font-size: 28px; display: block; }
+.track-line { margin-top: 22px; display: inline-flex; align-items: center; gap: 12px; font: 700 24px var(--mono); color: var(--ink-2); border: 1.5px solid var(--line); background: var(--bg-soft); padding: 10px 18px; border-radius: 999px; letter-spacing: .5px; }
+.track-line i { width: 12px; height: 12px; border-radius: 50%; background: var(--red); }
+.chooser { margin-top: 30px; }
+.chooser .q { font: 700 26px var(--display); color: var(--ink); margin-bottom: 14px; }
+.chooser .q .emo { font-size: 30px; }
+.chooser .opts2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.chooser button { text-align: left; background: #fff; border: 2px solid var(--line); border-radius: 16px; padding: 14px 18px; cursor: pointer; font: 500 24px/1.35 var(--text); color: var(--ink-2); transition: border-color .2s, background .2s; }
+.chooser button b { display: block; font: 700 24px var(--display); color: var(--ink); margin-bottom: 4px; }
+.chooser button kbd { display: inline-block; font: 700 24px var(--mono); background: var(--ink); color: #fff; border-radius: 6px; padding: 2px 9px; margin-right: 8px; }
+.chooser button.on { border-color: var(--red); background: var(--red-tint); }
+.chooser .msg { margin-top: 12px; font: 500 24px var(--text); color: #d9534f; min-height: 34px; }
 .quant-panel { background: var(--bg-soft); border: 1.5px solid var(--line); border-radius: 28px; padding: 34px; position: relative; }
 .quant-panel canvas { display: block; width: 100%; height: 520px; border-radius: 14px; }
 .quant-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; }
@@ -213,6 +235,8 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 .gchip::before, .gchip::after { content: ''; position: absolute; left: 14px; right: 14px; height: 6px; background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 12px); opacity: .6; }
 .gchip::before { top: -9px; }
 .gchip::after { bottom: -9px; }
+.gchip.slice { height: 60px; font-size: 24px; }
+.gchip.slice::before, .gchip.slice::after { display: none; }
 .kv-rows { border-top: 1.5px solid var(--line); }
 .opts { margin-top: 44px; }
 .gcount { font: 700 24px var(--display); color: var(--ct); margin-left: 10px; }
@@ -305,9 +329,18 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
   <div class="hero">
     <div>
       <div class="kicker rise">PyTorch Conference NA 2026 &middot; Demo Theater</div>
-      <h1 class="rise title-h1" style="--d:1">Not Every Question<br><span class="accent">Needs Two GPUs</span></h1>
+      <h1 class="rise title-h1" style="--d:1" id="titleH1">Not Every Question<br><span class="accent">Needs the Whole GPU</span></h1>
       <p class="lead rise" style="--d:2">When to use BF16, FP8, INT4, or speculative decoding, and when a router earns its keep.</p>
       <div class="byline rise" style="--d:3"><strong>Markell Rawls</strong>AI Developer Advocate, Red Hat</div>
+      <div class="rise" style="--d:4"><span class="track-line"><i></i><span data-t="trackLine">Track A: Llama 3.1 70B on two H200s</span></span></div>
+      <div class="chooser step" id="chooser">
+        <div class="q"><span class="emo">✋</span> Hands up: which one is your shop?</div>
+        <div class="opts2">
+          <button data-track-pick="llama"><b><kbd>1</kbd>70B-class, spread across GPUs</b>Llama 3.1 70B on two H200s</button>
+          <button data-track-pick="qwen"><b><kbd>2</kbd>27B-class, one GPU or a slice</b>Qwen3.8-27B on H200 MIG slices</button>
+        </div>
+        <div class="msg" id="chooserMsg"></div>
+      </div>
     </div>
     <div class="quant-panel rise" style="--d:2">
       <div class="quant-head">
@@ -330,7 +363,7 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
     <div class="person rise v-int4" style="--d:4"><div class="av emo">💼</div><div><div class="nm">Dana <small>finance</small></div><p>Watches the GPU bill, and has questions</p></div></div>
   </div>
   <div class="journey">
-    <div class="beat step v-bf16"><div class="dot emo">🚀</div><div class="t">Priya ships a 70B at full precision</div></div>
+    <div class="beat step v-bf16"><div class="dot emo">🚀</div><div class="t" data-t="beat1">Priya ships a 70B at full precision</div></div>
     <div class="beat step v-bf16"><div class="dot emo">📈</div><div class="t">It gets popular, so she adds replicas</div></div>
     <div class="beat step v-int4"><div class="dot emo">🗜️</div><div class="t">The bill climbs, so she grabs the first fix</div></div>
     <div class="beat step v-red"><div class="dot emo">🎫</div><div class="t">Marcus thinks the answers got worse</div></div>
@@ -341,10 +374,10 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 <!-- 3. Meet Priya -->
 <section class="slide" data-color="blue" data-dot="main">
   <div class="kicker rise"><span class="n">Chapter 1</span>Meet Priya <span class="emo">👩🏽‍💻</span></div>
-  <h2 class="rise" style="--d:1">Priya shipped Llama 3.1 70B at BF16, and the weights alone fill an entire H200.</h2>
+  <h2 class="rise" style="--d:1" data-t="s3h2">Priya shipped Llama 3.1 70B at BF16, and the weights alone fill an entire H200.</h2>
   <div class="two-col people-col">
     <div class="rise" style="--d:2">
-      <div class="gpus">
+      <div class="gpus" data-track="llama">
         <div class="gpu">
           <div class="gpu-top"><span class="gpu-name">H200 #1</span><span class="gpu-cap">141 GB</span></div>
           <div class="mem"><div class="w" data-w="50"></div><div class="kv" data-l="50" data-w="40"></div></div>
@@ -356,7 +389,19 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
           <div class="mem-legend"><span><b>70.6 GB</b> weights</span><span>KV cache</span></div>
         </div>
       </div>
-      <div class="popular"><span class="emo">📈</span><span>Then it got popular: <b>1 replica &rarr; 4</b>, so</span><span class="reps"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><b>8 H200s</b></div>
+      <div class="gpus" data-track="qwen">
+        <div class="gpu">
+          <div class="gpu-top"><span class="gpu-name">H200</span><span class="gpu-cap">141 GB</span></div>
+          <div class="mem"><div class="w" data-w="39.5"></div><div class="kv" data-l="39.5" data-w="51.5"></div></div>
+          <div class="mem-legend"><span><b>55.7 GB</b> weights</span><span>KV cache, 72.8 GB free</span></div>
+        </div>
+        <div class="gpu" style="opacity:.45">
+          <div class="gpu-top"><span class="gpu-name">H200 #2</span><span class="gpu-cap">141 GB</span></div>
+          <div class="mem"></div>
+          <div class="mem-legend"><span>Not needed for one replica</span></div>
+        </div>
+      </div>
+      <div class="popular"><span class="emo">📈</span><span>Then it got popular: <b>1 replica &rarr; 4</b>, so</span><span class="reps" data-track="llama"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="reps" data-track="qwen"><i></i><i></i><i></i><i></i></span><b data-t="repsLabel">8 H200s</b></div>
     </div>
     <div class="rise" style="--d:3">
       <div class="dm">
@@ -364,7 +409,7 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
         <div class="dm-msg">
           <div class="dm-av emo">💼</div>
           <div><div class="dm-name">Dana <small>Finance &middot; 9:02 AM</small></div>
-          <p class="dm-text">hey Priya, quick question <span class="emo">🙂</span> why did the chatbot go to <b data-count="5840">5,840</b> GPU-hours a month?</p></div>
+          <p class="dm-text">hey Priya, quick question <span class="emo">🙂</span> why did the chatbot go to <b data-count="5840" data-t-count="gpuHours">5,840</b> GPU-hours a month?</p></div>
         </div>
         <div class="dm-typing">Dana is typing a follow-up&hellip;</div>
       </div>
@@ -380,21 +425,21 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
   <div class="size-chart rise" style="--d:2" id="sizeChart">
     <div class="size-row">
       <div class="size-lab"><div class="nm t-bf16">BF16</div><div class="bp">2 bytes / weight</div></div>
-      <div class="size-track"><div class="size-bar v-bf16" data-gb="141"><span class="val t-bf16">141 GB<small>needs 2 GPUs</small></span></div></div>
+      <div class="size-track"><div class="size-bar v-bf16" data-gb="141" data-t-gb="sizes.bf16"><span class="val t-bf16" data-t="sizeBf16">141 GB<small>needs 2 GPUs</small></span></div></div>
     </div>
     <div class="size-row">
       <div class="size-lab"><div class="nm t-fp8">FP8</div><div class="bp">1 byte / weight</div></div>
-      <div class="size-track"><div class="size-bar v-fp8" data-gb="73"><span class="val t-fp8">~73 GB<small>fits on 1 GPU</small></span></div></div>
+      <div class="size-track"><div class="size-bar v-fp8" data-gb="73" data-t-gb="sizes.fp8"><span class="val t-fp8" data-t="sizeFp8">~73 GB<small>fits on 1 GPU</small></span></div></div>
     </div>
     <div class="size-row">
       <div class="size-lab"><div class="nm t-int4">INT4</div><div class="bp">&frac12; byte + scales</div></div>
-      <div class="size-track"><div class="size-bar v-int4" data-gb="41"><span class="val t-int4">~41 GB<small>fits on 1 GPU</small></span></div></div>
+      <div class="size-track"><div class="size-bar v-int4" data-gb="41" data-t-gb="sizes.int4"><span class="val t-int4" data-t="sizeInt4">~41 GB<small>fits on 1 GPU</small></span></div></div>
     </div>
-    <div class="h200-line" id="h200line"><span>one H200 = 141 GB</span></div>
+    <div class="h200-line" id="h200line" data-t-gb="sizes.line"><span data-t="sizeLine">one H200 = 141 GB</span></div>
   </div>
   <div class="size-note">
-    <p class="body rise" style="--d:3">Four INT4 replicas need four H200s instead of eight, Dana replies with <span class="emo">🎉</span>, and Priya is a hero for about two weeks.</p>
-    <p class="foot rise" style="--d:4">Weights as loaded by vLLM. BF16 is 2 × 65.7 GiB, FP8 67.7 GiB, INT4 37.9 GiB</p>
+    <p class="body rise" style="--d:3" data-t="sizeBody">Four INT4 replicas need four H200s instead of eight, Dana replies with <span class="emo">🎉</span>, and Priya is a hero for about two weeks.</p>
+    <p class="foot rise" style="--d:4" data-t="sizeFoot">Weights as loaded by vLLM. BF16 is 2 × 65.7 GiB, FP8 67.7 GiB, INT4 37.9 GiB</p>
   </div>
 </section>
 
@@ -418,33 +463,37 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
   <div class="cards3 cards4 opts">
     <div class="vcard step v-bf16">
       <h3><span class="emo">🔵</span> BF16</h3><div class="sub">THE BASELINE</div>
-      <div class="chips-row"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s</span></div>
+      <div class="chips-row" data-track="llama"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s</span></div>
+      <div class="chips-row" data-track="qwen"><div class="gchip">H200</div><span class="gcount">1 full H200</span></div>
       <div class="kv-rows">
         <div class="kv2"><span>Buys you</span><b>The reference answer</b></div>
         <div class="kv2"><span>Best for</span><b>Your hardest questions, until the others are tested on them</b></div>
       </div>
     </div>
     <div class="vcard step v-fp8">
-      <h3><span class="emo">🟢</span> FP8</h3><div class="sub">LLM COMPRESSOR, W8A8</div>
-      <div class="chips-row"><div class="gchip">H200</div><span class="gcount">1 H200</span></div>
+      <h3><span class="emo">🟢</span> FP8</h3><div class="sub" data-t="fp8Sub">LLM COMPRESSOR, W8A8</div>
+      <div class="chips-row" data-track="llama"><div class="gchip">H200</div><span class="gcount">1 H200</span></div>
+      <div class="chips-row" data-track="qwen"><div class="gchip slice">71 GB</div><span class="gcount">1 slice, 2 per H200</span></div>
       <div class="kv-rows">
-        <div class="kv2"><span>Buys you</span><b>BF16's speed and accuracy on one GPU</b><em class="caveat">Needs FP8 tensor cores (Ada, Hopper and newer)</em></div>
-        <div class="kv2"><span>Best for</span><b>Everyday traffic on H100 or H200</b></div>
+        <div class="kv2"><span>Buys you</span><b data-t="fp8Buys">BF16's speed and accuracy on one GPU</b><em class="caveat">Needs FP8 tensor cores (Ada, Hopper and newer)</em></div>
+        <div class="kv2"><span>Best for</span><b data-t="fp8Best">Everyday traffic on H100 or H200</b></div>
       </div>
     </div>
     <div class="vcard step v-int4">
-      <h3><span class="emo">🟡</span> INT4</h3><div class="sub">RED HAT W4A16, GPTQ</div>
-      <div class="chips-row"><div class="gchip">H200</div><span class="gcount">1 H200</span></div>
+      <h3><span class="emo">🟡</span> INT4</h3><div class="sub" data-t="int4Sub">RED HAT W4A16, GPTQ</div>
+      <div class="chips-row" data-track="llama"><div class="gchip">H200</div><span class="gcount">1 H200</span></div>
+      <div class="chips-row" data-track="qwen"><div class="gchip slice">35 GB</div><span class="gcount">1 slice, 3 per H200</span></div>
       <div class="kv-rows">
-        <div class="kv2"><span>Buys you</span><b>Half of FP8's memory, at 89% of BF16's speed</b><em class="caveat">44 vs 50 tokens a second for one request</em></div>
-        <div class="kv2"><span>Best for</span><b>When 73 GB doesn't fit: 48 GB cards, or more room for KV cache</b></div>
+        <div class="kv2"><span>Buys you</span><b data-t="int4Buys">Half of FP8's memory, at 89% of BF16's speed</b><em class="caveat" data-t="int4Caveat">44 vs 50 tokens a second for one request</em></div>
+        <div class="kv2"><span>Best for</span><b data-t="int4Best">When 73 GB doesn't fit: 48 GB cards, or more room for KV cache</b></div>
       </div>
     </div>
     <div class="vcard step v-spec">
-      <h3><span class="emo">🟣</span> Spec decode</h3><div class="sub">70B + SMALL 8B DRAFT</div>
-      <div class="chips-row"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s</span></div>
+      <h3><span class="emo">🟣</span> Spec decode</h3><div class="sub" data-t="specSub">70B + SMALL 8B DRAFT</div>
+      <div class="chips-row" data-track="llama"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s</span></div>
+      <div class="chips-row" data-track="qwen"><div class="gchip">H200</div><span class="gcount">Same card as BF16</span></div>
       <div class="kv-rows">
-        <div class="kv2"><span>Buys you</span><b>About 1.25× faster answers, with BF16 quality</b><em class="caveat">One request at a time, temperature 0. Slower first token</em></div>
+        <div class="kv2"><span>Buys you</span><b data-t="specBuys">About 1.25× faster answers, with BF16 quality</b><em class="caveat" data-t="specCaveat">One request at a time, temperature 0. Slower first token</em></div>
         <div class="kv2"><span>Best for</span><b>Latency-sensitive, low-traffic work</b></div>
       </div>
     </div>
@@ -472,13 +521,13 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
     <div class="hub rise" style="--d:5"><span class="emo">🔀</span><h3>Router</h3><p>One gateway on OpenShift AI, routing each request to the variant that fits it</p></div>
     <div class="wires" style="--d:6"><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg></div>
     <div class="rcol">
-      <div class="dest rise v-fp8" style="--d:6"><h3>FP8</h3><p>1 GPU per replica, INT4 where memory is tight</p></div>
-      <div class="dest rise v-bf16" style="--d:7"><h3>BF16</h3><p>2 GPUs, full precision</p></div>
-      <div class="dest rise v-spec" style="--d:8"><h3>Spec decode</h3><p>2 GPUs, ~1.25× faster</p></div>
+      <div class="dest rise v-fp8" style="--d:6"><h3>FP8</h3><p data-t="destFp8">1 GPU per replica, INT4 where memory is tight</p></div>
+      <div class="dest rise v-bf16" style="--d:7"><h3>BF16</h3><p data-t="destBf16">2 GPUs, full precision</p></div>
+      <div class="dest rise v-spec" style="--d:8"><h3>Spec decode</h3><p data-t="destSpec">2 GPUs, ~1.25× faster</p></div>
     </div>
   </div>
   <div class="plugs step"><span class="lab"><span class="emo">🔌</span> Also plugs into the same router</span><span class="chipset"><span>INT8 (W8A8)</span><span>GPTQ</span><span>EAGLE-3 draft heads</span><span>A smaller 8B for easy questions</span><span>INT4 + spec decode</span></span></div>
-  <p class="moral step">Only the hard questions go to BF16, so she needs fewer GPUs than running everything on BF16.<br>Marcus closes the ticket <span class="emo">✅</span> and Dana sends another <span class="emo">🎉</span></p>
+  <p class="moral step"><span data-t="moral">Only the hard questions go to BF16, so she needs fewer GPUs than running everything on BF16.</span><br>Marcus closes the ticket <span class="emo">✅</span> and Dana sends another <span class="emo">🎉</span></p>
 </section>
 
 <!-- 9. Wrap-up -->
@@ -489,10 +538,10 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
     <div class="rise" style="--d:2">
       <h3>The points we made</h3>
       <ol class="pts">
-        <li class="step"><span><b>On Hopper, try FP8 first.</b> One GPU, BF16's speed, and no measurable loss on our tests.</span></li>
-        <li class="step"><span><b>INT4 is for when the memory doesn't fit.</b> 48 GB cards, or more room for KV cache, at 89% of the speed.</span></li>
-        <li class="step"><span><b>Spec decode is a latency tool.</b> About 1.25× faster for one request, and about half the tokens per GPU under load.</span></li>
-        <li class="step"><span><b>Measure, don't guess.</b> FP8 and INT4 matched BF16 on 1,319 GSM8K problems. 280 MMLU-Pro questions were too few to call, so test yours.</span></li>
+        <li class="step"><span data-t="pt1"><b>On Hopper, try FP8 first.</b> One GPU, BF16's speed, and no measurable loss on our tests.</span></li>
+        <li class="step"><span data-t="pt2"><b>INT4 is for when the memory doesn't fit.</b> 48 GB cards, or more room for KV cache, at 89% of the speed.</span></li>
+        <li class="step"><span data-t="pt3"><b>Spec decode is a latency tool.</b> About 1.25× faster for one request, and about half the tokens per GPU under load.</span></li>
+        <li class="step"><span data-t="pt4"><b>Measure, don't guess.</b> FP8 and INT4 matched BF16 on 1,319 GSM8K problems. 280 MMLU-Pro questions were too few to call, so test yours.</span></li>
         <li class="step"><span><b>A router</b> lets each one run where it's best, once your traffic is big and mixed enough to run more than one.</span></li>
       </ol>
     </div>
@@ -517,6 +566,7 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
       <div class="close-list">
         <div class="rise" style="--d:1"><span class="emo">📦</span><span class="mono">github.com/MarkellR-RedHat/pytorch-quantization-demo</span></div>
         <div class="rise" style="--d:2"><span class="emo">🔍</span><span>If you want to see how I did this, it's all in there</span></div>
+        <div class="rise" style="--d:3"><span class="emo">🔀</span><span>Two tracks in this deck, Llama 3.1 70B on H200s and Qwen3.8-27B on MIG slices. <b>T</b> on the title slide switches.</span></div>
       </div>
       <p class="thanks rise" style="--d:4">Thank you <span class="emo">🙏</span><small>Markell Rawls &middot; AI Developer Advocate, Red Hat &middot; mrawls@redhat.com</small></p>
     </div>
@@ -547,7 +597,6 @@ addEventListener('resize', fit); fit();
 
 // size chart (slide 3): 0..160 GB scale
 const GB_MAX = 160;
-document.getElementById('h200line').style.left = `calc(330px + (100% - 330px - 60px) * ${141 / GB_MAX})`;
 function playSizes(slide) {
   const bars = slide.querySelectorAll('.size-bar');
   bars.forEach(b => b.style.width = '0');
@@ -635,10 +684,99 @@ function loadScript() {
   const c = [...document.childNodes].find(n => n.nodeType === 8 && n.data.includes('SPEAKER SCRIPT'));
   const out = {};
   if (c) c.data.split(/\n(?=\[\d+|\[B\d)/).forEach(block => {
-    const m = block.match(/^\[(\w+)[^\]]*\]/); if (m) out[m[1]] = block.trim();
+    const m = block.match(/^\[(\w+)( qwen)?[^\]]*\]/); if (m) out[m[1] + (m[2] ? ':qwen' : '')] = block.trim();
   });
   SCRIPT = out;
 }
+
+// Tracks: every audience number that differs between the two stories lives here.
+// A string is final. An object {pending, text} is a placeholder that renders with a red dashed box
+// until the raw file lands, and a track with pending fields refuses to go live unless the URL says allowPending.
+const TITLE = 'Not Every Question|Needs the Whole GPU';   // working title, one string for both tracks
+const TRACKS = {
+  llama: {
+    label: 'Llama', trackLine: 'Track A: Llama 3.1 70B on two H200s', beat1: 'Priya ships a 70B at full precision',
+    s3h2: 'Priya shipped Llama 3.1 70B at BF16, and the weights alone fill an entire H200.', repsLabel: '8 H200s', gpuHours: 5840,
+    sizes: { bf16: 141, fp8: 73, int4: 41, line: 141 },
+    sizeBf16: '141 GB<small>needs 2 GPUs</small>', sizeFp8: '~73 GB<small>fits on 1 GPU</small>', sizeInt4: '~41 GB<small>fits on 1 GPU</small>', sizeLine: 'one H200 = 141 GB',
+    sizeBody: 'Four INT4 replicas need four H200s instead of eight, Dana replies with <span class="emo">🎉</span>, and Priya is a hero for about two weeks.',
+    sizeFoot: 'Weights as loaded by vLLM. BF16 is 2 × 65.7 GiB, FP8 67.7 GiB, INT4 37.9 GiB',
+    fp8Sub: 'LLM COMPRESSOR, W8A8', fp8Buys: "BF16's speed and accuracy on one GPU", fp8Best: 'Everyday traffic on H100 or H200',
+    int4Sub: 'RED HAT W4A16, GPTQ', int4Buys: "Half of FP8's memory, at 89% of BF16's speed", int4Caveat: '44 vs 50 tokens a second for one request',
+    int4Best: "When 73 GB doesn't fit: 48 GB cards, or more room for KV cache",
+    specSub: '70B + SMALL 8B DRAFT', specBuys: 'About 1.25× faster answers, with BF16 quality', specCaveat: 'One request at a time, temperature 0. Slower first token',
+    destFp8: '1 GPU per replica, INT4 where memory is tight', destBf16: '2 GPUs, full precision', destSpec: '2 GPUs, ~1.25× faster',
+    moral: 'Only the hard questions go to BF16, so she needs fewer GPUs than running everything on BF16.',
+    pt1: "<b>On Hopper, try FP8 first.</b> One GPU, BF16's speed, and no measurable loss on our tests.",
+    pt2: "<b>INT4 is for when the memory doesn't fit.</b> 48 GB cards, or more room for KV cache, at 89% of the speed.",
+    pt3: '<b>Spec decode is a latency tool.</b> About 1.25× faster for one request, and about half the tokens per GPU under load.',
+    pt4: "<b>Measure, don't guess.</b> FP8 and INT4 matched BF16 on 1,319 GSM8K problems. 280 MMLU-Pro questions were too few to call, so test yours.",
+  },
+  qwen: {
+    label: 'Qwen', trackLine: 'Track B: Qwen3.8-27B on H200 MIG slices', beat1: 'Priya ships a 27B at full precision',
+    s3h2: 'Priya shipped Qwen3.8-27B at BF16 on a full H200, and most of the card sits empty.', repsLabel: '4 H200s', gpuHours: 2920,
+    sizes: { bf16: 56, fp8: { pending: 'GATE 5', est: 27 }, int4: { pending: 'GATE 5', est: 15 }, line: 71 },
+    sizeBf16: '~56 GB<small>a full H200</small>', sizeFp8: { pending: 'GATE 5', text: '__ GB<small>a 71 GB slice</small>' }, sizeInt4: { pending: 'GATE 5', text: '__ GB<small>a 35 GB slice</small>' }, sizeLine: 'one 3g slice = 71 GB',
+    sizeBody: { pending: 'GATE 5', text: 'Four INT4 replicas fit on 35 GB slices, so two H200s instead of four, Dana replies with <span class="emo">🎉</span>, and Priya is a hero for about two weeks.' },
+    sizeFoot: { pending: 'GATE 5', text: 'Weights as loaded by vLLM 0.24. BF16 is 51.9 GiB, FP8 __ GiB, INT4 __ GiB' },
+    fp8Sub: "QWEN'S OWN FP8 BUILD", fp8Buys: { pending: 'GATE 5', text: "__ of BF16's speed and accuracy on a slice" }, fp8Best: 'Everyday traffic, two replicas per H200',
+    int4Sub: 'LLM COMPRESSOR, W4A16', int4Buys: { pending: 'GATE 5', text: "A 35 GB slice, at __% of BF16's speed" }, int4Caveat: { pending: 'GATE 5', text: '__ vs __ tokens a second for one request' },
+    int4Best: 'When 71 GB is too much: 35 GB slices, three per H200',
+    specSub: 'BUILT-IN MTP HEADS', specBuys: { pending: 'GATE 6', text: 'About __× faster answers, with BF16 quality' }, specCaveat: 'No extra GPU: the model drafts for itself',
+    destFp8: '1 slice per replica, INT4 on a smaller slice', destBf16: '1 full H200, full precision', destSpec: { pending: 'GATE 6', text: 'Same H200, MTP, ~__× faster' },
+    moral: 'Only the hard questions get a whole H200, so she needs fewer cards than running everything on BF16.',
+    pt1: { pending: 'GATE 5', text: "<b>On Hopper, try FP8 first.</b> A 71 GB slice, __ of BF16's speed, and __ loss on our tests." },
+    pt2: { pending: 'GATE 5', text: "<b>INT4 is for when the memory doesn't fit.</b> 35 GB slices, three per H200, at __% of the speed." },
+    pt3: { pending: 'GATE 6', text: '<b>Spec decode is a latency tool.</b> MTP heads, no extra GPU, about __× faster for one request.' },
+    pt4: { pending: 'GATE 5', text: "<b>Measure, don't guess.</b> __ on 1,319 GSM8K problems and 280 MMLU-Pro questions. Test yours." },
+  },
+};
+const params = new URLSearchParams(location.search);
+const allowPending = params.has('allowPending');
+let track = 'llama';
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
+const lookup = (t, key) => key.split('.').reduce((o, k) => (o == null ? o : o[k]), TRACKS[t]);
+const isPending = v => v && typeof v === 'object' && 'pending' in v;
+function pendingCount(t) {
+  let n = 0;
+  const walk = v => { if (isPending(v)) n++; else if (v && typeof v === 'object') Object.values(v).forEach(walk); };
+  walk(TRACKS[t]); return n;
+}
+function applyTrack(t) {
+  track = t;
+  stage.dataset.track = t;
+  const [top, accent] = TITLE.split('|');
+  document.getElementById('titleH1').innerHTML = `${top}<br><span class="accent">${accent}</span>`;
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const v = lookup(t, el.dataset.t);
+    if (v === undefined) throw new Error(`track ${t} has no field ${el.dataset.t}`);
+    el.innerHTML = isPending(v) ? v.text : v;
+    el.classList.toggle('pending', isPending(v));
+    if (isPending(v)) el.dataset.pending = v.pending; else delete el.dataset.pending;
+  });
+  document.querySelectorAll('[data-t-gb]').forEach(el => {
+    const v = lookup(t, el.dataset.tGb);
+    if (v === undefined) throw new Error(`track ${t} has no field ${el.dataset.tGb}`);
+    el.dataset.gb = isPending(v) ? v.est : v;
+    el.classList.toggle('pending', isPending(v));
+    if (isPending(v)) el.dataset.pending = v.pending; else delete el.dataset.pending;
+  });
+  document.querySelectorAll('[data-t-count]').forEach(el => { el.dataset.count = lookup(t, el.dataset.tCount); el.textContent = (+el.dataset.count).toLocaleString('en-US'); });
+  document.getElementById('h200line').style.left = `calc(330px + (100% - 330px - 60px) * ${document.getElementById('h200line').dataset.gb / GB_MAX})`;
+  document.querySelectorAll('[data-track-pick]').forEach(b => b.classList.toggle('on', b.dataset.trackPick === t));
+  store.set('track', t);
+  const u = new URL(location.href); u.searchParams.set('track', t); history.replaceState(null, '', u);
+}
+function pickTrack(t) {
+  const n = pendingCount(t);
+  const msg = document.getElementById('chooserMsg');
+  if (n && !allowPending) { msg.textContent = `${TRACKS[t].label} track still has ${n} pending numbers. Add allowPending to the URL to preview it.`; return false; }
+  msg.textContent = '';
+  applyTrack(t);
+  go(cur);
+  return true;
+}
+applyTrack(params.get('track') === 'qwen' || (!params.has('track') && store.get('track') === 'qwen') ? 'qwen' : 'llama');
 
 // Navigation
 const slides = [...document.querySelectorAll('.slide')];
@@ -657,14 +795,16 @@ function go(n) {
   const s = slides[n];
   [...dotsEl.children].forEach((d, i) => d.classList.toggle('on', i === n));
   const isBk = s.dataset.dot === 'backup';
-  document.getElementById('counter').innerHTML = isBk ? `<span class="bk">BACKUP</span>B${n - mainCount + 1}` : `${n + 1} / ${mainCount}`;
+  const pend = pendingCount(track);
+  document.getElementById('counter').innerHTML = `<span class="trk${pend ? ' pend' : ''}">${TRACKS[track].label}${pend ? ' · ' + pend + ' pending' : ''}</span>` + (isBk ? `<span class="bk">BACKUP</span>B${n - mainCount + 1}` : `${n + 1} / ${mainCount}`);
   document.getElementById('progress').style.width = `${Math.min(1, (n + 1) / mainCount) * 100}%`;
   ambColor = COLORS[s.dataset.color] || COLORS.red;
   if (s.querySelector('.size-bar')) playSizes(s);
   if (s.querySelector('.mem')) playMem(s);
   if (s.querySelector('[data-count]')) playCount(s);
   const key = isBk ? 'B' + (n - mainCount + 1) : String(n + 1);
-  document.getElementById('notes').innerHTML = SCRIPT[key] ? `<b>SLIDE ${key}</b>` + SCRIPT[key].replace(/^\[[^\]]*\]\s*/, '').replace(/\n/g, '<br>') : '';
+  const note = SCRIPT[key + ':' + track] || SCRIPT[key];
+  document.getElementById('notes').innerHTML = note ? `<b>SLIDE ${key} · ${TRACKS[track].label.toUpperCase()}</b>` + note.replace(/^\[[^\]]*\]\s*/, '').replace(/\n/g, '<br>') : '';
 }
 function next() {
   const hidden = slides[cur].querySelector('.step:not(.shown)');
@@ -679,6 +819,7 @@ function toggleAuto() {
 document.getElementById('prev').onclick = () => go(cur - 1);
 document.getElementById('next').onclick = () => next();
 document.getElementById('auto').onclick = toggleAuto;
+document.querySelectorAll('[data-track-pick]').forEach(b => b.onclick = () => pickTrack(b.dataset.trackPick));
 document.getElementById('notesBtn').onclick = () => { document.getElementById('notes').classList.toggle('show'); document.getElementById('notesBtn').classList.toggle('on'); };
 
 addEventListener('keydown', e => {
@@ -692,6 +833,9 @@ addEventListener('keydown', e => {
   else if (k === 'b' || k === 'B' || k === '.') document.getElementById('blackout').classList.toggle('show');
   else if (k === 'h' || k === 'H') document.getElementById('nav').classList.toggle('hidden');
   else if (k === 'f' || k === 'F') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  else if (cur === 0 && (k === 't' || k === 'T')) pickTrack(track === 'llama' ? 'qwen' : 'llama');
+  else if (cur === 0 && k === '1') pickTrack('llama');
+  else if (cur === 0 && k === '2') pickTrack('qwen');
 });
 let touchX = 0;
 addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
@@ -705,18 +849,31 @@ window.addEventListener('load', () => { loadScript(); go(cur); });
 </html>
 <!--
 SPEAKER SCRIPT (10-minute Demo Theater slot, 10 slides). Keys: arrows or clicker to move, N notes, A auto, B blackout, H hide nav, F fullscreen.
+Tracks: T on the title slide switches between Llama (track A) and Qwen (track B); 1 and 2 pick directly. A [N qwen] section replaces [N] when the Qwen track is active; slides without one share the Llama note.
 
 [1 Title | 0:00 to 0:25]
-Hey everyone, I'm Markell, AI Developer Advocate at Red Hat. Not every question needs two GPUs. This talk is about when to use BF16, FP8, INT4, or speculative decoding, and when a router earns its keep, and the answer depends on the question your model is answering.
+Hey everyone, I'm Markell, AI Developer Advocate at Red Hat. Not every question needs the whole GPU. This talk is about when to use BF16, FP8, INT4, or speculative decoding, and when a router earns its keep, and the answer depends on the question your model is answering. [Click] Hands up: who runs 70B-class dense models spread across GPUs? Who runs 27B-class on one GPU or a slice? Press 1 or 2 for the bigger group (T also flips it), then move on. The chooser refuses a track that still has pending numbers unless the URL has allowPending. The other track stays in the deck for anyone reading it later.
+
+[1 qwen]
+Hey everyone, I'm Markell, AI Developer Advocate at Red Hat. Not every question needs the whole GPU. This talk is about when to use BF16, FP8, INT4, or speculative decoding, and when a router earns its keep, and the answer depends on the question your model is answering. [Click] Hands up as above, press 2. This track is Qwen3.8-27B on H200 MIG slices, and it runs on vLLM 0.24, the cluster's own runtime image, because Qwen's built-in MTP drafting needs it; the Llama track ran on 0.18. Each track is apples to apples within itself, not across tracks.
 
 [2 The story | 0:25 to 1:00]
 I'll tell it as a story with three people. Priya runs the model on the platform team and she's a little naive about it, Marcus is on data science and needs answers he can trust, and Dana is in finance watching the bill. [Click through the five steps one at a time.] Priya ships a 70B at full precision, it gets popular so she adds replicas, the bill climbs so she grabs the first fix, Marcus thinks the answers got worse, and she ends up not picking one winner at all.
 
+[2 qwen]
+I'll tell it as a story with three people. Priya runs the model on the platform team and she's a little naive about it, Marcus is on data science and needs answers he can trust, and Dana is in finance watching the bill. [Click through the five steps one at a time.] Priya ships a 27B at full precision on a whole card, it gets popular so she adds replicas, the bill climbs so she grabs the first fix, Marcus thinks the answers got worse, and she ends up not picking one winner at all.
+
 [3 Meet Priya | 1:00 to 1:40]
 Priya shipped Llama 3.1 70B at BF16. That's 70.6 billion parameters at two bytes each, 141 GB, and an H200 has 141 GB, so the weights alone fill a card and every replica needs two. Then it got popular, one replica became four, and that's eight H200s running all month. So Dana sends the message everyone in this room has gotten. Quick question, why did the chatbot go to 5,840 GPU-hours a month? It is never a quick question.
 
+[3 qwen]
+Priya shipped Qwen3.8-27B at BF16. That's 27 billion parameters at two bytes each, and vLLM loaded 51.9 GiB, about 56 GB, on an H200 that has 141, so most of the card sits empty and the KV cache gets the rest: 403,000 tokens of it, per the startup log. Then it got popular, one replica became four, and that's four H200s running all month. So Dana sends the message everyone in this room has gotten. Quick question, why did the chatbot go to 2,920 GPU-hours a month? It is never a quick question.
+
 [4 She quantizes | 1:40 to 2:10]
 Priya's a little naive, so she grabs the first INT4 file she finds, a community checkpoint off Hugging Face with no published eval, and swaps it in. FP8 halves the weights, INT4 takes them to about a quarter, and now a whole replica fits on one GPU. [The bars are what vLLM loaded: BF16 65.7 GiB on each of two GPUs, Red Hat's FP8 build 67.7 GiB, the community AWQ build 37.87 GiB; Red Hat's W4A16 build loads at 37.11 GiB, so the INT4 bar holds for both. FP8 is more than 70.6 GB because the embeddings and output layer stay in 16-bit.] Four replicas need four H200s instead of eight, Dana sends a party emoji, and Priya is a hero for about two weeks.
+
+[4 qwen]
+Priya's a little naive, so she grabs the first INT4 file she finds and swaps it in. FP8 halves the weights, INT4 takes them to about a quarter, and now a replica fits on a MIG slice instead of a whole card. [Pending Gate 5: the FP8 and INT4 bars are estimates until the startup logs land, about 27 GB and 15 GB; read the loaded sizes from "Model loading took" and the KV cache line for the 35 GB slice.] Four INT4 replicas on 35 GB slices, three to a card, is two H200s instead of four. Dana sends a party emoji, and Priya is a hero for about two weeks.
 
 [5 The ticket | 2:10 to 2:45]
 Two weeks later Marcus files this. Let the room read it. Did the model get worse? His analysis answers have felt off since the switch. [Click] Quick show of hands, who has quantized a model and then just hoped the quality was fine? Yeah. Priya didn't know either, and guessing is how she got here, so this time she measured.
@@ -724,18 +881,30 @@ Two weeks later Marcus files this. Let the room read it. Did the model get worse
 [6 The options | 2:45 to 3:45]
 So Priya started investigating less naive ways to improve inference, and here are her four options, apples to apples: same model, same vLLM build, same prompts, same H200s. [Click] BF16 is two H200s and the reference answer, and it's where your hardest questions stay until the others have been tested on them. [Click] The less naive builds are Red Hat's validated builds: FP8 made with LLM Compressor, INT4 a validated GPTQ checkpoint, both with published accuracy recovery, and Priya still measures them on her own questions. FP8 first: one H200, and for one request it did 51 tokens a second against BF16's 50, so BF16's speed on half the GPUs. On accuracy it scored 95.2% on GSM8K against BF16's 94.8% on 1,319 problems, and 66.1% against 66.8% on 280 MMLU-Pro questions, inside the noise, so no measurable loss on our tests. Under load it's the standout: at a 50 millisecond p95 per-token budget it served about 1,490 output tokens a second per GPU on random prompts against BF16's 980, about 1.5 times, because Hopper has FP8 tensor cores and the CUTLASS FP8 kernel uses them. That's the catch too: FP8 wants FP8 tensor cores, which Ada and Hopper have, so L40S and H100 are fine, and on A100 vLLM falls back to a weight-only FP8 kernel that's slower, so INT4 is the one-GPU option there. [Click] INT4 is Red Hat's W4A16 build, made with AutoGPTQ, also one H200, and its job is memory. It loads at 37 GiB against FP8's 68, so it fits on a 48 GB card, or leaves half again as much room for KV cache on an H200: 283,000 tokens of KV cache against FP8's 182,000 in the startup logs. For one request it did 44 tokens a second against BF16's 50, so 89% of the speed, and it stayed within 10% of BF16 per request up to 8 at once on ShareGPT prompts. On accuracy it scored 95.1% on GSM8K, so no loss on 1,319 problems, and 63.6% against 66.8% on 280 MMLU-Pro questions, 3 points lower with a standard error near 3 points, so too few to call it either way. The community AWQ build she started with ran at 96% of BF16's speed and scored about the same on both evals. On H200 vLLM runs 4-bit weights with the Machete kernel, the Hopper successor to Marlin, and both INT4 startup logs confirm it. Under heavy batching on high-end GPUs, Red Hat's study found 8-bit more cost-efficient than 4-bit, and our sweep to 64 at once agrees: at the 50 millisecond budget INT4 served about the same tokens per GPU as BF16, 977 against 981, while FP8 served 1.5 times as many. So on this hardware FP8 won, and INT4 is for when 73 GB doesn't fit. [Click] Speculative decoding still needs the same two H200s as BF16, and what it buys you is speed. A smaller 8B model drafts five tokens ahead and the 70B checks them in one pass, and on average each 70B pass produced about 4.5 tokens. Because the 70B checks every token, you keep BF16 quality. With enforce_eager off, so torch.compile and CUDA graphs are on, it ran about 1.25 times faster than BF16, one request at a time at temperature 0. If a vLLM engineer asks: that's 30 ShareGPT prompts, 62.2 versus 49.7 output tokens a second, and 1.18 times at temperature 0.7, where the tokens per pass drop from 4.5 to 4.2 because at 0.7 the target samples and rejects more of the draft. The first token is slower, about 107 milliseconds against 33, because the draft runs before the first answer token, so on a one-line answer spec decode can lose. Under load it served about half of BF16's tokens per GPU at the same latency budget, which is why it's the latency option and not the cost option. Quick vote before the demo, hands up if you think BF16 is fastest. FP8? INT4? Spec decode? Let's find out.
 
+[6 qwen]
+Same four options, apples to apples on this track: same model, same vLLM 0.24 image, same prompts, same H200s carved into MIG slices. [Click] BF16 is one full H200 and the reference answer. [Click] FP8 is Qwen's own build, fine-grained FP8 with a 128 by 128 block size and dynamic activation scaling, on a 71 GB slice, and two of those fit on one H200. [Pending Gate 5: speed for one request against BF16, GSM8K and MMLU-Pro, and tokens per H200 at the 50 millisecond p95 budget, which is the slice number times two.] Same catch as before: FP8 wants FP8 tensor cores, Ada and Hopper have them. [Click] INT4 is Red Hat's build made with LLM Compressor, AWQ smoothing with the W4A16 GPTQ scheme and an FP8 KV cache, with published recovery of 98.8% on MMLU-Pro and 101% on GSM8K Platinum on the model card. Its job is memory: it runs on a 35 GB slice, three to a card. [Pending Gate 5: speed for one request on the 35 GB slice against BF16, the evals from the 71 GB run, and tokens per H200, which is the slice number times three.] [Click] Speculative decoding on this model needs no draft model and no extra GPU: Qwen3.8 ships with a multi-token-prediction head, so the model drafts for itself, spec tokens 4 in vLLM 0.24, same full H200 as BF16. [Pending Gate 6: speed for one request against BF16 at temperature 0 and 0.7, tokens per pass from the metrics snapshots at spec tokens 1, 2 and 4, and the first-token cost. vLLM 0.24 warns that running one MTP layer several times lowers acceptance, so 4 may not be the best setting.] Quick vote before the demo, hands up if you think BF16 is fastest. FP8? INT4? Spec decode? Let's find out.
+
 [7 Let's find out | 3:45 to 7:00]
 Call out a question and I'll send it to all four setups at once. Switch to the dashboard. [Budget: Ask about 2:15, Under load 0:30, Numbers 0:30.]
 Scene 1, Ask. [On Oct 20 the demo runs on 5 H200s: BF16, FP8, and spec decode are live, and the INT4 column plays its recordings by plan. The corner badge reads "Live: BF16, FP8, Spec Decode · Recorded: INT4 (Red Hat W4A16)" and the INT4 column is headed "INT4 (Red Hat W4A16)" with its Recorded pill. The INT4 column showing "Recorded" is on purpose, so don't call it a failure on stage; a typed question from the room gets live answers from the other three and no INT4 answer, and only the presets show INT4.] Type the question from the room, or pick one of the eight presets if it's quiet: Sheep riddle, Python function, Three bullet summary, Decline a meeting, Quick fact, Logic puzzle, Explain KV cache, Extract to JSON. [Explain KV cache has no usable recording until it's re-recorded on Oct 19: the prompt was reworded to ask about the transformer KV cache, since the old wording got a generic key-value store explanation from every setup. Skip it if the live request fails.] The example router sends the sheep riddle and the logic puzzle to BF16 ("multi-step reasoning, and the hardest questions stay on BF16"), the summary, meeting decline, quick fact, and JSON extraction to FP8 ("nothing here needs the full model, and FP8 serves the most tokens per GPU"), and the Python function and KV cache explanation to spec decode ("a long answer with someone waiting, and Spec Decode answers fastest"). The router strip on Numbers reads: a wrong answer is expensive to BF16, everyday questions to FP8, 73 GB won't fit to INT4, latency-sensitive, low traffic to Spec Decode. [Those strings are b2's, on its kserve branch; check them on the laptop before the talk.] Point at each column: time to first token, tokens per second, tokens in the answer, total time, and who finished first. For a quiet room, use the Logic puzzle as the quality check, since it isn't a famous riddle the models could have memorized. On the sheep riddle all of them got it right, 20 out of 20 each when we sampled it, but it's famous and probably in the training data, so treat it as the fun moment and point to the evals for the real answer to Marcus. If a column turns dashed red and says Recorded, live request failed, say so plainly, something like that one's showing the recorded run because the live request didn't come back, and keep going. Pressing R flips every column to the recorded run. Read the router line out loud. Do two or three questions.
 Scene 2, Under load, about 30 seconds. One sentence: at the 50 millisecond budget FP8 serves 1.5 times BF16's tokens per GPU, INT4 about the same as BF16, and spec decode about half.
 Scene 3, Numbers, the money slide. BF16 50 tokens a second on two GPUs, FP8 51 on one, INT4 44 on one, spec decode 62 on two, all one request at a time. FP8 matches BF16 on one GPU, INT4 is for when 73 GB doesn't fit, spec decode is the latency tool, and BF16 is the reference.
 
+[7 qwen]
+Call out a question and I'll send it to all four setups at once. Switch to the dashboard on the Qwen track (the slide-7 link carries track=qwen). [Pending: b2's Qwen endpoints, presets and recordings. Scenes, presets, fallback and the R key work the same as the Llama track; the badge names the Qwen setups.]
+
 [8 Priya adds a router | 7:00 to 7:50]
 So there wasn't one winner, and Priya added a router. [The router here is the design. The demo shows an example routing rule, not a deployed gateway. If asked what to build it with: vLLM Semantic Router classifies each request and picks the model, and llm-d Router, formerly the llm-d inference scheduler, picks the replica within each pool, preferring one that already has the prompt's prefix cached.] Easy questions, which is most of the traffic, go to FP8 on one GPU each, or to INT4 where the GPU is smaller or the KV cache needs the room; latency-critical work goes to spec decode; and the hardest questions stay on BF16 until the others have been tested on them. It started as one BF16 replica, got popular, and every new replica cost two more H200s. [Click] And these four aren't the only options. INT8, GPTQ, EAGLE-3 draft heads, or a smaller 8B for the easy questions all plug into the same router, I just didn't have time for all of them today. EAGLE-3 heads exist for Llama 3.3 70B, not for 3.1 70B, so that one would mean moving to 3.3. INT4 plus spec decode, a draft model on an INT4 target, is the obvious why-not-both, and we haven't tested it here. [Click] Only the hard questions go to BF16 now, so she needs fewer GPUs than running everything on BF16, and the everyday lane serves about 1.5 times the tokens per GPU on FP8. Marcus closes his ticket, and Dana sends another party emoji.
+
+[8 qwen]
+So there wasn't one winner, and Priya added a router. Easy questions, most of the traffic, go to FP8 on a 71 GB slice each, or INT4 on a 35 GB slice where the card is being packed tighter; latency-critical work goes to spec decode, which is the same full H200 as BF16 with the MTP head on; and the hardest questions stay on BF16 until the others have been tested on them. It started as one BF16 replica on a whole card, got popular, and every new replica took a whole card. [Click] These four aren't the only options. INT8, GPTQ, EAGLE-3 draft heads, or a smaller model for the easy questions all plug into the same router. [Click] Only the hard questions get a whole H200 now, so she needs fewer cards than running everything on BF16. [Pending Gate 5 for the per-H200 number.] Marcus closes his ticket, and Dana sends another party emoji.
 
 [9 Wrap-up | 7:50 to 9:25]
 Five points to take home, one click each. On Hopper, try FP8 first: one GPU, BF16's speed, and no measurable loss on our tests. If asked for the numbers: 51 against 50 tokens a second for one request, 95.2% against 94.8% on 1,319 GSM8K problems, 66.1% against 66.8% on 280 MMLU-Pro questions, and at a 50 millisecond p95 per-token budget about 1,490 output tokens a second per GPU on random prompts against BF16's 980 (files: bench/FP8/single-t0.json, c64.json, eval/FP8). INT4 is for when the memory doesn't fit: 37 GiB loaded against FP8's 68, so a 48 GB card or half again as much KV cache room (283,000 tokens against 182,000), at 89% of BF16's single-request speed, and under load about the same tokens per GPU as BF16, 977 against 981, which matches Red Hat's study, where 4-bit weights win at low traffic and 8-bit wins under heavy batching. Spec decode is a latency tool, about 1.25 times faster for one request, and under the same 50 millisecond budget it served about half of BF16's tokens per GPU, 517 against 981. Measure, don't guess: both Red Hat builds matched BF16 on GSM8K, and on MMLU-Pro FP8 was inside the noise while INT4 was 3 points lower with a standard error near 3, which is the real answer to Marcus, since the sheep riddle is famous enough to be in training data. 280 questions is too few to call any of those MMLU-Pro comparisons, so the hard questions stay on BF16 until they're tested on more. And a router lets each one run where it's best, once your traffic is big and mixed enough. If you're small, three or four pools of GPUs is overkill, so pick the one that fits most of your questions, and on Hopper that's probably FP8. A few things to think about are how much of your traffic really needs full precision, whether your target is cost per token or time to answer, and whether you have an eval set built from real prompts. If technical questions come up and we're short on time, point to the link at the bottom, where the repo answers them. If asked why spec decode was slow in the first run: it had enforce_eager on, which in vLLM 0.18 turns off torch.compile and CUDA graphs, and it also used temperature 0.7, so we can't pin the difference on one cause. If asked about identical output: at temperature 0, spec decode matched BF16 word for word on 3 of the 8 presets (the sheep riddle, the meeting decline, the JSON extraction) and diverged on the other 5 at a word choice with the same substance, the earliest at the third token of the logic puzzle ("To find out" against "To determine", both answer Monday), which is the hardware-numerics caveat vLLM documents. We captured no logprobs, so don't call it a near-tie, just the same answers in different words. If asked why not FP8: we did, it's on the slide, and it's the one to try first on Hopper. If asked why INT4 then: memory. 37 GiB fits a 48 GB card and leaves half again as much KV cache room on an H200, at 89% of the speed, and on A100 vLLM falls back to weight-only FP8, so INT4 is the one-GPU option there. Red Hat's published recovery for the FP8 build is 99.9% on OpenLLM v1, and ours agrees. Smaller models lose more under quantization, 97.4% kept for the 70B vs 96.1% for the 8B on OpenLLM v2 in Red Hat's model cards for the W4A16 builds. If asked whether this only holds for Llama 3.1 70B: the recipe is model-agnostic, the same manifests, tests and dashboard take any Hugging Face model id, and Red Hat's study behind these builds (Kurtic et al., ACL 2025) ran over 500,000 evaluations across the Llama 3.1 family, so the pattern, FP8 lossless, 4-bit weights best at low traffic and 8-bit under heavy batching, is the general result and our numbers are one instance of it. If asked why vLLM 0.18, it's the Red Hat AI build the cluster runs. If asked why Llama 3.1 70B in late 2026: it has Red Hat validated quantized builds (FP8 and W4A16), a matching 8B draft model, and published accuracy recovery numbers, so every comparison here can be reproduced.
 
+[9 qwen]
+Five points to take home, one click each. On Hopper, try FP8 first: a 71 GB slice, two per card. [Pending Gate 5: speed against BF16, evals, tokens per H200.] INT4 is for when the memory doesn't fit: 35 GB slices, three per card. [Pending Gate 5.] Spec decode is a latency tool, and on this model it's free in GPU terms because the MTP head is built in. [Pending Gate 6.] Measure, don't guess: [Pending Gate 5: GSM8K on 1,319 problems and MMLU-Pro on 280 questions for FP8 and INT4 against BF16, same sample-size caveat as the Llama track.] And a router lets each one run where it's best, once your traffic is big and mixed enough. The rest of the Q&A is the same as the Llama track: why spec decode, identical output, why FP8, why INT4, the model-agnostic recipe. Two track-specific answers: why vLLM 0.24 here and 0.18 there: 0.24 is the cluster's runtime image and MTP drafting needs it, and the Llama numbers were run before it was in use, so each track is apples to apples within itself. Why not BF16 on a slice: 51.9 GiB of weights leaves little KV cache on a 71 GB slice; [Pending: the KV cache tokens line from the BF16-on-71 GB smoke load says exactly how little.]
+
 [10 Close | 9:25 to 10:00]
-Here's all the source code I used. If you want to see how I did this, it's all in the repo. Thank you.
+Here's all the source code I used. If you want to see how I did this, it's all in the repo, both tracks, and T on the title slide switches between them. Thank you.
 -->
