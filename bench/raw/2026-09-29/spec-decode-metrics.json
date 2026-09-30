@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-09-29T19:47:52-0400",
+  "acceptance_rate": {
+    "total_drafts": 1143,
+    "total_draft_tokens": 5715,
+    "total_accepted": 3990,
+    "overall_rate": 0.698,
+    "per_position": {
+      "pos_0": {
+        "accepted": 987,
+        "rate": 0.864
+      },
+      "pos_1": {
+        "accepted": 882,
+        "rate": 0.772
+      },
+      "pos_2": {
+        "accepted": 787,
+        "rate": 0.689
+      },
+      "pos_3": {
+        "accepted": 697,
+        "rate": 0.61
+      },
+      "pos_4": {
+        "accepted": 637,
+        "rate": 0.557
+      }
+    }
+  },
+  "quality": {
+    "sheep_greedy": "correct (9 sheep)",
+    "sheep_sampled_20": "20/20 correct (100%)"
+  }
+}

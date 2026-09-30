@@ -1,0 +1,81 @@
+{
+  "int4": {
+    "avg_tok_s": 45.3,
+    "gpus": 1,
+    "tok_per_gpu": 45.3,
+    "runs": [
+      {
+        "run": 1,
+        "tokens": 256,
+        "elapsed": 5.65,
+        "tok_per_sec": 45.3
+      },
+      {
+        "run": 2,
+        "tokens": 256,
+        "elapsed": 5.63,
+        "tok_per_sec": 45.4
+      },
+      {
+        "run": 3,
+        "tokens": 256,
+        "elapsed": 5.65,
+        "tok_per_sec": 45.3
+      },
+      {
+        "run": 4,
+        "tokens": 256,
+        "elapsed": 5.68,
+        "tok_per_sec": 45.1
+      },
+      {
+        "run": 5,
+        "tokens": 256,
+        "elapsed": 5.63,
+        "tok_per_sec": 45.5
+      }
+    ]
+  },
+  "bf16": {
+    "avg_tok_s": 46.9,
+    "gpus": 2,
+    "tok_per_gpu": 23.5,
+    "runs": [
+      {
+        "run": 1,
+        "tokens": 256,
+        "elapsed": 5.43,
+        "tok_per_sec": 47.2
+      },
+      {
+        "run": 2,
+        "tokens": 256,
+        "elapsed": 5.52,
+        "tok_per_sec": 46.4
+      },
+      {
+        "run": 3,
+        "tokens": 256,
+        "elapsed": 5.46,
+        "tok_per_sec": 46.9
+      },
+      {
+        "run": 4,
+        "tokens": 256,
+        "elapsed": 5.42,
+        "tok_per_sec": 47.2
+      },
+      {
+        "run": 5,
+        "tokens": 256,
+        "elapsed": 5.45,
+        "tok_per_sec": 46.9
+      }
+    ]
+  },
+  "ratio_per_request": 0.97,
+  "ratio_per_gpu": 1.93,
+  "timestamp": "2026-09-29T19:04:17-0400",
+  "cluster": "Red Hat internal H200 cluster",
+  "vllm_version": "0.18.0+rhaiv.14"
+}

@@ -25,7 +25,12 @@ def events(response):
     return [json.loads(line) for line in response.text.splitlines() if line.strip()]
 
 
-def test_preset_streams_and_finishes_with_timing(client):
+@pytest.fixture
+def no_captures(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "quality_dir", str(tmp_path))
+
+
+def test_preset_streams_and_finishes_with_timing(client, no_captures):
     r = client.post("/ask/INT4", json={"preset": "reasoning"})
     assert r.status_code == 200
     ev = events(r)
@@ -41,7 +46,7 @@ def test_preset_streams_and_finishes_with_timing(client):
     assert "9 sheep" in text
 
 
-def test_replay_never_invents_a_quality_difference(client):
+def test_replay_never_invents_a_quality_difference(client, no_captures):
     texts = {}
     for key in ("FP16", "INT4", "SPEC_DECODE"):
         ev = events(client.post(f"/ask/{key}", json={"preset": "reasoning"}))
@@ -90,3 +95,14 @@ def test_load_points_report_median_and_request_sizes(tmp_path):
     assert point["latency_ms"] == 5500.0 and point["latency_kind"] == "median"
     assert point["avg_input_tokens"] == 512 and point["avg_output_tokens"] == 256
     assert point["output_tokens_per_second_per_gpu"] == 400.0  # INT4 runs on one GPU
+
+
+def test_replay_uses_each_setups_captured_answer(client):
+    """With the Sep 29 captures in quality/, replay shows each setup's own real answer."""
+    for key in ("FP16", "INT4", "SPEC_DECODE"):
+        ev = events(client.post(f"/ask/{key}", json={"preset": "reasoning"}))
+        assert ev[0]["text_source"] == "captured"
+        text = "".join(e["text"] for e in ev if e["t"] == "delta")
+        path = settings.resolve(settings.quality_dir) / key / "complex_reasoning.json"
+        captured = json.loads(path.read_text())
+        assert text == captured["response_text"]

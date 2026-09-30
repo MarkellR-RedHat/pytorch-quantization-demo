@@ -17,6 +17,8 @@ VARIANTS = ["FP16", "INT4", "SPEC_DECODE"]
         ("Let's think. 17 - 9 = 8 ran away. The answer is 9.", True),
         ("There are 17 sheep. The answer is **8**.", False),
         ("No idea.", False),
+        ("Step 1: The farmer has 17 sheep.\nStep 2: 8 run away.\n\nSo the farmer has 9 sheep left.", True),
+        ("The farmer starts with 17 sheep. 9 run away, so the farmer has 8 sheep left.", False),
     ],
 )
 def test_sheep_verdict(text, expected):
@@ -61,3 +63,16 @@ def test_captured_output_is_used(tmp_path):
         "usage": {"completion_tokens": 8},
         "verdict": "pass",
     }
+
+
+def test_every_captured_sheep_answer_grades_correct():
+    """The Sep 29 captures: greedy and 20 sampled answers per setup, all stating 9."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "quality"
+    for variant in VARIANTS:
+        greedy = json.loads((root / variant / "complex_reasoning.json").read_text())["response_text"]
+        sampled = root / variant / "complex_reasoning_samples_t0.7.json"
+        samples = json.loads(sampled.read_text())["responses"]
+        assert sheep_verdict(greedy), variant
+        assert sum(sheep_verdict(t) for t in samples) == len(samples) == 20, variant

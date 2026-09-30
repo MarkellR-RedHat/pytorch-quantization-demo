@@ -25,7 +25,7 @@ The presenter dashboard is a fixed 1920 by 1080 stage that scales to whatever it
 
 **Under load** (press `2`, then `Space`). A replay of the `vllm bench serve` load test: 1, 8, 32, then 64 requests in flight at once against each setup (synthetic random-token prompts), with output tokens per second per GPU, total output tokens per second, and median time per answer at each step. The result line compares INT4 with BF16 at the same load per GPU, and Spec Decode with BF16 on the same GPUs. It plays back whatever sweep files are in `bench/<VARIANT>/c<N>.json` (the `vllm bench serve --save-result` output), and until those exist the scene stays out of the numbered flow, so `1` and `2` go to Ask and Numbers.
 
-**Numbers** (press `3`). The money slide: GPUs, tokens per second and mean time for one request, and accuracy against BF16 for each setup (shown as pending where it hasn't been measured), what each one is best for, what to watch out for, and when a router is worth adding.
+**Numbers** (press `3`, or `2` until the load test exists). The money slide: GPUs, tokens per second and mean time for one request, and accuracy against BF16 for each setup (shown as pending where it hasn't been measured), what each one is best for, what to watch out for, and when a router is worth adding.
 
 **The arena** (http://localhost:8000/arena). A booth game where birds flown by the same small PyTorch network, stored at different precisions, fly a course with hard gaps. It isn't part of the talk, and the next section explains how it works.
 
@@ -63,27 +63,33 @@ The arena is a teaching model, and I'd say that out loud on stage. A 4,673-param
 
 ## The real numbers
 
-Measured on September 29, 2026 on NVIDIA H200 (141 GB) with vLLM `0.18.0+rhaiv.14`, the vLLM build that ships with Red Hat AI. Each variant got 20 requests sent one at a time, with up to 256 output tokens.
+Measured on September 29, 2026 on NVIDIA H200 (141 GB) with vLLM `0.18.0+rhaiv.14`, the vLLM build that ships with Red Hat AI. All three setups ran with `enforce_eager` off, so torch.compile and CUDA graphs were on, and FlashAttention 3 was the attention backend. Each setup got 5 requests one at a time, on the same benchmark prompt, at temperature 0, with 256 output tokens each.
 
-| Variant | GPUs | Mean time per request | p95 | Tokens/s, one request | Tokens/s ÷ GPUs, one request |
+| Setup | GPUs | Tokens/s, one request | Mean time per request | Time to first token | Weights per GPU |
 |---|---|---|---|---|---|
-| BF16 (tensor parallel 2) | 2 | 4.96 s | 5.53 s | 47.3 | 23.6 |
-| INT4 AWQ (`awq_marlin`) | 1 | 5.07 s | 5.84 s | 44.3 | 44.3 |
-| Spec decode (70B + 8B draft, 5 tokens) | 2 | 5.54 s | 8.65 s | 40.0 | 20.0 |
+| BF16 (tensor parallel 2) | 2 | 46.9 | 5.46 s | 315 ms | 65.7 GiB |
+| INT4 AWQ (Machete kernel) | 1 | 45.3 | 5.65 s | 339 ms | 37.9 GiB |
+| Spec decode (70B + 8B draft, 5 tokens) | 2 | 64.9 | 4.01 s | not measured | 73.2 GiB |
 
-The raw file is `benchmark_results.json`, and the dashboard reads it directly. It was produced by the first version of `scripts/benchmark.py` (see commit `50987ff`): 5 prompts cycled to 20 sequential requests, temperature 0.7, max_tokens 256, no warmup, tokens/s as output tokens over summed request time. The current script adds warmup requests, temperature 0, and first-token timing for the rerun. One known inconsistency: BF16's recorded 47.3 tokens/s doesn't follow from its own averages (232.5 tokens over 4.96 s is 46.9), while INT4 and Spec Decode do. It's being re-derived from the raw log, and either value gives INT4 at 94% of BF16's speed.
+- **INT4** runs at 97% of BF16's speed on half the GPUs. From 1 to 8 requests at once, it stayed within a few percent of BF16 per request (34.5 vs 35.1 tokens/s at 8).
+- **Spec decode** runs about 1.4× faster than BF16 on the same GPUs. That average includes one cold first run at 49.6 tokens/s; the four warm runs averaged 68.8. Across our runs the draft's tokens were accepted 70% of the time, which works out to 4.5 tokens per 70B forward pass.
+- **Quality:** all three answered the sheep riddle correctly at temperature 0, and 20 out of 20 times each at temperature 0.7. INT4 hasn't been run on a benchmark suite yet. In 5 open-ended prompts, INT4's answers weren't shorter than BF16's (764 vs 677 tokens on average).
 
-The last column divides one request's speed by the GPU count. It's a way to see what half the GPUs costs you in speed, not a measure of how much traffic a GPU can serve, which is what the load test measures.
+Every number above is built from the raw files in `bench/raw/2026-09-29/` by `scripts/build_benchmark_file.py`, which writes `benchmark_results.json`, the file the dashboard reads. The deployments that produced them are in `kubernetes/models/`, and the captured answers are in `quality/`. Two caveats:
+- The requests went through a port-forward from a laptop, so absolute latencies include that network hop.
+- The weights and KV cache figures come from the vLLM startup logs.
 
-These are single-stream numbers, so they tell you about latency and not about how much traffic a GPU can serve. The load test (`vllm bench serve` at 1, 8, 32, and 64 concurrent requests) drops into `bench/<VARIANT>/c<N>.json`, and replay mode scales its timings by concurrency once those files exist.
+An earlier run had spec decode with `enforce_eager` on and temperature 0.7, and it measured 40.0 tokens/s. It's kept under `history` in the benchmark file. Two things changed between that run and this one, so the jump from 40 to 65 isn't all down to the flag.
+
+These are single-stream numbers, so they tell you about latency and not about how much traffic a GPU can serve. The load test (`vllm bench serve` at increasing concurrency) drops into `bench/<VARIANT>/c<N>.json`, and the Under load scene appears once those files exist.
 
 ## Technical questions
 
 **Why not FP8?**
 Llama 3.1 70B in FP8 is about 71 GB, so it fits on one H200 with room left for KV cache, and Hopper GPUs have native FP8 tensor cores. Red Hat's FP8 build of this model ([RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8)) keeps 99.9% of the BF16 score on the OpenLLM v1 benchmarks, so it's the next variant to add.
 
-**Why was speculative decoding slow in this benchmark?**
-The spec decode run had `enforce_eager` on, which in vLLM 0.18 turns off both `torch.compile` and CUDA graphs for the 70B target and the 8B draft. Speculative decoding runs many small forward passes (the draft proposes five tokens for every 70B pass), so launch overhead is a likely cost, but it isn't the only suspect, and none of them were measured separately: in vLLM 0.18 the draft runs at the same tensor parallel size as the target (2 GPUs here), the run used temperature 0.7 where the draft's greedy proposals get accepted less often, and the acceptance rate wasn't recorded. The rerun turns `enforce_eager` off, runs at temperature 0 and 0.7, and logs acceptance. Also keep in mind that spec decode uses the same GPUs as BF16. It's meant to lower latency per request, not to save GPUs.
+**What changed for speculative decoding?**
+The first spec decode run had `enforce_eager` on, which in vLLM 0.18 turns off both `torch.compile` and CUDA graphs for the 70B target and the 8B draft. It measured 40.0 tokens/s, slower than BF16. With `enforce_eager` off, it measured 64.9 tokens/s, about 1.4× BF16 on the same two GPUs. That rerun was also at temperature 0 instead of 0.7, where the draft's guesses get accepted more often, so both changes contributed. The draft's tokens were accepted 70% of the time, with acceptance falling from 86% for the first guessed token to 56% for the fifth. Spec decode uses the same GPUs as BF16: it buys lower latency per request, not fewer GPUs, and the draft model takes memory away from the KV cache (218K tokens of cache vs 367K for BF16).
 
 **Does this hold for an 8B model?**
 The trade-offs have the same shape, but smaller models lose more when quantized. In Red Hat's quantization study, INT4 kept 97.4% of the 70B's score on the OpenLLM v2 benchmarks and 96.1% of the 8B's, so test an 8B carefully on your own prompts.
@@ -92,16 +98,16 @@ The trade-offs have the same shape, but smaller models lose more when quantized.
 Both produce INT4 weights that vLLM serves with fast mixed-precision kernels. Red Hat's study found GPTQ slightly ahead on harder benchmarks, and Red Hat's published INT4 build of this model ([RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16)) is GPTQ.
 
 **Where do these numbers come from?**
-Red Hat's quantization study is Kurtic et al., ["Give Me BF16 or Give Me Death? Accuracy-Performance Trade-Offs in LLM Quantization"](https://arxiv.org/abs/2411.02355), ACL 2025, which ran more than 500,000 evaluations. The benchmark numbers in this repo come from 20 sequential requests per variant on NVIDIA H200s with vLLM 0.18, so they measure one request at a time and not throughput under heavy load.
+Red Hat's quantization study is Kurtic et al., ["Give Me BF16 or Give Me Death? Accuracy-Performance Trade-Offs in LLM Quantization"](https://arxiv.org/abs/2411.02355), ACL 2025, which ran more than 500,000 evaluations. The benchmark numbers in this repo come from single requests on NVIDIA H200s with vLLM 0.18 (see The real numbers above), so they measure one request at a time and not throughput under heavy load.
 
 **Why isn't INT4 faster than BF16?**
-At one request at a time, decoding is limited by how fast the GPU can read the weights. BF16 across two H200s reads about 70 GB per GPU per token against 4.8 TB/s each, and INT4 on one H200 reads about 35 to 40 GB. BF16 lands at about 70% of its bandwidth ceiling and INT4 at a much lower fraction, which is typical for 4-bit kernels at batch size 1. The result that matters for the bill is that, one request at a time, INT4 runs at 94% of BF16's speed on half the GPUs. How the two compare per GPU under heavy traffic is what the load test measures.
+At one request at a time, decoding is limited by how fast the GPU can read the weights. BF16 across two H200s reads about 70 GB per GPU per token against 4.8 TB/s each, and INT4 on one H200 reads about 35 to 40 GB, so on paper INT4 has more headroom. In practice it ran at 97% of BF16's speed, which is typical for 4-bit kernels at batch size 1. The result that matters for the bill is that it does that on half the GPUs.
 
 **Is speculative decoding really lossless?**
-The verification step keeps the output distribution of the target model, so the quality you get is the target's quality. vLLM describes it as lossless up to the precision limits of hardware numerics, so greedy outputs can differ in rare cases because verification runs with a different batch shape.
+The verification step keeps the output distribution of the target model, so the quality you get is the target's quality. vLLM describes it as lossless up to the precision limits of hardware numerics. We saw exactly that at temperature 0. On the sheep riddle, spec decode's answer matched BF16's word for word. On the code and summary prompts, the two matched for the first 100 to 150 tokens and then split on a near-tie word choice ("applications where low latency is critical" versus "latency-critical applications"). Both answers are the 70B's; they just aren't guaranteed to be byte-identical.
 
 **Which INT4 checkpoint was this?**
-vLLM reported `awq_marlin`, which is the AutoAWQ checkpoint format. LLM Compressor writes the `compressed-tensors` format and supports AWQ through its `AWQModifier`.
+`hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4`, an AutoAWQ checkpoint: 4-bit weights, group size 128, FP16 activations. vLLM loads it through its `awq_marlin` path and, on Hopper GPUs, runs it with the Machete kernel. LLM Compressor writes the `compressed-tensors` format and supports AWQ through its `AWQModifier`, and Red Hat's published INT4 build of this model is a GPTQ checkpoint.
 
 **Where's PyTorch in all this?**
 vLLM is a PyTorch Foundation project and compiles its models with torch.compile, LLM Compressor calibrates in PyTorch, and the arena's networks are trained and quantized in PyTorch.

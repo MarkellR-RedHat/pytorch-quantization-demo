@@ -8,25 +8,25 @@
         FP16: {
             color: '--v-bf16', role: 'The reference',
             gets: 'The reference the other two are measured against',
-            best: 'Questions where a wrong answer is expensive',
+            best: 'Your hardest questions, until INT4 is tested on them',
             watch: 'Every replica needs two GPUs',
             route: 'A wrong answer is expensive',
             acc: '100%', accNote: 'the reference',
         },
         INT4: {
             color: '--v-int4', role: 'Half the GPUs',
-            gets: 'Half the GPUs, at about the same speed for one request at a time',
+            gets: 'Half the GPUs, about the same speed up to 8 requests at once',
             best: 'Everyday chat and easy questions',
-            watch: 'Loses the most on hard reasoning, so test it on your own prompts',
-            route: 'Easy questions',
-            acc: 'Pending', accSmall: true, accNote: 'not evaluated yet*',
+            watch: 'Not tested on a benchmark suite yet, so test it on your own prompts',
+            route: 'Everyday questions',
+            acc: 'Pending', accSmall: true, accNote: 'suite eval pending*',
         },
         SPEC_DECODE: {
             color: '--v-spec', role: 'Same 2 GPUs, 70B + 8B draft',
-            gets: 'Meant to cut latency on the same GPUs, and this run didn\'t',
-            best: 'Latency-sensitive, low-traffic work, if the rerun wins',
-            watch: 'This run had enforce_eager on (no torch.compile or CUDA graphs) and its acceptance rate wasn\'t measured, so it\'s being rerun',
-            route: 'Latency-sensitive, low traffic', pending: 'if rerun wins',
+            gets: 'About 1.4× faster answers on the same GPUs, with BF16 quality',
+            best: 'Latency-sensitive, low-traffic work',
+            watch: 'The draft model leaves less room for KV cache, and it isn\'t load-tested yet',
+            route: 'Latency-sensitive, low traffic',
             acc: '= BF16', accNote: 'by design, the 70B checks every token',
         },
         FP8: {
@@ -114,9 +114,11 @@
             return { key: 'FP16', why: 'a wrong answer here is expensive' };
         }
         if (/\b(why|prove|step by step|how many|calculate|reason\w*|riddle|puzzle|math)\b/.test(t)) {
-            return { key: 'FP16', why: 'it\'s multi-step reasoning, where INT4 loses the most accuracy' };
+            return { key: 'FP16', why: 'it\'s multi-step reasoning, where INT4 hasn\'t been tested on a benchmark suite yet' };
         }
-        // Nothing routes to Spec Decode until a rerun shows it's faster on the same GPUs.
+        if (/\b(write|draft|explain|describe|story|essay|report)\b/.test(t) && t.length > 60) {
+            return { key: 'SPEC_DECODE', why: 'it\'s a long answer with someone waiting, and Spec Decode answers fastest' };
+        }
         return { key: 'INT4', why: 'nothing here needs the full model, so the cheapest tokens win' };
     }
 
@@ -281,7 +283,9 @@
         const bf = bench('FP16'), q = bench('INT4');
         if (bf && q && bf.throughput_tps && q.throughput_tps) {
             const speed = q.throughput_tps / bf.throughput_tps;
-            $('#takeaway').innerHTML = `One request at a time, ${esc(label('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(label('FP16'))}'s speed on half the GPUs</b>.`
+            const sp = bench('SPEC_DECODE');
+            const spTxt = sp && sp.throughput_tps ? `, and ${esc(label('SPEC_DECODE'))} runs <b>about ${one(sp.throughput_tps / bf.throughput_tps)}× faster</b> on the same GPUs` : '';
+            $('#takeaway').innerHTML = `On our benchmark prompt, ${esc(label('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(label('FP16'))}'s speed on half the GPUs</b>${spTxt}.`
                 + (loadData().keys.length ? '' : ' <span class="pending-note">Under heavy batching on high-end GPUs, Red Hat\'s study found 8-bit (W8A8) more cost-efficient than 4-bit, and the load test shows where these three land.</span>');
         }
         const strip = $('#routerStrip');
@@ -290,9 +294,12 @@
             `<div class="route">${esc(SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k))}</b>${SETUPS[k].pending ? `<em class="pend">${esc(SETUPS[k].pending)}</em>` : ''}</div>`).join('');
         const bm = (config && config.benchmark) || {};
         const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-        $('#numbersFoot').textContent = '* The INT4 build measured here (AWQ, W4A16 on Marlin kernels) hasn\'t been evaluated. For reference, Red Hat\'s published INT4 build of this model (GPTQ) recovers 99.4% of BF16 on the OpenLLM v1 benchmarks and 97.4% on the harder v2 set. Spec Decode used Llama 3.1 8B as the draft, proposing 5 tokens per step.';
+        const sd = bench('SPEC_DECODE') || {};
+        const mal = sd.mean_acceptance_length || null;
+        $('#numbersFoot').textContent = '* All three setups answered the sheep riddle correctly 20 out of 20 times at temperature 0.7, but the INT4 build here (hugging-quants AWQ, W4A16 on vLLM\'s Machete kernel) hasn\'t been run on a benchmark suite yet. Red Hat\'s published INT4 build of this model (GPTQ) recovers 99.4% of BF16 on OpenLLM v1 and 97.4% on the harder v2 set. Spec Decode used Llama 3.1 8B as the draft, proposing 5 tokens per step'
+            + (mal ? `, and averaged ${one(mal)} tokens per 70B pass.` : '.');
         $('#routerNote').textContent = 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions.';
-        $('#benchNote').textContent = `Llama 3.1 70B Instruct on NVIDIA H200 with vLLM ${bm.vllm_version || ''}, measured ${when}: 20 requests per setup (5 prompts), one at a time, no warmup, up to 256 output tokens, temperature 0.7.`
+        $('#benchNote').textContent = `Llama 3.1 70B Instruct on NVIDIA H200 with vLLM ${bm.vllm_version || ''}, measured ${when}: 5 runs per setup on one benchmark prompt, one request at a time, temperature 0, 256 output tokens, enforce_eager off everywhere. Spec Decode's average includes one cold run.`
             + (keys.includes('FP8') ? '' : ' FP8 fits on one H200 and recovers 99.7% or more in Red Hat\'s published tests, so it\'s the next setup to measure.');
     }
 

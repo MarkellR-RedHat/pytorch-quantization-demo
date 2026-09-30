@@ -1,0 +1,51 @@
+{
+  "variant": "INT4",
+  "scenario": "summarization",
+  "prompt": "Summarize the key trade-offs of model quantization for production LLM deployments in 3 bullet points.",
+  "temperature": 0,
+  "model": "benchmark-int4",
+  "response_text": "Here are three key trade-offs of model quantization for production Large Language Model (LLM) deployments:\n\n\u2022 **Accuracy vs. Model Size**: Quantization reduces the precision of model weights, which can lead to a loss of accuracy. However, this trade-off allows for significant reductions in model size, making it possible to deploy LLMs on devices with limited memory or storage capacity.\n\n\u2022 **Inference Speed vs. Training Complexity**: Quantized models can lead to faster inference times due to reduced computational requirements. However, training quantized models can be more complex and time-consuming, requiring additional techniques such as quantization-aware training or knowledge distillation.\n\n\u2022 **Hardware Compatibility vs. Quantization Scheme Flexibility**: Different quantization schemes may be optimized for specific hardware platforms, such as GPUs or TPUs. While some quantization schemes may offer better performance on certain hardware, they may not be compatible with other platforms, limiting the flexibility of model deployment.",
+  "usage": {
+    "prompt_tokens": 57,
+    "total_tokens": 248,
+    "completion_tokens": 191,
+    "prompt_tokens_details": null
+  },
+  "captured_at": "2026-09-29T17:19:01-0400",
+  "raw": {
+    "id": "chatcmpl-83069d971392f4f8",
+    "object": "chat.completion",
+    "created": 1790716737,
+    "model": "benchmark-int4",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "Here are three key trade-offs of model quantization for production Large Language Model (LLM) deployments:\n\n\u2022 **Accuracy vs. Model Size**: Quantization reduces the precision of model weights, which can lead to a loss of accuracy. However, this trade-off allows for significant reductions in model size, making it possible to deploy LLMs on devices with limited memory or storage capacity.\n\n\u2022 **Inference Speed vs. Training Complexity**: Quantized models can lead to faster inference times due to reduced computational requirements. However, training quantized models can be more complex and time-consuming, requiring additional techniques such as quantization-aware training or knowledge distillation.\n\n\u2022 **Hardware Compatibility vs. Quantization Scheme Flexibility**: Different quantization schemes may be optimized for specific hardware platforms, such as GPUs or TPUs. While some quantization schemes may offer better performance on certain hardware, they may not be compatible with other platforms, limiting the flexibility of model deployment.",
+          "refusal": null,
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": [],
+          "reasoning": null
+        },
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "prompt_tokens": 57,
+      "total_tokens": 248,
+      "completion_tokens": 191,
+      "prompt_tokens_details": null
+    },
+    "prompt_logprobs": null,
+    "prompt_token_ids": null,
+    "kv_transfer_params": null
+  }
+}

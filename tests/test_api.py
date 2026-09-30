@@ -42,9 +42,11 @@ class TestBasics:
         assert body["public_url"].startswith("http://testserver")
         assert body["gpu_hourly_usd"] == 0
         bench = body["benchmark"]
-        assert "rhai-tmm" not in json.dumps(bench)
+        assert "rhai-tmm" not in json.dumps(bench) and "TMM" not in json.dumps(bench)
         assert bench["variants"]["FP16"]["label"] == "BF16"
-        assert bench["variants"]["FP16"]["tokens_per_second_per_gpu"] == pytest.approx(47.3 / 2)
+        raw = json.loads((main.settings.resolve(main.settings.benchmark_file)).read_text())["variants"]
+        per_gpu = bench["variants"]["FP16"]["tokens_per_second_per_gpu"]
+        assert per_gpu == pytest.approx(raw["FP16"]["throughput_tps"] / 2)
         assert bench["variants"]["INT4"]["gpus"] == 1
         assert "FP8" not in bench["variants"]
 

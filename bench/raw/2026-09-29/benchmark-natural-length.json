@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-09-29T19:17:28-0400",
+  "test": "natural-length output (max_tokens=2048, temp=0.7, 5 prompts)",
+  "int4": {
+    "lengths": [
+      962,
+      671,
+      747,
+      566,
+      874
+    ],
+    "avg": 764,
+    "median": 747,
+    "min": 566,
+    "max": 962
+  },
+  "bf16": {
+    "lengths": [
+      664,
+      613,
+      708,
+      493,
+      909
+    ],
+    "avg": 677,
+    "median": 664,
+    "min": 493,
+    "max": 909
+  },
+  "finding": "INT4 writes 13% MORE tokens than BF16 on average. Disproves the concern that INT4 produces shorter answers."
+}

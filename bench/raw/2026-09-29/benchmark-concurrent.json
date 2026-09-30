@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-09-29T19:08:27-0400",
+  "cluster": "Red Hat internal H200 cluster",
+  "vllm_version": "0.18.0+rhaiv.14",
+  "int4": {
+    "concurrency_1": {
+      "avg_tok_s_req": 42.7,
+      "aggregate_tok_s": 84.8
+    },
+    "concurrency_2": {
+      "avg_tok_s_req": 42.3,
+      "aggregate_tok_s": 168.4
+    },
+    "concurrency_4": {
+      "avg_tok_s_req": 42.1,
+      "aggregate_tok_s": 333.6
+    },
+    "concurrency_8": {
+      "avg_tok_s_req": 34.5,
+      "aggregate_tok_s": 427.7
+    },
+    "gpus": 1
+  },
+  "bf16": {
+    "concurrency_1": {
+      "avg_tok_s_req": 44.2,
+      "aggregate_tok_s": 87.7
+    },
+    "concurrency_2": {
+      "avg_tok_s_req": 43.0,
+      "aggregate_tok_s": 171.2
+    },
+    "concurrency_4": {
+      "avg_tok_s_req": 42.4,
+      "aggregate_tok_s": 333.6
+    },
+    "concurrency_8": {
+      "avg_tok_s_req": 35.1,
+      "aggregate_tok_s": 437.6
+    },
+    "gpus": 2
+  }
+}

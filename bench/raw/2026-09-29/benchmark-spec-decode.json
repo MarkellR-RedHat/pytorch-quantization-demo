@@ -1,0 +1,51 @@
+{
+  "spec_decode": {
+    "avg_tok_s": 64.9,
+    "gpus": 2,
+    "tok_per_gpu": 32.5,
+    "runs": [
+      {
+        "run": 1,
+        "tokens": 256,
+        "elapsed": 5.16,
+        "tok_per_sec": 49.6
+      },
+      {
+        "run": 2,
+        "tokens": 256,
+        "elapsed": 3.65,
+        "tok_per_sec": 70.2
+      },
+      {
+        "run": 3,
+        "tokens": 256,
+        "elapsed": 3.87,
+        "tok_per_sec": 66.1
+      },
+      {
+        "run": 4,
+        "tokens": 256,
+        "elapsed": 3.69,
+        "tok_per_sec": 69.4
+      },
+      {
+        "run": 5,
+        "tokens": 256,
+        "elapsed": 3.69,
+        "tok_per_sec": 69.4
+      }
+    ],
+    "enforce_eager": false,
+    "cuda_graphs": true,
+    "draft_model": "meta-llama/Llama-3.1-8B-Instruct",
+    "num_speculative_tokens": 5
+  },
+  "comparison": {
+    "vs_old_spec_eager": 1.62,
+    "vs_bf16": 1.38,
+    "vs_int4_per_gpu": 0.72
+  },
+  "timestamp": "2026-09-29T19:45:44-0400",
+  "cluster": "Red Hat internal H200 cluster",
+  "vllm_version": "0.18.0+rhaiv.14"
+}

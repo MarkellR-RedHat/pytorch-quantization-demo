@@ -1,52 +1,96 @@
 {
-  "cluster": "Red Hat OpenShift AI (internal lab)",
+  "model": "meta-llama/Meta-Llama-3.1-70B-Instruct",
   "gpu": "NVIDIA H200 (141 GB)",
   "vllm_version": "0.18.0+rhaiv.14",
-  "model": "meta-llama/Meta-Llama-3.1-70B-Instruct",
   "date": "2026-09-29",
-  "notes": "Single stream (concurrency 1): 20 sequential requests per variant, 5 prompts, temperature 0.7, max_tokens 256, no warmup. Latency is end-to-end per request; throughput_tps is completion tokens divided by summed end-to-end request time (so it includes time to first token), which makes it single-stream speed, not server capacity. vllm_pool_gib_per_gpu is the memory vLLM preallocates (gpu_memory_utilization x GPU memory, mostly KV cache), not model weight size. weights_gb is filled from the vLLM startup log line 'Model weights take X GiB' once re-measured.",
+  "cluster": "Red Hat internal H200 cluster",
+  "source": "built by scripts/build_benchmark_file.py from bench/raw/2026-09-29",
+  "notes": "Single stream: 5 requests per setup, one at a time, same prompt, temperature 0, 256 output tokens each, all with enforce_eager off and CUDA graphs on. Measured through a port-forward from a laptop, so latencies include that network hop. throughput_tps is the mean of per-run output tokens per second over the whole request. Spec Decode's first run was cold (49.6 tok/s). Acceptance counters are cumulative since pod start and include the temperature 0.7 quality runs.",
   "variants": {
-    "INT4": {
-      "quantization": "awq_marlin",
-      "gpus": 1,
-      "avg_latency_ms": 5072.5,
-      "p95_latency_ms": 5836.0,
-      "throughput_tps": 44.3,
-      "avg_tokens_per_request": 224.5,
-      "gpu_memory_gib_unverified": 38,
-      "gpu_memory_note": "Source of this reading is unknown; it is not comparable to the other variants' pool size. Re-measure.",
-      "weights_gb": null,
-      "total_requests": 20,
-      "errors": 0
-    },
     "FP16": {
-      "quantization": null,
-      "tensor_parallel_size": 2,
       "gpus": 2,
-      "avg_latency_ms": 4958.7,
-      "p95_latency_ms": 5527.6,
-      "throughput_tps": 47.3,
-      "avg_tokens_per_request": 232.5,
-      "vllm_pool_gib_per_gpu": 130,
-      "weights_gb": null,
-      "total_requests": 20,
-      "errors": 0
+      "tensor_parallel_size": 2,
+      "quantization": null,
+      "dtype": "bfloat16",
+      "runs": 5,
+      "throughput_tps": 46.9,
+      "avg_latency_ms": 5456.0,
+      "p95_latency_ms": 5520.0,
+      "avg_tokens_per_request": 256,
+      "per_run_tps": [
+        47.2,
+        46.4,
+        46.9,
+        47.2,
+        46.9
+      ],
+      "ttft_ms_avg": 314.5,
+      "natural_length_tokens_avg": 677,
+      "weights_gib_per_gpu": 65.74,
+      "kv_cache_tokens": 367280
+    },
+    "INT4": {
+      "gpus": 1,
+      "tensor_parallel_size": 1,
+      "quantization": "awq_marlin",
+      "dtype": "float16",
+      "checkpoint": "hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4",
+      "runs": 5,
+      "throughput_tps": 45.3,
+      "avg_latency_ms": 5648.0,
+      "p95_latency_ms": 5680.0,
+      "avg_tokens_per_request": 256,
+      "per_run_tps": [
+        45.3,
+        45.4,
+        45.3,
+        45.1,
+        45.5
+      ],
+      "ttft_ms_avg": 338.9,
+      "natural_length_tokens_avg": 764,
+      "weights_gib_per_gpu": 37.87,
+      "kv_cache_tokens": 280112,
+      "kernel": "MacheteLinearKernel"
     },
     "SPEC_DECODE": {
-      "target_model": "meta-llama/Meta-Llama-3.1-70B-Instruct",
-      "draft_model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
-      "num_speculative_tokens": 5,
-      "tensor_parallel_size": 2,
       "gpus": 2,
-      "enforce_eager": true,
+      "tensor_parallel_size": 2,
+      "quantization": null,
+      "dtype": "bfloat16",
+      "draft_model": "meta-llama/Llama-3.1-8B-Instruct",
+      "num_speculative_tokens": 5,
+      "enforce_eager": false,
+      "runs": 5,
+      "throughput_tps": 64.9,
+      "avg_latency_ms": 4012.0,
+      "p95_latency_ms": 5160.0,
+      "avg_tokens_per_request": 256,
+      "per_run_tps": [
+        49.6,
+        70.2,
+        66.1,
+        69.4,
+        69.4
+      ],
+      "first_run_cold": true,
+      "draft_acceptance_rate": 0.698,
+      "mean_acceptance_length": 4.49,
+      "weights_gib_per_gpu": 73.24,
+      "kv_cache_tokens": 218064
+    }
+  },
+  "history": {
+    "SPEC_DECODE_enforce_eager": {
+      "date": "2026-09-29",
+      "throughput_tps": 40.0,
       "avg_latency_ms": 5543.9,
       "p95_latency_ms": 8646.0,
-      "throughput_tps": 40.0,
-      "avg_tokens_per_request": 221.7,
-      "vllm_pool_gib_per_gpu": 130,
-      "weights_gb": null,
-      "total_requests": 20,
-      "errors": 0
+      "enforce_eager": true,
+      "temperature": 0.7,
+      "max_tokens": 256,
+      "requests": 20,
+      "note": "First run: enforce_eager on (no torch.compile, no CUDA graphs), temperature 0.7."
     }
   }
 }

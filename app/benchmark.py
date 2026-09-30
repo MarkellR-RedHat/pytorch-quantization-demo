@@ -132,6 +132,7 @@ class BenchmarkData:
             "tokens_per_second_per_gpu": round(tps / gpus, 2) if isinstance(tps, int | float) else None,
             "avg_tokens_per_request": v.get("avg_tokens_per_request"),
             "weights_gb": self.weights_gb(key),
+            "mean_acceptance_length": v.get("mean_acceptance_length"),
         }
 
     def has(self, key: str) -> bool:

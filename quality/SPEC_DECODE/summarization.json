@@ -1,0 +1,51 @@
+{
+  "variant": "SPEC_DECODE",
+  "scenario": "summarization",
+  "prompt": "Summarize the key trade-offs of model quantization for production LLM deployments in 3 bullet points.",
+  "temperature": 0,
+  "model": "benchmark-spec",
+  "response_text": "Here are three key trade-offs of model quantization for production Large Language Model (LLM) deployments:\n\n\u2022 **Accuracy vs. Model Size and Inference Speed**: Quantization reduces the precision of model weights and activations, which can lead to a loss in model accuracy. However, this reduction in precision also leads to a decrease in model size and an increase in inference speed, making it more suitable for deployment on resource-constrained devices or in latency-critical applications.\n\n\u2022 **Quantization Method vs. Complexity and Flexibility**: Different quantization methods offer varying levels of complexity, flexibility, and accuracy. For example, post-training quantization is simpler to implement but may result in lower accuracy, while quantization-aware training is more complex but can provide better accuracy. The choice of quantization method depends on the specific deployment requirements and constraints.\n\n\u2022 **Hardware Support vs. Quantization Format**: The choice of quantization format (e.g., INT8, FP16, or bfloat16) depends on the target hardware and its support for different formats. Some hardware platforms may only support certain formats, which can limit the choice of quantization method. Additionally, some formats may require additional hardware or software support, which can add complexity to the deployment.",
+  "usage": {
+    "prompt_tokens": 57,
+    "total_tokens": 307,
+    "completion_tokens": 250,
+    "prompt_tokens_details": null
+  },
+  "captured_at": "2026-09-29T19:46:14-0400",
+  "raw": {
+    "id": "chatcmpl-a6eeeb25d071c142",
+    "object": "chat.completion",
+    "created": 1790725569,
+    "model": "benchmark-spec",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "Here are three key trade-offs of model quantization for production Large Language Model (LLM) deployments:\n\n\u2022 **Accuracy vs. Model Size and Inference Speed**: Quantization reduces the precision of model weights and activations, which can lead to a loss in model accuracy. However, this reduction in precision also leads to a decrease in model size and an increase in inference speed, making it more suitable for deployment on resource-constrained devices or in latency-critical applications.\n\n\u2022 **Quantization Method vs. Complexity and Flexibility**: Different quantization methods offer varying levels of complexity, flexibility, and accuracy. For example, post-training quantization is simpler to implement but may result in lower accuracy, while quantization-aware training is more complex but can provide better accuracy. The choice of quantization method depends on the specific deployment requirements and constraints.\n\n\u2022 **Hardware Support vs. Quantization Format**: The choice of quantization format (e.g., INT8, FP16, or bfloat16) depends on the target hardware and its support for different formats. Some hardware platforms may only support certain formats, which can limit the choice of quantization method. Additionally, some formats may require additional hardware or software support, which can add complexity to the deployment.",
+          "refusal": null,
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": [],
+          "reasoning": null
+        },
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "prompt_tokens": 57,
+      "total_tokens": 307,
+      "completion_tokens": 250,
+      "prompt_tokens_details": null
+    },
+    "prompt_logprobs": null,
+    "prompt_token_ids": null,
+    "kv_transfer_params": null
+  }
+}

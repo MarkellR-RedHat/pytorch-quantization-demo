@@ -9,7 +9,7 @@
 
 Llama 3.1 70B Instruct runs on vLLM in three setups on NVIDIA H200s: BF16 on two GPUs, INT4 AWQ on one, and speculative decoding with an 8B draft model on two. During the demo Markell types a question from the room, it goes to all three at once, and the answers stream side by side with their timing and GPU count. The Numbers scene then shows what each setup gets you and when a router earns its keep.
 
-What the audience sees, backed by data: INT4 runs at 94% of BF16's speed on half the GPUs, which works out to 1.9 times the tokens per GPU. Speculative decoding runs on the same two GPUs as BF16, so what it buys is lower latency per request, and this benchmark ran it with CUDA graphs off.
+What the audience sees, backed by data: on our benchmark prompt, INT4 runs at 97% of BF16's speed on half the GPUs, and speculative decoding runs about 1.4× faster than BF16 on the same two GPUs. All three answered the sheep riddle correctly 20 out of 20 times.
 
 ## How It Works Under the Hood
 

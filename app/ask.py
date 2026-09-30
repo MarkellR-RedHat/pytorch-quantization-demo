@@ -37,15 +37,17 @@ def event(kind: str, **data) -> bytes:
     return (json.dumps({"t": kind, **data}) + "\n").encode()
 
 
-def replay_text(variant: str, preset: str | None) -> tuple[str, str]:
-    """(text, where it came from): "captured" model output, a "scripted" example, or the replay "note"."""
+def replay_text(variant: str, preset: str | None) -> tuple[str, str, int | None]:
+    """(text, where it came from, completion tokens if known): "captured" model output, a "scripted"
+    example, or the replay "note"."""
     scenario = PRESETS.get(preset or "")
     if not scenario:
-        return REPLAY_NOTE, "note"
+        return REPLAY_NOTE, "note", None
     comparison = get_comparison(scenario, [variant, "FP16"])
     if comparison["source"] == "captured" and variant in comparison["responses"]:
-        return comparison["responses"][variant]["text"], "captured"
-    return ILLUSTRATIVE[scenario]["FP16"], "scripted"
+        found = comparison["responses"][variant]
+        return found["text"], "captured", (found.get("usage") or {}).get("completion_tokens")
+    return ILLUSTRATIVE[scenario]["FP16"], "scripted", None
 
 
 def preset_prompt(preset: str | None) -> str | None:
@@ -54,7 +56,7 @@ def preset_prompt(preset: str | None) -> str | None:
 
 
 async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIterator[bytes]:
-    text, text_source = replay_text(variant, preset)
+    text, text_source, captured_tokens = replay_text(variant, preset)
     pieces = re.findall(r"\S+\s*|\s+", text)
     tps = float(benchmark.variant(variant).get("throughput_tps") or 40.0)
     # about 1.3 tokens per word piece for English text
@@ -73,8 +75,9 @@ async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIte
         yield event("delta", text=buf)
     # Replay only paces the text at the measured speed. It reports that measured speed and nothing
     # else, since first-token time, token count, and total time weren't measured for this text.
+    # A captured answer's token count is real; everything else stays "live only".
     yield event("done", source="replay", ttft_ms=None, total_ms=None,
-                completion_tokens=None, tokens_per_second=round(tps, 1))
+                completion_tokens=captured_tokens, tokens_per_second=round(tps, 1))
 
 
 async def live_stream(variant: str, prompt: str) -> AsyncIterator[bytes]:
