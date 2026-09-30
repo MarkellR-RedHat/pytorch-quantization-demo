@@ -54,6 +54,18 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 - `/presenter?mode=sim` tested as the fallback
 - Backup video recorded and on a USB drive
 
+### Oct 19: final testing and fresh recordings
+
+Once all five setups are up (BF16 on 2 H200s, spec decode on 2, Red Hat's INT4 on 1) and warm, re-record every preset from the day's deployments, so the answers the fallback plays are warm and from the exact models on stage. From a folder with the port-forwards up:
+
+```bash
+python3 scripts/capture_presets.py FP16        http://localhost:18001/v1/chat/completions benchmark-bf16
+python3 scripts/capture_presets.py INT4_RH     http://localhost:18002/v1/chat/completions benchmark-int4-rh
+python3 scripts/capture_presets.py SPEC_DECODE http://localhost:18003/v1/chat/completions benchmark-spec
+```
+
+About 5 minutes per setup. It writes `results-2/quality/<VARIANT>/`; copy those folders over `quality/<VARIANT>/` in the repo, run `python scripts/preflight.py`, then commit the new `quality/` files. Until this is done, the "Explain KV cache" preset has no usable recording: its prompt was reworded on Sep 30 (to say "in a transformer LLM", because every setup had explained a generic key-value store), and preflight fails that preset on purpose. The round-2 recording of the sheep riddle on spec decode was also a cold first request (first token 1.1 s), which this step replaces.
+
 ### 30 Minutes Before
 
 - Run the preflight from the repo root, with the same `.env` as the app:

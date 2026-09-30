@@ -22,7 +22,7 @@ PROMPTS = {
     "logic_puzzle": "Alice, Bob and Carol each have one meeting, on Monday, Tuesday or Wednesday, each on a "
     "different day. Alice's isn't on Monday. Bob's is the day after Alice's. Which day is Carol's? "
     "Explain step by step.",
-    "long_explanation": "Explain the KV cache to a new engineer in about 300 words.",
+    "long_explanation": "Explain the KV cache in a transformer LLM to a new engineer in about 300 words.",
     "json_extraction": "Extract the name, company and meeting date from this message as JSON: \"Hi, this is Sam "
     "Ortiz from Acme Robotics. Can we meet on October 21 to review the pilot?\"",
 }
