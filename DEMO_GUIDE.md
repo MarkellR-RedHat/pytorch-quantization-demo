@@ -52,7 +52,7 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 
 **If the laptop app breaks:** open the backup, the OpenShift Route (`https://<route>/presenter?key=<value>`), in the same browser. It runs the same code with the same recordings. If the venue network is bad, stay on the laptop: fonts and everything else are bundled, and `R` plays the recordings.
 
-**If nobody calls out a question:** use the eight preset buttons under the question box. Sheep riddle and Logic puzzle go to BF16, the four everyday ones go to INT4, and Python function and Explain KV cache go to Spec Decode. Explain KV cache is the long-answer, latency case, where Spec Decode's speed shows most.
+**If nobody calls out a question:** use the eight preset buttons under the question box. Sheep riddle and Logic puzzle go to BF16, the four everyday ones go to FP8 (INT4 when FP8 isn't deployed), and Python function and Explain KV cache go to Spec Decode. Explain KV cache is the long-answer, latency case, where Spec Decode's speed shows most.
 
 **If everything fails:** play the backup video from the USB drive, narrate over it, and move to Q&A.
 

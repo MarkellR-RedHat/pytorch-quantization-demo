@@ -52,7 +52,7 @@ class TestSimulator:
 
     def test_unknown_variant_raises(self, sim):
         with pytest.raises(ValueError):
-            sim.sample("FP8")
+            sim.sample("NOPE")
 
     def test_sweep_scales_latency_with_concurrency(self, tmp_path):
         folder = tmp_path / "bench" / "FP16"

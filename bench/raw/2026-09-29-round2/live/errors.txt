@@ -1,0 +1,26 @@
+# fp8 2026-09-30 00:13:56
+badge does not say Live models: 'LIVE MODELS'
+Sheep riddle: FP16 column fell back to its recording
+Sheep riddle: INT4 column fell back to its recording
+Sheep riddle: SPEC_DECODE column fell back to its recording
+Python function: FP16 column fell back to its recording
+Python function: INT4 column fell back to its recording
+Python function: SPEC_DECODE column fell back to its recording
+Three bullet summary: FP16 column fell back to its recording
+Three bullet summary: INT4 column fell back to its recording
+Three bullet summary: SPEC_DECODE column fell back to its recording
+Decline a meeting: FP16 column errored
+Decline a meeting: INT4 column errored
+Decline a meeting: SPEC_DECODE column errored
+Quick fact: FP16 column errored
+Quick fact: INT4 column errored
+Quick fact: SPEC_DECODE column errored
+Logic puzzle: FP16 column errored
+Logic puzzle: INT4 column errored
+Logic puzzle: SPEC_DECODE column errored
+Explain KV cache: FP16 column errored
+Explain KV cache: INT4 column errored
+Explain KV cache: SPEC_DECODE column errored
+Extract to JSON: FP16 column errored
+Extract to JSON: INT4 column errored
+Extract to JSON: SPEC_DECODE column errored

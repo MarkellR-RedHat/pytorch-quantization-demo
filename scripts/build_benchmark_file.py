@@ -40,6 +40,16 @@ SETUPS = {
         "quantization": None, "dtype": "bfloat16", "checkpoint": MODEL,
         "draft_model": "meta-llama/Llama-3.1-8B-Instruct", "num_speculative_tokens": 5,
     },
+    "FP8": {
+        "raw": "FP8", "pod": "benchmark-fp8", "gpus": 1, "tensor_parallel_size": 1,
+        "quantization": "fp8 (compressed-tensors, W8A8)", "dtype": "bfloat16",
+        "checkpoint": "RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8",
+        "build": "Red Hat FP8 build",
+        "sweep_note": (
+            "c1.json (random prompts) looks cold: 40.8 tok/s with a mean first token of 144 ms and p95 "
+            "193 ms, against 51.1 tok/s and 62 ms on the ShareGPT single-stream run, the headline number."
+        ),
+    },
 }
 AWQ_REFERENCE = {
     "raw": "INT4", "pod": "benchmark-int4", "gpus": 1, "tensor_parallel_size": 1,
@@ -67,7 +77,7 @@ def startup_log(raw: Path, pod: str) -> dict:
         "kv_cache_tokens": int(find(r"GPU KV cache size: ([\d,]+) tokens").replace(",", "")),
         "attention": f"FlashAttention {fa_version}",
     }
-    if kernel := find(r"Using (\w+LinearKernel) for"):
+    if kernel := find(r"(?:Using|Selected) (\w+LinearKernel) for"):
         info["kernel"] = kernel
     return info
 
@@ -185,7 +195,8 @@ def build_round2(raw: Path = ROUND2) -> dict:
         "cluster": "Red Hat internal H200 cluster",
         "source": f"built by scripts/build_benchmark_file.py from {raw.relative_to(ROOT)}",
         "notes": (
-            "Round 2, the evening of Sep 29, 2026. Single stream: vllm bench serve inside each pod, 30 "
+            "Round 2, the evening of Sep 29, 2026 (FP8 ran last, into the early hours of Sep 30). Single "
+            "stream: vllm bench serve inside each pod, 30 "
             "ShareGPT prompts one at a time (max_concurrency 1), at temperature 0 (the headline numbers) and "
             "0.7, enforce_eager off everywhere, so no network hop is included. throughput_tps is output "
             "tokens per second over the whole run. Accuracy is lm_eval through a port-forward: GSM8K 8-shot "

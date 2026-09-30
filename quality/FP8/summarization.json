@@ -1,0 +1,21 @@
+{
+  "variant": "FP8",
+  "model": "benchmark-fp8",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "summarization",
+  "prompt": "Summarize the key trade-offs of model quantization for production LLM deployments in 3 bullet points.",
+  "temperature": 0,
+  "response_text": "Here are three key trade-offs of model quantization for production Large Language Model (LLM) deployments:\n\n\u2022 **Accuracy vs. Model Size**: Quantization reduces the precision of model weights, which can lead to a loss in model accuracy. However, this reduction in precision also leads to a smaller model size, making it more efficient to deploy and serve. The trade-off is between maintaining high accuracy and reducing the model size to improve deployment efficiency.\n\n\u2022 **Computational Efficiency vs. Quantization Granularity**: Quantization can be applied at different granularities, such as per-layer, per-channel, or per-tensor. Finer-grained quantization can lead to better accuracy but may require more computational resources. Coarser-grained quantization can be more efficient but may result in lower accuracy. The trade-off is between achieving better accuracy and reducing computational overhead.\n\n\u2022 **Inference Speed vs. Training and Calibration Overhead**: Quantization can significantly speed up inference times, but it often requires additional training and calibration steps to maintain accuracy. These extra steps can add overhead to the deployment process. The trade-off is between achieving faster inference times and investing time and resources in training and calibration.",
+  "usage": {
+    "prompt_tokens": 57,
+    "total_tokens": 296,
+    "completion_tokens": 239
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 350.6,
+  "total_ms": 4902.5,
+  "tokens_per_second": 48.8,
+  "captured_at": "2026-09-29T23:44:14-04:00"
+}

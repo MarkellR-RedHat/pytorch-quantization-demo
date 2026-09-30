@@ -10,7 +10,7 @@ from app.quality import GRADERS, PROMPTS, json_verdict, puzzle_verdict, sheep_ve
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "bench" / "raw" / "2026-09-29-round2"
-SETUPS = ("FP16", "INT4", "INT4_RH", "SPEC_DECODE")
+SETUPS = ("FP16", "INT4", "INT4_RH", "SPEC_DECODE", "FP8")
 # Reworded after round 2, so its round-2 recordings answer the old prompt and are re-recorded on Oct 19.
 RE_RECORD = {"long_explanation"}
 BENCH = json.loads((ROOT / "benchmark_results.json").read_text())

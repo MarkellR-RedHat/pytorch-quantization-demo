@@ -7,7 +7,7 @@
     const SETUPS = {
         FP16: {
             color: '--v-bf16', role: 'The reference',
-            gets: 'The reference the other two are measured against',
+            gets: 'The reference the others are measured against',
             best: 'Your hardest questions, until INT4 is tested on them',
             watch: 'Every replica needs two GPUs',
             route: 'A wrong answer is expensive',
@@ -17,8 +17,10 @@
             color: '--v-int4', role: 'Half the GPUs',
             gets: 'Half the GPUs, and about the same output per GPU under load',
             best: 'Everyday chat and easy questions',
+            bestWithFP8: 'When 71 GB of weights won\'t fit: memory-tight GPUs',
             watch: '3 to 4 points lower on 280 MMLU-Pro questions, too few to call it, so the hardest questions stay on BF16 until it\'s tested further',
             route: 'Everyday questions',
+            routeWithFP8: '71 GB won\'t fit',
         },
         SPEC_DECODE: {
             color: '--v-spec', role: 'Same 2 GPUs, 70B + 8B draft',
@@ -30,12 +32,13 @@
         },
         FP8: {
             color: '--v-fp8', role: 'One GPU, 8-bit',
-            gets: '8-bit weights and activations on a single GPU',
-            best: 'High-throughput serving on Hopper GPUs',
-            watch: 'Not measured in this run yet',
+            gets: 'BF16 speed on one GPU, and the most tokens per GPU under load',
+            best: 'Everyday chat and easy questions, on Hopper or newer',
+            watch: 'Needs native FP8 (Hopper or newer) and 71 GB for the weights, so less room for KV cache than INT4',
+            route: 'Everyday questions',
         },
     };
-    const ORDER = ['FP16', 'INT4', 'SPEC_DECODE', 'FP8'];
+    const ORDER = ['FP16', 'FP8', 'INT4', 'SPEC_DECODE'];
 
     let config = null;
     let running = [];
@@ -111,17 +114,19 @@
     // ------------------------------------------------------------ example router
 
     // A deliberately simple, visible rule that shows where a router fits. It isn't a trained classifier.
-    function route(q) {
+    function route(q, hasFP8) {
         const t = q.toLowerCase();
         if (/\b(legal|contract|diagnos\w*|compliance|medical|financial|audit)\b/.test(t)) {
             return { key: 'FP16', why: 'a wrong answer here is expensive' };
         }
         if (/\b(prove|step by step|how many|calculate|reason\w*|riddle|puzzle|logic|math)\b/.test(t)) {
-            return { key: 'FP16', why: 'it\'s multi-step reasoning, where INT4 hasn\'t been tested on a benchmark suite yet' };
+            return { key: 'FP16', why: 'it\'s multi-step reasoning, and the hardest questions stay on BF16' };
         }
         if (/\b(explain|describe|essay|report|story|function|code|script)\b|\b\d{3,} words\b/.test(t)) {
             return { key: 'SPEC_DECODE', why: 'it\'s a long answer with someone waiting, and Spec Decode answers fastest' };
         }
+        // the everyday lane: FP8 on Hopper when it's deployed, INT4 where 71 GB of weights won't fit
+        if (hasFP8) return { key: 'FP8', why: 'nothing here needs the full model, and FP8 serves the most tokens per GPU' };
         return { key: 'INT4', why: 'nothing here needs the full model, so the cheapest tokens win' };
     }
 
@@ -130,13 +135,15 @@
     function roleText(key) {
         const v = config && config.variants.find(x => x.key === key);
         const role = (SETUPS[key] || {}).role || '';
-        return v && v.build ? `${role}, ${v.build}` : role;
+        // the build note is dropped when the label already names the build
+        return v && v.build && !label(key).includes('LLM Compressor') ? `${role}, ${v.build}` : role;
     }
 
     function buildAsk() {
         const keys = variants();
         const grid = $('#askGrid');
         grid.style.setProperty('--cols', keys.length);
+        grid.classList.toggle('cols-4', keys.length >= 4);
         grid.innerHTML = '';
         for (const key of keys) {
             const col = document.createElement('div');
@@ -164,7 +171,7 @@
         running.forEach(c => c.abort());
         running = [];
         finished = 0;
-        const r = route(prompt);
+        const r = route(prompt, variants().includes('FP8'));
         const router = $('#router');
         router.hidden = false;
         router.innerHTML = `An example routing rule sends this to ${glyph(r.key)}<b>${esc(label(r.key))}</b>, because ${esc(r.why)}`;
@@ -301,6 +308,8 @@
     $('#askInput').addEventListener('input', fitInput);
 
     function buildPresets() {
+        const n = variants().length;
+        $('#askAll').textContent = `Ask all ${['', '', 'two', 'three', 'four'][n] || n}`;
         const box = $('#presets');
         $$('button', box).forEach(b => b.remove());
         for (const p of (config && config.presets) || []) {
@@ -339,6 +348,7 @@
         const keys = variants();
         const grid = $('#moneyGrid');
         grid.style.setProperty('--cols', keys.length);
+        grid.classList.toggle('cols-4', keys.length >= 4);
         grid.innerHTML = '';
         const bf = bench('FP16');
         for (const key of keys) {
@@ -362,7 +372,7 @@
                     <div><b class="num">${mean != null ? `${(mean / 1000).toFixed(2)} s` : '–'}</b><span>mean time, one request</span></div>
                     <div><b class="num${acc.small ? ' small' : ''}">${esc(acc.text)}</b><span>${esc(acc.note)}</span></div>
                 </div>
-                <dl><div><dt>Best for</dt><dd>${esc(s.best || '')}</dd></div>${s.watch ? `<div><dt>Watch out for</dt><dd>${esc(watchText(key, s, b, bf))}</dd></div>` : ''}</dl>`;
+                <dl><div><dt>Best for</dt><dd>${esc(keys.includes('FP8') && s.bestWithFP8 || s.best || '')}</dd></div>${s.watch ? `<div><dt>Watch out for</dt><dd>${esc(watchText(key, s, b, bf))}</dd></div>` : ''}</dl>`;
             grid.appendChild(card);
         }
         const q = bench('INT4');
@@ -370,21 +380,23 @@
             const speed = q.throughput_tps / bf.throughput_tps;
             const sp = bench('SPEC_DECODE');
             const spTxt = sp && sp.throughput_tps ? `, and ${esc(shortLabel('SPEC_DECODE'))} <b>about ${(sp.throughput_tps / bf.throughput_tps).toFixed(2)}× faster</b> on the same GPUs` : '';
-            $('#takeaway').innerHTML = `One request at a time, ${esc(shortLabel('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(shortLabel('FP16'))}'s speed on half the GPUs</b>${spTxt}.`
+            const f8 = bench('FP8');
+            const f8Txt = f8 && f8.throughput_tps ? `${esc(shortLabel('FP8'))} <b>matches ${esc(shortLabel('FP16'))} on one GPU</b> (${(f8.throughput_tps / bf.throughput_tps).toFixed(2)}×), ` : '';
+            $('#takeaway').innerHTML = `One request at a time, ${f8Txt}${esc(shortLabel('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(shortLabel('FP16'))}'s speed on half the GPUs</b>${spTxt}.`
                 + (loadData().keys.length ? costLine() : ' <span class="pending-note">Under heavy batching on high-end GPUs, Red Hat\'s study found 8-bit (W8A8) more cost-efficient than 4-bit, and the load test shows where these three land.</span>');
         }
         const strip = $('#routerStrip');
         strip.className = 'card router-strip';
-        strip.innerHTML = `<h3>Big, mixed traffic? Route it</h3>` + ['FP16', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k)).map(k =>
+        const hasFP8 = keys.includes('FP8');
+        strip.innerHTML = `<h3>Big, mixed traffic? Route it</h3>` + ['FP16', 'FP8', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k)).map(k =>
             // the lane names the setup, not the checkpoint, so "INT4 (LLM Compressor)" shows as INT4 here
-            `<div class="route">${esc(SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k).replace(/ \(.*\)$/, ''))}</b></div>`).join('')
-            // the same lane idea combined, as on the router slide: not measured here
-            + '<div class="route untested"><b>INT4 + spec decode</b><em>untested</em></div>';
+            `<div class="route">${esc(hasFP8 && SETUPS[k].routeWithFP8 || SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k).replace(/ \(.*\)$/, ''))}</b></div>`).join('');
         const bm = (config && config.benchmark) || {};
         const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
         const sd = bench('SPEC_DECODE') || {};
         $('#numbersFoot').textContent = accuracyFoot() + specFoot(sd);
-        $('#routerNote').textContent = 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions.';
+        // the same lane idea combined, as on the router slide: not measured here
+        $('#routerNote').textContent = 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions. INT4 + spec decode, a draft model on an INT4 target, is the obvious next lane, untested here.';
         const ss = bm.single_stream || {};
         const q4 = bench('INT4') || {};
         $('#benchNote').textContent = `Llama 3.1 70B Instruct on NVIDIA H200, vLLM ${bm.vllm_version || ''}, measured ${when} inside the pods with vllm bench serve: ${ss.prompts || 30} ${ss.dataset || 'ShareGPT'} prompts per setup, one at a time, temperature 0.`
@@ -402,7 +414,9 @@
         const g = a.gsm8k, qg = qa.gsm8k, m = a.mmlu_pro, qm = qa.mmlu_pro;
         const pts = m.score - qm.score;
         const naive = ref ? `The naive pick, the ${ref.build.replace(', the naive pick', '')}: ${one(ref.throughput_tps)} tokens/s (${Math.round(100 * ref.speed_vs_baseline)}% of BF16), GSM8K ${ref.gsm8k.toFixed(1)}%, MMLU-Pro ${ref.mmlu_pro.toFixed(1)}%. ` : '';
-        return naive + `GSM8K (${g.fewshot}-shot chain of thought, all ${g.questions.toLocaleString('en-US')} questions): BF16 ${g.score.toFixed(1)}%, INT4 ${qg.score.toFixed(1)}%: no loss. MMLU-Pro (${m.fewshot}-shot, the first ${m.per_subject} questions of ${m.subjects} subjects, ${m.questions} in all, standard error about ±${m.stderr.toFixed(1)} points): BF16 ${m.score.toFixed(1)}%, INT4 ${qm.score.toFixed(1)}%: ${Math.floor(pts)} to ${Math.ceil(pts)} points lower on ${m.questions} questions, too few to call it, so the hard questions stay on BF16 until it's tested further. `;
+        const f8 = bench('FP8'), fa = f8 && f8.accuracy;
+        const f8g = fa ? `, FP8 ${fa.gsm8k.score.toFixed(1)}%` : '', f8m = fa ? `, FP8 ${fa.mmlu_pro.score.toFixed(1)}%` : '';
+        return naive + `GSM8K (${g.fewshot}-shot chain of thought, all ${g.questions.toLocaleString('en-US')} questions): BF16 ${g.score.toFixed(1)}%, INT4 ${qg.score.toFixed(1)}%${f8g}: no loss. MMLU-Pro (${m.fewshot}-shot, the first ${m.per_subject} questions of ${m.subjects} subjects, ${m.questions} in all, standard error about ±${m.stderr.toFixed(1)} points): BF16 ${m.score.toFixed(1)}%${f8m}, INT4 ${qm.score.toFixed(1)}%: INT4 ${Math.floor(pts)} to ${Math.ceil(pts)} points lower on ${m.questions} questions, too few to call it, so the hard questions stay on BF16 until it's tested further. `;
     }
     function specFoot(sd) {
         const acc = sd.acceptance;
@@ -467,6 +481,7 @@
         const sizes = any ? ` Synthetic random-token prompts of about ${any.avg_input_tokens} tokens, each asking for ${any.avg_output_tokens}.` : ' Synthetic random-token prompts.';
         $('#loadSetup').textContent = `A replay of the vllm bench serve load test on the H200s: ${levels.join(', ').replace(/, (\d+)$/, ' and $1')} requests in flight at once, sent to each setup.${sizes}`;
         stage.style.setProperty('--cols', keys.length);
+        stage.classList.toggle('cols-4', keys.length >= 4);
         const maxPerGpu = Math.max(...keys.flatMap(k => load[k].map(p => p.output_tokens_per_second_per_gpu)));
         for (const key of keys) {
             const card = document.createElement('div');
@@ -592,7 +607,7 @@
         }
         // what sets cost: output tokens per GPU while the tail time per token stays under the target
         const t = targetInfo(), bfBest = t.best.FP16;
-        const cost = ['INT4', 'SPEC_DECODE'].filter(k => bfBest && t.best[k]).map(k =>
+        const cost = ['FP8', 'INT4', 'SPEC_DECODE'].filter(k => bfBest && t.best[k]).map(k =>
             `${esc(shortLabel(k))} <b>${one(t.best[k].output_tokens_per_second_per_gpu / bfBest.output_tokens_per_second_per_gpu)}×</b>`);
         if (cost.length) {
             // with a latency target, the per-GPU comparison at the target replaces the equal-load one

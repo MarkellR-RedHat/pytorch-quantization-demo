@@ -1,0 +1,15 @@
+Setup        Check               Result  Detail
+BF16         models list         FAIL    ConnectError: [Errno 61] Connection refused
+BF16         recordings          FAIL    no recording in quality/FP16/ for: Decline a meeting, Quick fact, Logic puzzle, Explain KV cache, Extract to JSON
+FP8          models list         PASS    serves 'benchmark-fp8'
+FP8          1-token completion  PASS    127 ms
+FP8          warm-up             PASS    3 requests, 263 ms, 257 ms, 251 ms
+FP8          recordings          FAIL    no recording in quality/FP8/ for: Sheep riddle, Python function, Three bullet summary, Decline a meeting, Quick fact, Logic puzzle, Explain KV cache, Extract to JSON
+INT4 AWQ     models list         FAIL    ConnectError: [Errno 61] Connection refused
+INT4 AWQ     recordings          FAIL    no recording in quality/INT4/ for: Decline a meeting, Quick fact, Logic puzzle, Explain KV cache, Extract to JSON
+INT4 AWQ     INT4 build          PASS    served name 'benchmark-int4' matches quality/INT4/
+Spec Decode  models list         FAIL    ConnectError: [Errno 61] Connection refused
+Spec Decode  recordings          FAIL    no recording in quality/SPEC_DECODE/ for: Decline a meeting, Quick fact, Logic puzzle, Explain KV cache, Extract to JSON
+app          corner badge        PASS    "Live models"
+
+FAIL: 7 failed, 0 warnings, 12 checks

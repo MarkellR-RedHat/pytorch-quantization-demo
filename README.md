@@ -1,6 +1,6 @@
 # Not Every Question Needs Two GPUs
 
-Everyone who has shipped a 70B model has had the same conversation with their GPU bill, and the first answer is usually to quantize it. This demo puts that decision side by side. It sends the same question to Llama 3.1 70B Instruct served by vLLM on NVIDIA H200s in three setups (BF16 on two GPUs, INT4 from Red Hat's LLM Compressor on one, and speculative decoding with an 8B draft model on two), streams all three answers at once, and then shows what each setup gets you, what it costs, and where a router fits.
+Everyone who has shipped a 70B model has had the same conversation with their GPU bill, and the first answer is usually to quantize it. This demo puts that decision side by side. It sends the same question to Llama 3.1 70B Instruct served by vLLM on NVIDIA H200s in four setups (BF16 on two GPUs, FP8 on one, INT4 from Red Hat's LLM Compressor on one, and speculative decoding with an 8B draft model on two), streams all the answers at once, and then shows what each setup gets you, what it costs, and where a router fits.
 
 Built for the Demo Theater at PyTorch Conference North America 2026 in San Jose.
 
@@ -29,10 +29,10 @@ The eight preset questions, and the lane the example router gives each one (it m
 |---|---|---|
 | Sheep riddle | A farmer has 17 sheep. All but 9 run away. How many are left? (step by step) | BF16, the hardest questions |
 | Logic puzzle | Alice, Bob and Carol each have one meeting on a different day of Monday to Wednesday… Which day is Carol's? | BF16 |
-| Three bullet summary | The trade-offs of quantization in 3 bullets | INT4, everyday chat and easy questions |
-| Decline a meeting | A short, polite reply declining a Friday meeting | INT4 |
-| Quick fact | The capital of Australia, and why it isn't Sydney, in two sentences | INT4 |
-| Extract to JSON | Name, company and date from a one-line message | INT4 |
+| Three bullet summary | The trade-offs of quantization in 3 bullets | The everyday lane: FP8 when it's deployed, INT4 otherwise |
+| Decline a meeting | A short, polite reply declining a Friday meeting | Everyday |
+| Quick fact | The capital of Australia, and why it isn't Sydney, in two sentences | Everyday |
+| Extract to JSON | Name, company and date from a one-line message | Everyday |
 | Python function | Second largest number in a list, with edge cases | Spec Decode, long answers with someone waiting |
 | Explain KV cache | The KV cache in a transformer LLM, for a new engineer, in about 300 words | Spec Decode (the long-answer, latency case) |
 
@@ -88,14 +88,16 @@ Measured on September 29, 2026 on NVIDIA H200 (141 GB) with vLLM `0.18.0+rhaiv.1
 | INT4, Red Hat's LLM Compressor build (Machete kernel) | 1 | 44.0 | 0.89× | 4.48 s | 80 ms (median 47) | 37.1 GiB |
 | INT4, community AWQ build, the naive pick (Machete kernel) | 1 | 47.7 | 0.96× | 4.24 s | 34 ms | 37.9 GiB |
 | Spec decode (70B + 8B draft, 5 tokens) | 2 | 62.2 | 1.25× | 3.22 s | 107 ms | 73.2 GiB |
+| FP8, Red Hat's build (CutlassFP8ScaledMM kernel) | 1 | 51.1 | 1.03× | 3.77 s | 62 ms (median 41) | 67.7 GiB |
 
-At temperature 0.7 the same runs give 49.3, 44.4 (0.90×), 47.2 (0.96×) and 58.3 (1.18×) tokens/s.
+At temperature 0.7 the same runs give 49.3, 44.4 (0.90×), 47.2 (0.96×), 58.3 (1.18×) and 51.0 (1.03×) tokens/s. FP8 ran last, into the early hours of Sep 30.
 
 - **INT4** runs at 89% of BF16's single-request speed on half the GPUs. The community AWQ build is a little faster per request (96%), and both run on vLLM's Machete kernel on Hopper; the Red Hat build is a GPTQ checkpoint in the `compressed-tensors` format, loaded through `gptq_marlin`.
 - **Spec decode** runs about 1.25× faster than BF16 on the same two GPUs (1.18× at temperature 0.7). Its first token is about 3× slower than BF16's, because the draft model runs first. The draft's tokens were accepted 70.5% of the time at temperature 0 and 63.9% at 0.7, which works out to 4.5 and 4.2 tokens per 70B forward pass. Those rates are isolated per temperature: the counters were read before and after each run.
-- **Accuracy, GSM8K** (8-shot chain of thought, all 1,319 questions, `lm_eval`): BF16 94.8%, INT4 (Red Hat) 95.1%, INT4 (AWQ) 94.8%. No loss; the differences are inside the ±0.6 point standard error.
-- **Accuracy, MMLU-Pro** (5-shot, the first 20 questions of each of 14 subjects, 280 in all, standard error about ±2.8 points): BF16 66.8%, INT4 (Red Hat) 63.6%, INT4 (AWQ) 62.9%. On the hardest questions INT4 scored 3 to 4 points lower on 280 questions, which is too few to call it, so the hard questions stay on BF16 until it's tested further. Spec decode wasn't evaluated: its output is the 70B's by design.
-- **Recorded answers:** all four setups answered the sheep riddle with 9, put Carol's meeting on Monday (at temperature 0 and in 5 of 5 samples at 0.7), and extracted all three JSON values.
+- **FP8** matches BF16 one request at a time (1.03×) on one GPU: 8-bit weights and activations in the `compressed-tensors` format ([RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8)), run on Hopper's native FP8 tensor cores through vLLM's CutlassFP8ScaledMM kernel. The weights take 67.7 GiB, so it fits on one H200 with 182K tokens of KV cache (INT4 leaves room for 283K). Its c=1 random-prompt sweep point looks cold (40.8 tokens/s, mean first token 144 ms), so the headline is the ShareGPT single-stream run.
+- **Accuracy, GSM8K** (8-shot chain of thought, all 1,319 questions, `lm_eval`): BF16 94.8%, FP8 95.2%, INT4 (Red Hat) 95.1%, INT4 (AWQ) 94.8%. No loss; the differences are inside the ±0.6 point standard error.
+- **Accuracy, MMLU-Pro** (5-shot, the first 20 questions of each of 14 subjects, 280 in all, standard error about ±2.8 points): BF16 66.8%, FP8 66.1%, INT4 (Red Hat) 63.6%, INT4 (AWQ) 62.9%. FP8 is inside a point of BF16. On the hardest questions INT4 scored 3 to 4 points lower on 280 questions, which is too few to call it, so the hard questions stay on BF16 until it's tested further. Spec decode wasn't evaluated: its output is the 70B's by design.
+- **Recorded answers:** all five setups answered the sheep riddle with 9, put Carol's meeting on Monday (at temperature 0 and in 5 of 5 samples at 0.7), and extracted all three JSON values.
 
 ### Under load
 
@@ -107,23 +109,26 @@ The sweep is `vllm bench serve` at 1, 8, 16, 32 and 64 requests in flight, with 
 | INT4, Red Hat build (1 GPU) | 977 at 32 | 916 at 32 |
 | INT4, AWQ build (1 GPU) | 1,025 at 32 | see the note below |
 | Spec decode (2 GPUs) | 517 at 32 | 561 at 32 |
+| FP8 (1 GPU) | 1,485 at 64 (p95 38.8 ms) | 860 at 32 (64 in flight is 55 ms, just over) |
 
 - At the 50 ms target, INT4 serves about the same output per GPU as BF16 on random prompts and a little more on chat-like prompts. **INT4's win is the replica that needs one GPU instead of two; per GPU at saturation it is roughly even.**
 - INT4 hits a ceiling near 1,050 tokens/s per GPU at 64 in flight on random prompts (1,043 for the Red Hat build and 1,056 for AWQ, at a p95 of 53 to 55 ms), while BF16 keeps scaling (981 per GPU at 64, p95 36 ms). That is the finding from Red Hat's quantization study showing up: 4-bit weights with 16-bit activations (W4A16) win when a GPU is starved for memory bandwidth, one request at a time, and lose that edge under heavy batching, where the work becomes compute-bound and 8-bit weights and activations (W8A8) are the more cost-efficient choice.
 - Spec decode serves about half of BF16's tokens per GPU under load (517 vs 981 at the target). It is a latency tool, and the sweep proves it.
+- FP8 serves about 1.5× BF16's tokens per GPU under load on random prompts (1,485 at 64 in flight, still under the target at a p95 of 38.8 ms), and matches BF16 one request at a time. On Hopper, that makes it the everyday lane; INT4 is the lane for when 71 GB of weights won't fit.
+- `nvidia-smi` showed every GPU at 100% utilization through the 64-in-flight runs (`logs/*-gpu-util-c64.csv`, all five setups), which says the GPUs were busy, not how well the busy time was used, so those files are evidence and not a metric.
 - The AWQ build's ShareGPT run at 64 in flight (1,636 per GPU, p95 33 ms) was a retry after a timed-out first attempt on the same prompts with prefix caching on, and its first-token times are far below every other setup's at that load, so that point isn't used for any claim.
 - 50 ms is a reasonable target for this data: BF16 and both INT4 builds sit between 36 ms (32 in flight) and 53 to 55 ms (64 in flight) on random prompts, so the target separates "still fast" from "starting to queue". A 60 ms target would let INT4's 64-in-flight point count (1,043 against BF16's 981) without changing the story: about even per GPU, on half the GPUs per replica.
 
 ### Where the numbers live
 
-Every number above is built from the raw files in `bench/raw/2026-09-29-round2/` by `scripts/build_benchmark_file.py`, which writes `benchmark_results.json`, the file the dashboard reads. The sweeps the Under load scene plays are the same files under `bench/<VARIANT>/`, the `lm_eval` output is under `eval/`, the startup logs, versions and spec decode counters are under `logs/`, and the recorded answers (all 8 presets for all four setups, with their own timings, recorded through a port-forward with the same 1,024-token cap as live Ask) are in `quality/`. The deployments that produced them are in `kubernetes/models/`.
+Every number above is built from the raw files in `bench/raw/2026-09-29-round2/` by `scripts/build_benchmark_file.py`, which writes `benchmark_results.json`, the file the dashboard reads. The sweeps the Under load scene plays are the same files under `bench/<VARIANT>/`, the `lm_eval` output is under `eval/`, the startup logs, versions and spec decode counters are under `logs/`, and the recorded answers (all 8 presets for all four setups, with their own timings, recorded through a port-forward with the same 1,024-token cap as live Ask) are in `quality/`. The deployments that produced them are in `kubernetes/models/`. The live path (the Ask scene streaming from a real vLLM endpoint, with the other columns falling back to their recordings) was verified on Sep 30 against the FP8 deployment; the preflight output, the browser's error log and the screenshots are under `bench/raw/2026-09-29-round2/live/`.
 
 The afternoon run of the same day (5 requests per setup on one prompt, through a port-forward) is kept under `history` in the benchmark file and under `bench/raw/2026-09-29/`. It measured spec decode at 64.9 tokens/s, about 1.4× BF16, on that one prompt with one cold run in the average; the 30-prompt run above gives 1.25×, which is the number used everywhere. An even earlier spec decode run with `enforce_eager` on measured 40.0 tokens/s and is kept there too.
 
 ## Technical questions
 
-**Why not FP8?**
-Llama 3.1 70B in FP8 is about 71 GB, so it fits on one H200 with room left for KV cache, and Hopper GPUs have native FP8 tensor cores. Red Hat's FP8 build of this model ([RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8)) keeps 99.9% of the BF16 score on the OpenLLM v1 benchmarks, so it's the next variant to add.
+**So why not just use FP8?**
+On Hopper, for everyday traffic, that's the answer: FP8 matched BF16 one request at a time (51.1 vs 49.7 tokens/s), served about 1.5× BF16's tokens per GPU under load, and lost nothing we could measure (GSM8K 95.2% vs 94.8%, MMLU-Pro 66.1% vs 66.8% on 280 questions). Red Hat's published numbers for the same build say 99.9% of BF16 on OpenLLM v1. It needs a GPU with native FP8 (Hopper or newer), and its weights take 67.7 GiB, so it leaves less KV cache than INT4 (182K vs 283K tokens on an H200) and it won't fit where INT4's 37 GiB will. That's the split on the router slide: FP8 for everyday questions, INT4 where 71 GB doesn't fit, BF16 for the hardest questions, spec decode where latency matters.
 
 **What changed for speculative decoding?**
 The first spec decode run had `enforce_eager` on, which in vLLM 0.18 turns off both `torch.compile` and CUDA graphs for the 70B target and the 8B draft. It measured 40.0 tokens/s, slower than BF16. With `enforce_eager` off it measures 62.2 tokens/s on 30 ShareGPT prompts at temperature 0, about 1.25× BF16 on the same two GPUs, and 58.3 (1.18×) at temperature 0.7, where the draft's guesses get accepted less often (63.9% against 70.5%). Spec decode uses the same GPUs as BF16: it buys lower latency per request, not fewer GPUs, and the draft model takes memory away from the KV cache (218K tokens of cache vs 367K for BF16). Two more things to know before choosing it: the first token takes about 3× longer than BF16's (107 ms against 33 ms mean, inside the pod), and under load it serves about half of BF16's output tokens per GPU, because each 70B forward pass verifies one request's draft instead of decoding a token for many requests at once.

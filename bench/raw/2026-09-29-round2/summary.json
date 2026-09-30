@@ -3,12 +3,14 @@
     "0": {
       "INT4_vs_BF16": 0.959,
       "INT4_RH_vs_BF16": 0.886,
-      "SPEC_DECODE_vs_BF16": 1.252
+      "SPEC_DECODE_vs_BF16": 1.252,
+      "FP8_vs_BF16": 1.028
     },
     "0.7": {
       "INT4_vs_BF16": 0.959,
       "INT4_RH_vs_BF16": 0.901,
-      "SPEC_DECODE_vs_BF16": 1.184
+      "SPEC_DECODE_vs_BF16": 1.184,
+      "FP8_vs_BF16": 1.035
     }
   },
   "single_stream_raw": {
@@ -60,6 +62,18 @@
         "mean_tpot_ms": 18.53845497501481,
         "median_tpot_ms": 16.485230086219257,
         "mean_e2el_ms": 3220.77278176439
+      },
+      "FP8": {
+        "file": "results-2/bench/FP8/single-t0.json",
+        "concurrency": 1,
+        "completed": 30,
+        "output_tok_s": 51.07036886621036,
+        "request_s": 0.2648878053226678,
+        "mean_ttft_ms": 61.78911007203472,
+        "median_ttft_ms": 41.485057037789375,
+        "mean_tpot_ms": 19.35839514207754,
+        "median_tpot_ms": 19.3614241682742,
+        "mean_e2el_ms": 3774.9607683062395
       }
     },
     "0.7": {
@@ -110,6 +124,18 @@
         "mean_tpot_ms": 19.475272798191153,
         "median_tpot_ms": 18.20206399423261,
         "mean_e2el_ms": 3375.3208048079005
+      },
+      "FP8": {
+        "file": "results-2/bench/FP8/single-t0.7.json",
+        "concurrency": 1,
+        "completed": 30,
+        "output_tok_s": 50.98990139209811,
+        "request_s": 0.25089339704165053,
+        "mean_ttft_ms": 31.306587805738673,
+        "median_ttft_ms": 28.480528009822592,
+        "mean_tpot_ms": 19.546359299604507,
+        "median_tpot_ms": 19.545518141585045,
+        "mean_e2el_ms": 3985.5634807317983
       }
     }
   },
@@ -209,6 +235,18 @@
           "mean_tpot_ms": 42.728021641317035,
           "median_tpot_ms": 38.955439115742074,
           "mean_e2el_ms": 11537.030158118454
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/c64.json",
+          "concurrency": 64,
+          "completed": 512,
+          "output_tok_s": 1484.8771715124444,
+          "request_s": 5.800301451220486,
+          "mean_ttft_ms": 2490.053697717144,
+          "median_ttft_ms": 3043.9706675242633,
+          "mean_tpot_ms": 33.46856712443482,
+          "median_tpot_ms": 31.40640741958301,
+          "mean_e2el_ms": 11024.538314448022
         }
       },
       "8": {
@@ -259,6 +297,18 @@
           "mean_tpot_ms": 25.83496966618601,
           "median_tpot_ms": 23.787987078357414,
           "mean_e2el_ms": 6995.431602316785
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/c8.json",
+          "concurrency": 8,
+          "completed": 64,
+          "output_tok_s": 368.9243572545344,
+          "request_s": 1.441110770525525,
+          "mean_ttft_ms": 299.4611923722914,
+          "median_ttft_ms": 242.23372948472388,
+          "mean_tpot_ms": 20.58820547389783,
+          "median_tpot_ms": 20.487956870712484,
+          "mean_e2el_ms": 5549.453588216238
         }
       },
       "32": {
@@ -309,6 +359,18 @@
           "mean_tpot_ms": 27.407459176925375,
           "median_tpot_ms": 26.149600801998567,
           "mean_e2el_ms": 7202.656697623297
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/c32.json",
+          "concurrency": 32,
+          "completed": 256,
+          "output_tok_s": 976.1060409439432,
+          "request_s": 3.812914222437278,
+          "mean_ttft_ms": 610.7811114527522,
+          "median_ttft_ms": 187.13402352295816,
+          "mean_tpot_ms": 30.472766747918428,
+          "median_tpot_ms": 30.331466625462852,
+          "mean_e2el_ms": 8381.336632171951
         }
       },
       "1": {
@@ -359,6 +421,18 @@
           "mean_tpot_ms": 23.596871820771803,
           "median_tpot_ms": 22.934483847119754,
           "mean_e2el_ms": 6133.044323427384
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/c1.json",
+          "concurrency": 1,
+          "completed": 64,
+          "output_tok_s": 40.839293704320234,
+          "request_s": 0.1595284910325009,
+          "mean_ttft_ms": 143.68629103591957,
+          "median_ttft_ms": 71.54825198813342,
+          "mean_tpot_ms": 24.01786306604752,
+          "median_tpot_ms": 19.77054387440576,
+          "mean_e2el_ms": 6268.2413728780375
         }
       },
       "16": {
@@ -409,6 +483,18 @@
           "mean_tpot_ms": 26.656730430304197,
           "median_tpot_ms": 25.066163347162053,
           "mean_e2el_ms": 7191.722809681323
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/c16.json",
+          "concurrency": 16,
+          "completed": 128,
+          "output_tok_s": 678.0738480374511,
+          "request_s": 2.648725968896293,
+          "mean_ttft_ms": 472.1046302843206,
+          "median_ttft_ms": 150.9719490131829,
+          "mean_tpot_ms": 21.825654920062604,
+          "median_tpot_ms": 21.49031290581322,
+          "mean_e2el_ms": 6037.646634900284
         }
       }
     },
@@ -461,6 +547,18 @@
           "mean_tpot_ms": 22.705870714524046,
           "median_tpot_ms": 19.69583879429809,
           "mean_e2el_ms": 3837.8023391137503
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/sharegpt-c16.json",
+          "concurrency": 16,
+          "completed": 128,
+          "output_tok_s": 538.9111404439279,
+          "request_s": 2.9023699237103036,
+          "mean_ttft_ms": 85.23320170388615,
+          "median_ttft_ms": 68.76731451484375,
+          "mean_tpot_ms": 22.2813029130353,
+          "median_tpot_ms": 21.52875746311866,
+          "mean_e2el_ms": 4174.261466344433
         }
       },
       "8": {
@@ -511,6 +609,18 @@
           "mean_tpot_ms": 23.89545365066787,
           "median_tpot_ms": 20.108973503449995,
           "mean_e2el_ms": 3226.633633918027
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/sharegpt-c8.json",
+          "concurrency": 8,
+          "completed": 64,
+          "output_tok_s": 303.914322141365,
+          "request_s": 1.7383605878136885,
+          "mean_ttft_ms": 62.839756315042905,
+          "median_ttft_ms": 61.453478992916644,
+          "mean_tpot_ms": 20.16231832244998,
+          "median_tpot_ms": 20.159181503307384,
+          "mean_e2el_ms": 3569.9936445489584
         }
       },
       "64": {
@@ -561,6 +671,18 @@
           "mean_tpot_ms": 35.56527795946366,
           "median_tpot_ms": 29.72242285250104,
           "mean_e2el_ms": 5831.112831254359
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/sharegpt-c64.json",
+          "concurrency": 64,
+          "completed": 512,
+          "output_tok_s": 1556.0706318884984,
+          "request_s": 7.9193280869050735,
+          "mean_ttft_ms": 316.70247998874856,
+          "median_ttft_ms": 133.81539849797264,
+          "mean_tpot_ms": 38.965534522134796,
+          "median_tpot_ms": 33.40539752622375,
+          "mean_e2el_ms": 6806.233594522155
         }
       },
       "32": {
@@ -611,6 +733,18 @@
           "mean_tpot_ms": 26.802097257788574,
           "median_tpot_ms": 24.021529514541633,
           "mean_e2el_ms": 4576.915366265439
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/sharegpt-c32.json",
+          "concurrency": 32,
+          "completed": 256,
+          "output_tok_s": 860.4747637559415,
+          "request_s": 4.481001231138164,
+          "mean_ttft_ms": 217.55332507564162,
+          "median_ttft_ms": 128.5811439738609,
+          "mean_tpot_ms": 31.746940113538194,
+          "median_tpot_ms": 30.954839767646238,
+          "mean_e2el_ms": 6021.458106498358
         }
       },
       "1": {
@@ -661,6 +795,18 @@
           "mean_tpot_ms": 21.930770195844584,
           "median_tpot_ms": 19.550113934533798,
           "mean_e2el_ms": 3227.8158549970613
+        },
+        "FP8": {
+          "file": "results-2/bench/FP8/sharegpt-c1.json",
+          "concurrency": 1,
+          "completed": 64,
+          "output_tok_s": 50.52579793919833,
+          "request_s": 0.28043110468378224,
+          "mean_ttft_ms": 62.40643993623962,
+          "median_ttft_ms": 41.401336988201365,
+          "mean_tpot_ms": 19.559779205239398,
+          "median_tpot_ms": 19.53074201957272,
+          "mean_e2el_ms": 3565.753037251852
         }
       }
     }
@@ -722,6 +868,25 @@
       "mmlu_pro_physics:exact_match,custom-extract": 0.8,
       "mmlu_pro_psychology:exact_match,custom-extract": 0.5,
       "mmlu_pro:exact_match,custom-extract": 0.6357142857142857
+    },
+    "FP8": {
+      "gsm8k_cot_llama:exact_match,strict-match": 0.9514783927217589,
+      "gsm8k_cot_llama:exact_match,flexible-extract": 0.9514783927217589,
+      "mmlu_pro_biology:exact_match,custom-extract": 0.85,
+      "mmlu_pro_business:exact_match,custom-extract": 0.75,
+      "mmlu_pro_chemistry:exact_match,custom-extract": 0.8,
+      "mmlu_pro_computer_science:exact_match,custom-extract": 0.7,
+      "mmlu_pro_economics:exact_match,custom-extract": 0.6,
+      "mmlu_pro_engineering:exact_match,custom-extract": 0.6,
+      "mmlu_pro_health:exact_match,custom-extract": 0.75,
+      "mmlu_pro_history:exact_match,custom-extract": 0.5,
+      "mmlu_pro_law:exact_match,custom-extract": 0.6,
+      "mmlu_pro_math:exact_match,custom-extract": 0.6,
+      "mmlu_pro_other:exact_match,custom-extract": 0.65,
+      "mmlu_pro_philosophy:exact_match,custom-extract": 0.5,
+      "mmlu_pro_physics:exact_match,custom-extract": 0.65,
+      "mmlu_pro_psychology:exact_match,custom-extract": 0.7,
+      "mmlu_pro:exact_match,custom-extract": 0.6607142857142857
     }
   },
   "spec_acceptance": {
@@ -736,6 +901,7 @@
   },
   "versions": {
     "benchmark-bf16-predictor-7c8d9fdcf8-9qbvs-version.txt": "0.18.0+rhaiv.14",
+    "benchmark-fp8-predictor-7fc4f45b48-6d9hq-version.txt": "0.18.0+rhaiv.14",
     "benchmark-int4-predictor-894c5d5df-4p28x-version.txt": "0.18.0+rhaiv.14",
     "benchmark-int4-rh-predictor-5ccd66657b-h2w2s-version.txt": "0.18.0+rhaiv.14",
     "benchmark-spec-predictor-5cbbd65476-f5klg-version.txt": "0.18.0+rhaiv.14"

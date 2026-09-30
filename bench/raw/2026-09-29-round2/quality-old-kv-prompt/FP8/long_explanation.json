@@ -1,0 +1,21 @@
+{
+  "variant": "FP8",
+  "model": "benchmark-fp8",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "long_explanation",
+  "prompt": "Explain the KV cache to a new engineer in about 300 words.",
+  "temperature": 0,
+  "response_text": "**KV Cache Overview**\n=======================\n\nAs a new engineer, understanding the KV (Key-Value) cache is essential for optimizing application performance. In this explanation, we'll break down the basics of KV caching and its benefits.\n\n**What is a KV Cache?**\n------------------------\n\nA KV cache is a simple, in-memory data store that maps keys to values. It's designed to store small amounts of data, such as configuration settings, user sessions, or frequently accessed database query results. The cache acts as a layer between your application and a slower, more persistent data store, like a database.\n\n**How Does it Work?**\n----------------------\n\nHere's a step-by-step overview of the KV cache workflow:\n\n1.  **Cache Miss**: Your application requests data, but it's not in the cache.\n2.  **Fetch from Data Store**: The cache retrieves the data from the underlying data store (e.g., database).\n3.  **Store in Cache**: The retrieved data is stored in the cache with a unique key.\n4.  **Cache Hit**: The next time your application requests the same data, it's retrieved directly from the cache.\n\n**Benefits of KV Caching**\n---------------------------\n\n1.  **Improved Performance**: By storing frequently accessed data in memory, you reduce the number of requests to slower data stores.\n2.  **Reduced Latency**: Cache hits are typically faster than querying a database or other data store.\n3.  **Increased Throughput**: By minimizing the number of requests to data stores, you can handle more concurrent requests.\n\n**Example Use Cases**\n----------------------\n\n*   **User Session Storage**: Store user session data, such as authentication tokens or preferences, in a KV cache for fast retrieval.\n*   **Configuration Settings**: Cache application configuration settings to avoid frequent database queries.\n*   **Frequently Accessed Data**: Store frequently accessed database query results in a KV cache to reduce database load.\n\nIn summary, a KV cache is a simple, in-memory data store that accelerates application performance by reducing the number of requests to slower data stores. By understanding how KV caching works, you can optimize your application's performance and improve user experience.",
+  "usage": {
+    "prompt_tokens": 50,
+    "total_tokens": 489,
+    "completion_tokens": 439
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 306.5,
+  "total_ms": 8778.1,
+  "tokens_per_second": 50.0,
+  "captured_at": "2026-09-29T23:44:30-04:00"
+}

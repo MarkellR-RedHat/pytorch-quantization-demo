@@ -315,10 +315,20 @@ kbd {
 .answer .live-part + .fb-divider { margin-top: 16px; }
 .answer > .fb-divider:first-child { margin-top: 0; }
 .answer.planned .fb-divider { border-top-color: var(--line-strong); color: var(--ink-3); }
-.astats { display: grid; grid-template-columns: repeat(4, 1fr) auto; align-items: end; gap: 10px; padding: 14px 24px 18px; border-top: 1px solid var(--line); }
-.astats div { display: flex; flex-direction: column; gap: 2px; }
-.astats b { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--ink); }
+.astats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; gap: 10px; padding: 14px 24px 18px; border-top: 1px solid var(--line); }
+.astats div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.astats b { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--ink); white-space: nowrap; }
 .astats span { font-size: 14px; color: var(--ink-3); }
+/* four columns: narrower cards, so the stat row tightens instead of wrapping */
+.ask-grid.cols-4 .astats { gap: 8px; padding: 12px 16px 14px; }
+.ask-grid.cols-4 .astats b { font-size: 18px; }
+.ask-grid.cols-4 .astats b.na { font-size: 13.5px; line-height: 24px; }
+.ask-grid.cols-4 .astats span { font-size: 12.5px; min-height: 2.4em; line-height: 1.2; }
+.ask-grid.cols-4 .answer { padding: 14px 16px; font-size: 17.5px; }
+.ask-grid.cols-4 .acol-head { padding: 14px 16px 12px; }
+.ask-grid.cols-4 .acol-head h3 { font-size: 22px; }
+.ask-grid.cols-4 .acol-head .role { font-size: 15px; }
+.ask-grid.cols-4 .place { transform: scale(.85); }
 .place {
     align-self: center; min-width: 58px; height: 36px; padding: 0 12px; border-radius: 999px;
     display: inline-flex; align-items: center; justify-content: center;
@@ -345,13 +355,10 @@ kbd {
 .takeaway-big b { color: var(--ink); }
 .router-strip { display: flex; align-items: center; gap: 14px; padding: 20px 28px; }
 .router-strip .route { flex: 1 1 auto; justify-content: center; white-space: nowrap; }
-.router-strip .route.untested { flex: 0 0 auto; }
 .router-strip h3 { margin: 0 12px 0 0; font-family: var(--display); font-weight: 800; font-size: 22px; white-space: nowrap; }
 .route { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: 17px; color: var(--ink-2); }
 .route b { color: var(--ink); }
 .route .arrow { color: var(--ink-3); }
-.route.untested { background: none; border: 1px dashed var(--line-strong); white-space: nowrap; }
-.route.untested em { font-style: normal; font-family: var(--mono); font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
 .mcard .mhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .router-note { margin: -8px 4px 0; font-size: 17px; color: var(--ink-3); }
 
@@ -379,7 +386,14 @@ kbd {
 .lcard .tpot circle.over { fill: var(--surface); stroke: var(--c); stroke-width: 3; }
 .lcard .tpot .target { stroke: var(--ink-2); stroke-width: 2; stroke-dasharray: 6 5; }
 .lcard .tpot .target-label { font-family: var(--mono); font-size: 14px; fill: var(--ink-2); }
-.l-target { margin: 0; height: 24px; line-height: 24px; font-size: 17px; color: var(--ink-2); }
+.l-target { margin: 0; min-height: 24px; line-height: 24px; font-size: 17px; color: var(--ink-2); }
+.load-stage.cols-4 { gap: 16px; }
+.load-stage.cols-4 .lcard { padding: 18px 20px; gap: 12px; }
+.load-stage.cols-4 .lcard .mhead h3 { font-size: 22px; }
+.load-stage.cols-4 .lcard .big b { font-size: 64px; }
+.load-stage.cols-4 .lstats b { font-size: 21px; }
+.load-stage.cols-4 .lstats span { font-size: 13px; }
+.load-stage.cols-4 .l-target { font-size: 15px; line-height: 22px; min-height: 22px; }
 .l-target b { color: var(--ink); }
 .lstats div { display: flex; flex-direction: column; gap: 2px; }
 .lstats b { font-family: var(--mono); font-size: 24px; font-weight: 700; }
@@ -405,3 +419,16 @@ kbd {
 
 /* reserve the result line so the cards (and their charts) keep their size when it appears */
 #loadResult { min-height: 2.6em; }
+
+/* four setups on the Numbers screen: narrower cards, so everything shrinks a step instead of wrapping */
+.money-grid.cols-4 { gap: 16px; }
+.money-grid.cols-4 .mcard { padding: 18px 20px 16px; gap: 12px; }
+.money-grid.cols-4 .mcard .mhead h3 { font-size: 22px; }
+.money-grid.cols-4 .mcard .gets { font-size: 19px; min-height: 2.6em; }
+.money-grid.cols-4 .mcard .nums { padding: 10px 0; gap: 8px; }
+.money-grid.cols-4 .mcard .nums.three b { font-size: 34px; white-space: nowrap; }
+.money-grid.cols-4 .mcard .nums b.small { font-size: 26px; line-height: 34px; }
+.money-grid.cols-4 .mcard .nums span { font-size: 13px; margin-top: 6px; min-height: 2.4em; }
+.money-grid.cols-4 .mcard dl { gap: 8px; }
+.money-grid.cols-4 .mcard dd { font-size: 15.5px; line-height: 1.4; }
+.money-grid.cols-4 + .takeaway-big { font-size: 23px; }

@@ -7,9 +7,9 @@
 
 ## What This Demo Does
 
-Llama 3.1 70B Instruct runs on vLLM in three setups on NVIDIA H200s: BF16 on two GPUs, INT4 (Red Hat's LLM Compressor build) on one, and speculative decoding with an 8B draft model on two. During the demo Markell types a question from the room, it goes to all three at once, and the answers stream side by side with their timing and GPU count. The Numbers scene then shows what each setup gets you and when a router earns its keep.
+Llama 3.1 70B Instruct runs on vLLM in four setups on NVIDIA H200s: BF16 on two GPUs, FP8 on one, INT4 (Red Hat's LLM Compressor build) on one, and speculative decoding with an 8B draft model on two. During the demo Markell types a question from the room, it goes to all three at once, and the answers stream side by side with their timing and GPU count. The Numbers scene then shows what each setup gets you and when a router earns its keep.
 
-What the audience sees, backed by data: one request at a time, INT4 runs at 89% of BF16's speed on half the GPUs and serves about the same output per GPU under load, and speculative decoding runs about 1.25× faster than BF16 on the same two GPUs (with a first token about 3× slower, and about half of BF16's tokens per GPU under load). GSM8K shows no loss for INT4 on 1,319 questions; on MMLU-Pro it scored 3 to 4 points lower on 280 questions, which is too few to call it, so the hard questions stay on BF16 until it's tested further.
+What the audience sees, backed by data: one request at a time, INT4 runs at 89% of BF16's speed on half the GPUs and serves about the same output per GPU under load, and speculative decoding runs about 1.25× faster than BF16 on the same two GPUs (with a first token about 3× slower, and about half of BF16's tokens per GPU under load). FP8 matches BF16 one request at a time on one GPU and serves about 1.5× BF16's tokens per GPU under load, with no measurable accuracy loss, so on Hopper it's the everyday lane and INT4 is the lane for when 71 GB won't fit. GSM8K shows no loss for INT4 on 1,319 questions; on MMLU-Pro it scored 3 to 4 points lower on 280 questions, which is too few to call it, so the hard questions stay on BF16 until it's tested further.
 
 ## How It Works Under the Hood
 
@@ -57,12 +57,13 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 
 ### Oct 19: final testing and fresh recordings
 
-Once all five setups are up (BF16 on 2 H200s, spec decode on 2, Red Hat's INT4 on 1) and warm, re-record every preset from the day's deployments, so the answers the fallback plays are warm and from the exact models on stage. From a folder with the port-forwards up:
+Once the setups are up (BF16 on 2 H200s, spec decode on 2, Red Hat's INT4 on 1, and FP8 on 1 if it's deployed; without an FP8 endpoint the FP8 column shows only when `MODEL_FP8_MODE=recorded`) and warm, re-record every preset from the day's deployments, so the answers the fallback plays are warm and from the exact models on stage. From a folder with the port-forwards up:
 
 ```bash
 python3 scripts/capture_presets.py FP16        http://localhost:18001/v1/chat/completions benchmark-bf16
 python3 scripts/capture_presets.py INT4_RH     http://localhost:18002/v1/chat/completions benchmark-int4-rh
 python3 scripts/capture_presets.py SPEC_DECODE http://localhost:18003/v1/chat/completions benchmark-spec
+python3 scripts/capture_presets.py FP8         http://localhost:18004/v1/chat/completions benchmark-fp8
 ```
 
 About 5 minutes per setup. It writes `results-2/quality/<VARIANT>/`; copy those folders over `quality/<VARIANT>/` in the repo, run `python scripts/preflight.py`, then commit the new `quality/` files. Until this is done, the "Explain KV cache" preset has no usable recording: its prompt was reworded on Sep 30 (to say "in a transformer LLM", because every setup had explained a generic key-value store), and preflight fails that preset on purpose. The round-2 recording of the sheep riddle on spec decode was also a cold first request (first token 1.1 s), which this step replaces.
@@ -88,7 +89,7 @@ About 5 minutes per setup. It writes `results-2/quality/<VARIANT>/`; copy those 
 
 **If the laptop app breaks:** open the backup, the OpenShift Route (`https://<route>/presenter?key=<value>`), in the same browser. It runs the same code with the same recordings. If the venue network is bad, stay on the laptop: fonts and everything else are bundled, so the screen renders with no network, and `R` plays the recordings.
 
-**If nobody calls out a question:** use the eight preset buttons under the question box. Sheep riddle and Logic puzzle go to BF16, the four everyday ones go to INT4, and Python function and Explain KV cache go to Spec Decode. Explain KV cache is the long-answer, latency case, where Spec Decode's speed shows most.
+**If nobody calls out a question:** use the eight preset buttons under the question box. Sheep riddle and Logic puzzle go to BF16, the four everyday ones go to FP8 (INT4 when FP8 isn't deployed), and Python function and Explain KV cache go to Spec Decode. Explain KV cache is the long-answer, latency case, where Spec Decode's speed shows most.
 
 **If everything fails:** play the backup video from the USB drive, narrate over it, and move to Q&A.
 

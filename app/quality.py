@@ -69,7 +69,7 @@ def sheep_verdict(text: str) -> bool:
 
 _DAY = r"(monday|tuesday|wednesday)"
 _FINAL_DAY = (
-    r"carol'?s?\b[^.\n]{0,40}?\b" + _DAY,
+    r"carol'?s?\b[^.\n]{0,80}?\b" + _DAY,
     r"answer\b[^.\n]{0,20}?\b" + _DAY,
 )
 

@@ -1,0 +1,21 @@
+{
+  "variant": "FP8",
+  "model": "benchmark-fp8",
+  "max_tokens": 1024,
+  "endpoint": "port-forward",
+  "stream": true,
+  "scenario": "complex_reasoning",
+  "prompt": "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left? Explain your reasoning step by step.",
+  "temperature": 0,
+  "response_text": "To find out how many sheep the farmer has left, we need to subtract the number of sheep that ran away from the total number of sheep. \n\n1. The farmer started with 17 sheep.\n2. \"All but 9\" means that 9 sheep did not run away, but the rest did. To find the number of sheep that ran away, we subtract 9 from the total number of sheep: 17 - 9 = 8.\n3. Since 8 sheep ran away, the farmer is left with the 9 sheep that did not run away.\n\nSo, the farmer has 9 sheep left.",
+  "usage": {
+    "prompt_tokens": 65,
+    "total_tokens": 193,
+    "completion_tokens": 128
+  },
+  "finish_reason": "stop",
+  "ttft_ms": 422.9,
+  "total_ms": 2874.0,
+  "tokens_per_second": 44.5,
+  "captured_at": "2026-09-29T23:43:58-04:00"
+}

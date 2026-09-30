@@ -28,8 +28,9 @@ WARMUP_PROMPT = "Say hello in five words."
 
 
 def configured_variants() -> list[str]:
-    """The setups the dashboard shows: the three base ones, plus FP8 when it has an endpoint."""
-    return [k for k in ALL_VARIANTS if k != "FP8" or settings.model_fp8_endpoint]
+    """The setups the dashboard shows: the base three, plus FP8 when it has an endpoint or is recorded."""
+    fp8 = bool(settings.model_fp8_endpoint) or settings.mode_for("FP8") == "recorded"
+    return [k for k in ALL_VARIANTS if k != "FP8" or fp8]
 
 
 def short(e: Exception) -> str:

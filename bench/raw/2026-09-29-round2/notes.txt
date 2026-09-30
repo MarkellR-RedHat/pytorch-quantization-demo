@@ -46,3 +46,10 @@ Flags/issues:
 Setups by phase:
   Phase A: benchmark-bf16 (2 GPU) + benchmark-int4 (1 GPU)
   Phase B: benchmark-spec (2 GPU) + benchmark-int4-rh (1 GPU)
+
+FP8 (RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8, 1x H200):
+  Single-request: 51.07 tok/s at t=0 (1.03x BF16, 2.06x per GPU)
+  GSM8K: 95.15% (100.4% recovery)
+  MMLU-Pro: 66.07% (98.9% recovery)
+
+GPU utilization CSVs captured for all 5 variants during c=64 random.

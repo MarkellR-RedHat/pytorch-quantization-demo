@@ -37,12 +37,13 @@ class TestBasics:
     def test_config(self, client):
         body = client.get("/api/config").json()
         assert body["mode"] == "simulated"
-        assert [v["key"] for v in body["variants"]] == ["FP16", "INT4", "SPEC_DECODE"]
+        assert [v["key"] for v in body["variants"]] == ["FP16", "FP8", "INT4", "SPEC_DECODE"]
         assert body["variants"][0]["label"] == "BF16"
         assert body["variants"][0]["gpus"] == 2
         # weights per GPU come through from the startup-log figures, not null
         weights = {v["key"]: v["weights_gib_per_gpu"] for v in body["variants"]}
-        assert weights == {"FP16": 65.74, "INT4": 37.11, "SPEC_DECODE": 73.24}  # INT4 is Red Hat's build
+        # INT4 is Red Hat's build
+        assert weights == {"FP16": 65.74, "FP8": 67.7, "INT4": 37.11, "SPEC_DECODE": 73.24}
         assert body["gpu_hourly_usd"] == 0
         bench = body["benchmark"]
         assert "rhai-tmm" not in json.dumps(bench) and "TMM" not in json.dumps(bench)
@@ -51,7 +52,8 @@ class TestBasics:
         per_gpu = bench["variants"]["FP16"]["tokens_per_second_per_gpu"]
         assert per_gpu == pytest.approx(raw["FP16"]["throughput_tps"] / 2)
         assert bench["variants"]["INT4"]["gpus"] == 1
-        assert "FP8" not in bench["variants"]
+        fp8 = bench["variants"]["FP8"]
+        assert fp8["gpus"] == 1 and fp8["kernel"] == "CutlassFP8ScaledMMLinearKernel"
 
     def test_root_redirects_to_presenter(self, client):
         response = client.get("/", follow_redirects=False)
@@ -64,7 +66,7 @@ class TestBasics:
         assert client.get("/quality/nope").status_code == 404
         body = client.get("/quality/complex_reasoning").json()
         assert body["source"] in {"not_captured", "captured"}
-        assert set(body["responses"]) <= {"FP16", "INT4", "SPEC_DECODE"}
+        assert set(body["responses"]) <= {"FP16", "FP8", "INT4", "SPEC_DECODE"}
 
     def test_metrics_shape(self, client):
         infer("INT4")
@@ -94,8 +96,10 @@ class TestInference:
         assert body.completion_tokens > 0
         assert body.cost_per_request is None
 
-    def test_fp8_disabled_without_data(self, client):
-        assert infer("FP8").status_code == 400
+    def test_fp8_is_a_fourth_setup_now_that_it_was_measured(self, client):
+        assert infer("FP8").model_type == "FP8"
+        snap = client.get("/metrics").json()["FP8"]
+        assert snap["gpus"] == 1 and snap["label"] == "FP8"
 
     def test_cost_when_price_configured(self, client, monkeypatch):
         monkeypatch.setattr(settings, "gpu_hourly_usd", 4.0)

@@ -61,7 +61,10 @@ auto_traffic_tasks: set[asyncio.Task] = set()
 # ---------------------------------------------------------------- helpers
 
 def active_variants() -> list[str]:
-    fp8 = benchmark_data.has("FP8") if simulator.is_enabled() else bool(settings.model_fp8_endpoint)
+    if simulator.is_enabled():
+        fp8 = benchmark_data.has("FP8")
+    else:
+        fp8 = bool(settings.model_fp8_endpoint) or settings.mode_for("FP8") == "recorded"
     return [k for k in ALL_VARIANTS if k != "FP8" or fp8]
 
 

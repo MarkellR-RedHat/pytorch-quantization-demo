@@ -14,14 +14,15 @@ from app.quality import PROMPTS
 ROOT = Path(__file__).resolve().parent.parent
 node = shutil.which("node")
 
-# BF16 = the hardest questions, INT4 = everyday chat and easy questions, Spec = latency-sensitive long answers
+# BF16 = the hardest questions, the everyday lane = FP8 on Hopper when it's deployed (INT4 where 71 GB of
+# weights won't fit), Spec = latency-sensitive long answers
 LANES = {
     "reasoning": "FP16",
     "puzzle": "FP16",
-    "summary": "INT4",
-    "decline": "INT4",
-    "fact": "INT4",
-    "json": "INT4",
+    "summary": "EVERYDAY",
+    "decline": "EVERYDAY",
+    "fact": "EVERYDAY",
+    "json": "EVERYDAY",
     "code": "SPEC_DECODE",
     "explain": "SPEC_DECODE",
 }
@@ -29,21 +30,27 @@ LANES = {
 
 def route_source() -> str:
     js = (ROOT / "static" / "js" / "presenter.js").read_text()
-    match = re.search(r"\n    function route\(q\) \{\n.*?\n    \}\n", js, re.S)
+    match = re.search(r"\n    function route\(q, hasFP8\) \{\n.*?\n    \}\n", js, re.S)
     assert match, "route() not found in presenter.js"
     return match.group(0)
 
 
-@pytest.mark.skipif(node is None, reason="node is not installed")
-def test_every_preset_lands_on_its_lane():
-    assert set(LANES) == set(PRESETS)
+def lanes(has_fp8: bool) -> dict:
     prompts = {key: PROMPTS[scenario] for key, (scenario, _label) in PRESETS.items()}
     src = route_source() + f"\nconst P = {json.dumps(prompts)};\n" + (
-        "const keys = Object.entries(P).map(([k, q]) => [k, route(q).key]);\n"
+        f"const keys = Object.entries(P).map(([k, q]) => [k, route(q, {json.dumps(has_fp8)}).key]);\n"
         "console.log(JSON.stringify(Object.fromEntries(keys)));"
     )
     out = subprocess.run([node, "-e", src], capture_output=True, text=True, timeout=60, check=True)
-    assert json.loads(out.stdout) == LANES
+    return json.loads(out.stdout)
+
+
+@pytest.mark.skipif(node is None, reason="node is not installed")
+@pytest.mark.parametrize("has_fp8", [True, False])
+def test_every_preset_lands_on_its_lane(has_fp8):
+    assert set(LANES) == set(PRESETS)
+    everyday = "FP8" if has_fp8 else "INT4"
+    assert lanes(has_fp8) == {k: (everyday if v == "EVERYDAY" else v) for k, v in LANES.items()}
 
 
 def js_function(name: str) -> str:
