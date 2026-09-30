@@ -1,0 +1,25 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: benchmark-int4-rh
+  namespace: <your-namespace>
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    kueue.x-k8s.io/queue-name: reserved
+spec:
+  predictor:
+    minReplicas: 1
+    maxReplicas: 1
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-gpu-benchmark
+      storageUri: hf://RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16
+      resources:
+        limits:
+          nvidia.com/gpu: "1"
+        requests:
+          nvidia.com/gpu: "1"
+          memory: 48Gi
+          cpu: "4"
