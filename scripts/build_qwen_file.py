@@ -9,8 +9,8 @@ MIG slices (two per H200, the same profile, so the two are like for like), and I
 35 GB slice (three per H200) as the "it fits there too" footnote under the INT4 card.
 
 Every throughput is per device (a full H200 or one slice). The `per_h200` block next to it is that
-number times the slices per card: arithmetic, not a measurement (two slices at once weren't
-borrowable), and labeled so; the app never divides a per-H200 number by a per-slice one.
+number times the slices per card: arithmetic, not a measurement (two slices were not loaded at
+once), and labeled so; the app never divides a per-H200 number by a per-slice one.
 
 What the file carries that the sheet of headline numbers doesn't: which pod each setup's log came
 from, whether that pod ran with CUDA graphs or in eager mode, the thinking-mode setting, every
@@ -361,6 +361,8 @@ def thinking_setting(raw: Path, variants: list[dict]) -> str:
     carried enable_thinking in their args (server-side, the same for every request)."""
     notes = (raw / "notes.txt").read_text() if (raw / "notes.txt").is_file() else ""
     line = next((ln.strip() for ln in notes.splitlines() if ln.lower().startswith("thinking")), None)
+    if line:  # the notes say "Thinking mode: OFF (...)" or "thinking: off"; keep what follows the label
+        line = re.sub(r"^thinking(?: mode)?\s*:\s*", "", line, flags=re.I)
     flags = {v.get("thinking_in_server_args") for v in variants}
     if flags == {False}:
         server = "off server-side in every pod (--default-chat-template-kwargs enable_thinking=false)"
@@ -413,9 +415,9 @@ def build(raw: Path) -> dict:
             "temperature 0 (headline) and 0.7, --max-model-len 32768. BF16 and the MTP speculator on one "
             "full H200 with CUDA graphs; FP8 and INT4 on 71 GB MIG slices (two per H200, the same profile, "
             "also with CUDA graphs); INT4 once more on a 35 GB slice (three per H200) in eager mode, the "
-            "workaround for an NVML CUDA-graph profiling failure on that slice. The slices were borrowed "
-            "on a shared node. Every throughput is per device; per_h200 is that number times the slices "
-            "per card, arithmetic and not a measurement. The sweeps and the BF16 and INT4 temperature-0.7 "
+            "workaround for an NVML CUDA-graph profiling failure on that slice. Every throughput is per "
+            "device; per_h200 is that number times the slices per card, arithmetic and not a measurement "
+            "(two slices were not loaded at once). The sweeps and the BF16 and INT4 temperature-0.7 "
             "runs are the evening pass, one client per pod; the afternoon pass, where runs shared their "
             "pod, is kept under sweeps/<V>/first-pass/ and nothing is read from it (sweep_runs lists every "
             "run's window and any overlap, and the app labels an overlapped point as a lower bound). "
@@ -432,11 +434,14 @@ def build(raw: Path) -> dict:
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    raw = Path(args[0] if args else ROOT / "bench" / "raw" / "2026-09-30-qwen-r1").resolve()
-    out_path = ROOT / "benchmark_results.qwen.json"
-    if "--out" in sys.argv:
-        out_path = Path(sys.argv[sys.argv.index("--out") + 1])
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Build benchmark_results.qwen.json from a results folder")
+    parser.add_argument("raw", nargs="?", default=str(ROOT / "bench" / "raw" / "2026-09-30-qwen-r1"))
+    parser.add_argument("--out", default=str(ROOT / "benchmark_results.qwen.json"))
+    opts = parser.parse_args()
+    raw = Path(opts.raw).resolve()
+    out_path = Path(opts.out)
     result = build(raw)
     out_path.write_text(json.dumps(result, indent=2) + "\n")
     for key, v in result["variants"].items():
