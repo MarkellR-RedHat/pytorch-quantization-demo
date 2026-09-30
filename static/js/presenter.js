@@ -44,7 +44,7 @@
     let running = [];
     let finished = 0;
 
-    // ------------------------------------------------------------ stage, theme, scenes
+    // stage, theme, scenes
 
     function fit() {
         const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
@@ -79,7 +79,7 @@
     }
     $$('.tab').forEach(t => t.addEventListener('click', () => { t.blur(); show(t.dataset.scene); }));
 
-    // ------------------------------------------------------------ helpers
+    // helpers
 
     function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
     function variants() {
@@ -111,7 +111,7 @@
     const one = x => (Math.round(x * 10 + 1e-6) / 10).toFixed(1);
     const secs = ms => `${(ms / 1000).toFixed(ms < 10000 ? 2 : 1)} s`;
 
-    // ------------------------------------------------------------ example router
+    // example router
 
     // A deliberately simple, visible rule that shows where a router fits. It isn't a trained classifier.
     function route(q, hasFP8) {
@@ -130,7 +130,7 @@
         return { key: 'INT4', why: 'nothing here needs the full model, so the cheapest tokens win' };
     }
 
-    // ------------------------------------------------------------ ask
+    // ask
 
     function roleText(key) {
         const v = config && config.variants.find(x => x.key === key);
@@ -325,7 +325,7 @@
         }
     }
 
-    // ------------------------------------------------------------ numbers (the money slide)
+    // numbers (the money slide)
 
     // The "gets" and "watch out" lines carry ratios computed from the benchmark, so the words never drift
     // from the numbers under them.
@@ -441,7 +441,7 @@
         return ` <span class="pending-note">Under load, output tokens/s per GPU while the ${t.kind || 'tail'} time per token stays under ${t.ms} ms${assumed}: ${items.join(' · ')}.</span>`;
     }
 
-    // ------------------------------------------------------------ under load (replay of the load test)
+    // under load (replay of the load test)
 
     let loadTimer = null;
 
@@ -634,7 +634,7 @@
     }
     $('#loadPlay').addEventListener('click', () => { $('#loadPlay').blur(); playLoad(); });
 
-    // ------------------------------------------------------------ boot
+    // boot
 
     // The corner badge says exactly which setups are live and which are playing recordings.
     function badgeState(cfg) {

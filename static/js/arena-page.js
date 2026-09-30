@@ -18,7 +18,7 @@
     let votes = {};
     let lastSnapshot = null;
 
-    // ------------------------------------------------------------ stage scaling
+    // stage scaling
 
     function fit() {
         const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
@@ -34,7 +34,7 @@
     }
     window.addEventListener('resize', fit);
 
-    // ------------------------------------------------------------ theme
+    // theme
 
     function setTheme(t) {
         document.documentElement.dataset.theme = t;
@@ -43,7 +43,7 @@
     }
     try { const t = localStorage.getItem('qs-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) { /* ignore */ }
 
-    // ------------------------------------------------------------ arena
+    // arena
 
     async function startArena() {
         const res = await fetch('/static/arena/policy.json');
@@ -149,7 +149,7 @@
         feed(`<b>${esc(from || 'Presenter')}</b> threw <b>${esc(label)}</b>`);
     }
 
-    // ------------------------------------------------------------ server
+    // server
 
     function connect() {
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -174,7 +174,7 @@
         } catch (e) { config = null; }
     }
 
-    // ------------------------------------------------------------ keyboard
+    // keyboard
 
     document.addEventListener('keydown', e => {
         if (e.target.closest('input, textarea')) return;
@@ -194,7 +194,7 @@
         }
     });
 
-    // ------------------------------------------------------------ boot
+    // boot
 
     fit();
     loadConfig();

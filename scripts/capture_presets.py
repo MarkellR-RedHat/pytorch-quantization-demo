@@ -1,7 +1,7 @@
 """Capture every Ask preset from one vLLM endpoint, streamed, with timings. Standard library only.
 
-usage: python3 capture_presets.py <VARIANT> <chat-completions URL> <served model name>
-writes results-2/quality/<VARIANT>/<scenario>.json, plus 5 samples at 0.7 for the logic puzzle
+usage: python3 capture_presets.py <VARIANT> <chat-completions URL> <served model name> [<output dir>]
+writes <output dir>/<VARIANT>/<scenario>.json (default quality/), plus 5 samples at 0.7 for the logic puzzle
 """
 
 import json
@@ -76,8 +76,8 @@ def ask(url: str, model: str, prompt: str, temperature: float) -> dict:
     }
 
 
-def main(variant: str, url: str, model: str) -> None:
-    out = Path("results-2/quality") / variant
+def main(variant: str, url: str, model: str, out_dir: str = "quality") -> None:
+    out = Path(out_dir) / variant
     out.mkdir(parents=True, exist_ok=True)
     meta = {"variant": variant, "model": model, "max_tokens": MAX_TOKENS, "endpoint": "port-forward", "stream": True}
     for scenario, prompt in PROMPTS.items():
@@ -94,6 +94,6 @@ def main(variant: str, url: str, model: str) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
+    if len(sys.argv) not in (4, 5):
         sys.exit(__doc__)
     main(*sys.argv[1:])

@@ -54,26 +54,26 @@ def results(rows):
     return {(setup, check): result for setup, check, result, _detail in rows}
 
 
-def test_all_live_and_recorded_passes(setups):
+def test_preflight_pass(setups):
     rows = preflight.run(vllm())
     assert all(r[2] == "PASS" for r in rows), rows
     assert rows[-1][3] == '"Live models"'
     assert results(rows)[("INT4 (Red Hat W4A16)", "warm-up")] == "PASS"
 
 
-def test_a_down_endpoint_fails(setups):
+def test_preflight_down_endpoint(setups):
     rows = results(preflight.run(vllm(down={"SPEC_DECODE"})))
     assert rows[("Spec Decode", "models list")] == "FAIL"
 
 
-def test_a_missing_recording_fails(setups):
+def test_preflight_missing_recording(setups):
     (setups / "BF16" / "logic_puzzle.json").unlink()
     rows = preflight.run(vllm())
     row = next(r for r in rows if r[:2] == ("BF16", "recordings"))
     assert row[2] == "FAIL" and "Logic puzzle" in row[3]
 
 
-def test_a_recorded_setup_skips_its_endpoint_and_shows_in_the_badge(setups, monkeypatch):
+def test_preflight_recorded_setup(setups, monkeypatch):
     monkeypatch.setattr(settings, "model_spec_decode_mode", "recorded")
     rows = preflight.run(vllm(down={"SPEC_DECODE"}))
     got = results(rows)
@@ -81,17 +81,17 @@ def test_a_recorded_setup_skips_its_endpoint_and_shows_in_the_badge(setups, monk
     assert rows[-1][3] == '"Live: BF16, INT4 (Red Hat W4A16) · Recorded: Spec Decode"'
 
 
-def test_int4_build_mismatch_warns(setups, monkeypatch):
+def test_preflight_build_mismatch(setups, monkeypatch):
     monkeypatch.setattr(settings, "model_int4_captures", "INT4")
     assert results(preflight.run(vllm()))[("INT4 AWQ", "INT4 build")] == "WARN"
 
 
-def test_replay_badge_fails(setups, monkeypatch):
+def test_preflight_replay_badge(setups, monkeypatch):
     monkeypatch.setattr(settings, "simulation_mode", True)
     assert preflight.run(vllm())[-1][2] == "FAIL"
 
 
-def test_the_day_of_env_passes_with_int4_recorded(setups, monkeypatch):
+def test_preflight_day_of_env(setups, monkeypatch):
     """Oct 20: BF16, spec decode and FP8 live on five H200s, INT4 recorded by plan from quality/INT4_RH/."""
     monkeypatch.setattr(settings, "model_int4_endpoint", "")
     monkeypatch.setattr(settings, "model_int4_name", "")

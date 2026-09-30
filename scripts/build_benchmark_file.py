@@ -63,7 +63,7 @@ def load(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
-# ---------------------------------------------------------------- round 2
+# round 2
 
 
 def startup_log(raw: Path, pod: str) -> dict:
@@ -211,7 +211,7 @@ def build_round2(raw: Path = ROUND2) -> dict:
     }
 
 
-# ---------------------------------------------------------------- round 1 (kept as history)
+# round 1 (kept as history)
 
 # Reported by the vLLM startup logs of each deployment on Sep 29, 2026 (those logs weren't exported).
 STARTUP_LOGS_ROUND1 = {

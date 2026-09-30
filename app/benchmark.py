@@ -66,7 +66,7 @@ def _per_request(data: dict, key: str, done: int) -> int | None:
 
 
 class BenchmarkData:
-    """benchmark_results.json plus optional `vllm bench serve` sweeps in bench/<VARIANT>/c<N>.json"""
+    """benchmark_results.json plus the `vllm bench serve` sweeps under bench_dir/<VARIANT>/c<N>.json"""
 
     def __init__(self, path: Path, bench_dir: Path):
         self.path = Path(path)

@@ -91,8 +91,6 @@ class Settings(BaseSettings):
 
 BASE_VARIANTS = ["BF16", "INT4", "SPEC_DECODE"]
 ALL_VARIANTS = ["BF16", "FP8", "INT4", "SPEC_DECODE"]
-# Kept for backwards compatibility with older imports
-MODEL_VARIANTS = BASE_VARIANTS
 
 settings = Settings()
 

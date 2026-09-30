@@ -47,7 +47,7 @@ def lanes(has_fp8: bool) -> dict:
 
 @pytest.mark.skipif(node is None, reason="node is not installed")
 @pytest.mark.parametrize("has_fp8", [True, False])
-def test_every_preset_lands_on_its_lane(has_fp8):
+def test_preset_lanes(has_fp8):
     assert set(LANES) == set(PRESETS)
     everyday = "FP8" if has_fp8 else "INT4"
     assert lanes(has_fp8) == {k: (everyday if v == "EVERYDAY" else v) for k, v in LANES.items()}
@@ -61,7 +61,7 @@ def js_function(name: str) -> str:
 
 
 @pytest.mark.skipif(node is None, reason="node is not installed")
-def test_badge_names_live_and_recorded_setups():
+def test_badge_text():
     def badge(cfg):
         src = js_function("badgeState") + f"\nconsole.log(JSON.stringify(badgeState({json.dumps(cfg)})));"
         out = subprocess.run([node, "-e", src], capture_output=True, text=True, check=True)

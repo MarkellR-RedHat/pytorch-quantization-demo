@@ -102,7 +102,7 @@
             if (this.hidden.has(key)) this.hidden.delete(key); else this.hidden.add(key);
         }
 
-        // ------------------------------------------------------------ simulation
+        // simulation
 
         loop(t) {
             const dt = Math.min(250, t - this.last);
@@ -238,7 +238,7 @@
             return { frame: this.frame, gaps, birds, spec };
         }
 
-        // ------------------------------------------------------------ rendering
+        // rendering
 
         resize(pxW, pxH) {
             if (this.canvas.width !== pxW || this.canvas.height !== pxH) {

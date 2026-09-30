@@ -17,7 +17,7 @@ BENCH = json.loads((ROOT / "benchmark_results.json").read_text())
 
 
 @pytest.mark.parametrize("setup", SETUPS)
-def test_every_preset_is_recorded_and_finished(setup):
+def test_captures_complete(setup):
     for scenario, _label in PRESETS.values():
         if scenario in RE_RECORD:
             continue
@@ -30,13 +30,13 @@ def test_every_preset_is_recorded_and_finished(setup):
 
 
 @pytest.mark.parametrize("setup", SETUPS)
-def test_the_logic_puzzle_holds_at_temperature_0_7(setup):
+def test_puzzle_samples(setup):
     samples = json.loads((ROOT / "quality" / setup / "logic_puzzle_samples_t0.7.json").read_text())
     assert samples["n"] == 5 == len(samples["responses"])
     assert all(puzzle_verdict(t) for t in samples["responses"]), setup
 
 
-def test_the_graders_agree_with_the_sheet():
+def test_graders_on_captures():
     """b7's grading of the recordings: sheep 9, Carol on Monday, and all three JSON values, on all four."""
     for setup in SETUPS:
         folder = ROOT / "quality" / setup
@@ -44,7 +44,7 @@ def test_the_graders_agree_with_the_sheet():
         assert json_verdict(json.loads((folder / "json_extraction.json").read_text())["response_text"])
 
 
-def test_single_stream_numbers_come_from_the_raw_files():
+def test_single_stream_provenance():
     raw_dir = {"BF16": "FP16"}  # the raw folders keep the names they were delivered with
     raw = {k: json.loads((RAW / "sweeps" / raw_dir.get(k, k) / "single-t0.json").read_text()) for k in SETUPS}
     v = BENCH["variants"]
@@ -77,14 +77,14 @@ def test_accuracy_carries_its_sample_sizes():
     assert "accuracy" not in BENCH["variants"]["SPEC_DECODE"]  # its output is the 70B's by design
 
 
-def test_the_int4_column_is_red_hats_build_with_the_awq_build_as_reference():
+def test_int4_build_and_reference():
     int4 = BENCH["variants"]["INT4"]
     assert int4["checkpoint"].startswith("RedHatAI/") and int4["sweep_dir"] == "INT4_RH"
     assert int4["kernel"] == "MacheteLinearKernel" == int4["reference"]["kernel"]
     assert int4["reference"]["checkpoint"].startswith("hugging-quants/")
 
 
-def test_the_built_file_is_reproducible():
+def test_benchmark_file_reproducible():
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("builder", ROOT / "scripts" / "build_benchmark_file.py")

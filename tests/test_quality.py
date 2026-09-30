@@ -25,7 +25,7 @@ def test_sheep_verdict(text, expected):
     assert sheep_verdict(text) is expected
 
 
-def test_nothing_is_shown_when_nothing_was_captured(tmp_path):
+def test_uncaptured_scenario(tmp_path):
     for scenario in PROMPTS:
         result = get_comparison(scenario, VARIANTS, tmp_path)
         assert result["source"] == "not_captured"
@@ -33,7 +33,7 @@ def test_nothing_is_shown_when_nothing_was_captured(tmp_path):
         assert result["prompt"] == PROMPTS[scenario]
 
 
-def test_every_capture_answers_its_preset_prompt():
+def test_captures_match_prompts():
     """Presets can be uncaptured (they show "not captured"), but a capture that exists must answer the
     exact preset prompt, and the Sep 29 three stay captured for the three setups."""
     from pathlib import Path
@@ -47,14 +47,14 @@ def test_every_capture_answers_its_preset_prompt():
             assert (root / variant / f"{scenario}.json").is_file(), (variant, scenario)
 
 
-def test_uncaptured_preset_reports_not_captured():
+def test_uncaptured_preset():
     result = get_comparison("logic_puzzle", VARIANTS)
     if not result["responses"]:
         assert result["source"] == "not_captured"
         assert result["prompt"] == PROMPTS["logic_puzzle"]
 
 
-def test_a_capture_of_a_different_prompt_is_ignored(tmp_path):
+def test_capture_prompt_mismatch(tmp_path):
     (tmp_path / "BF16").mkdir()
     (tmp_path / "BF16" / "quick_fact.json").write_text(json.dumps({
         "prompt": "What is the capital of Australia?", "response_text": "Canberra.",
@@ -62,7 +62,7 @@ def test_a_capture_of_a_different_prompt_is_ignored(tmp_path):
     assert get_comparison("quick_fact", ["BF16"], tmp_path)["source"] == "not_captured"
 
 
-def test_capture_script_sends_the_same_prompts():
+def test_capture_script_prompts():
     import importlib.util
     from pathlib import Path
 
@@ -127,7 +127,7 @@ def test_captured_output_is_used(tmp_path):
     }
 
 
-def test_every_captured_sheep_answer_grades_correct():
+def test_sheep_captures_grade():
     """The Sep 29 captures: greedy and 20 sampled answers per setup, all stating 9."""
     from pathlib import Path
 

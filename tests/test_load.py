@@ -32,14 +32,14 @@ def bench(tmp_path, monkeypatch):
     return bench
 
 
-def test_points_carry_median_and_tail_time_per_token(bench):
+def test_load_point_tpot(bench):
     [c1, c16, c64] = bench.load_points("INT4")
     assert (c64["tpot_median_ms"], c64["tpot_tail_ms"], c64["tpot_tail_kind"]) == (65.0, 88.0, "p99")
     assert bench.load_points("SPEC_DECODE")[0]["tpot_tail_kind"] == "p95"
     assert c16["output_tokens_per_second_per_gpu"] == 470.0  # INT4 runs on one GPU
 
 
-def test_throughput_counts_only_under_the_target(bench):
+def test_at_target(bench):
     best = bench.meta()["at_target"]
     assert best["BF16"]["concurrency"] == 64 and best["BF16"]["output_tokens_per_second_per_gpu"] == 850.0
     # INT4 at 64 in flight serves more per GPU, but its tail time per token breaks 50 ms
@@ -47,18 +47,18 @@ def test_throughput_counts_only_under_the_target(bench):
     assert best["SPEC_DECODE"]["concurrency"] == 16 and best["SPEC_DECODE"]["tpot_tail_kind"] == "p95"
 
 
-def test_the_target_is_a_setting(bench, monkeypatch):
+def test_tpot_target_setting(bench, monkeypatch):
     monkeypatch.setattr(settings, "tpot_target_ms", 100.0)
     assert bench.meta()["at_target"]["INT4"]["concurrency"] == 64
     assert bench.meta()["tpot_target_ms"] == 100.0
 
 
-def test_no_point_under_the_target_means_no_number():
+def test_at_target_none():
     assert at_target([{"tpot_tail_ms": 80.0, "output_tokens_per_second_per_gpu": 1.0}], 50.0) is None
     assert at_target([{"tpot_tail_ms": None, "output_tokens_per_second_per_gpu": 1.0}], 50.0) is None
 
 
-def test_config_exposes_the_target_without_a_sweep():
+def test_config_tpot_target():
     from fastapi.testclient import TestClient
 
     with TestClient(main.app) as client:

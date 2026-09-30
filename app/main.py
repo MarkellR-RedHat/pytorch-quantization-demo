@@ -57,7 +57,7 @@ sim_slots = {k: asyncio.Semaphore(SIM_MAX_INFLIGHT) for k in ALL_VARIANTS}
 auto_traffic_tasks: set[asyncio.Task] = set()
 
 
-# ---------------------------------------------------------------- helpers
+# helpers
 
 def active_variants() -> list[str]:
     if simulator.is_enabled():
@@ -137,7 +137,7 @@ def is_https(request: Request) -> bool:
     return request.url.scheme == "https" or proto == "https"
 
 
-# ---------------------------------------------------------------- inference
+# inference
 
 async def run_inference(model_type: str, prompt_id: str) -> InferenceResponse:
     if model_type not in active_variants():
@@ -227,7 +227,7 @@ async def metrics_broadcast_task():
         await asyncio.sleep(0.5)
 
 
-# ---------------------------------------------------------------- app
+# app
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

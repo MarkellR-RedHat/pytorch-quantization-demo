@@ -142,7 +142,7 @@ def main():
         "--natural-length", action="store_true",
         help="let each model end its own answer (chat template, no ignore_eos) to compare answer length",
     )
-    parser.add_argument("--out", help="output JSON (default bench/<VARIANT>/single_stream.json)")
+    parser.add_argument("--out", help="output JSON (default <bench dir>/<VARIANT>/single_stream.json)")
     args = parser.parse_args()
     if not args.endpoint:
         parser.error("--endpoint or BENCH_ENDPOINT is required")
