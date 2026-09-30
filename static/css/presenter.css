@@ -233,10 +233,11 @@ kbd {
 .acol { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; overflow: hidden; }
 .acol.is-routed { border-color: var(--c); box-shadow: 0 0 0 2px var(--c), var(--shadow); }
 .acol-head { padding: 18px 24px 14px; border-bottom: 1px solid var(--line); }
-.acol-head .row1 { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.acol-head .row1 { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .acol-head h3 { display: flex; align-items: center; gap: 12px; margin: 0; font-family: var(--display); font-weight: 800; font-size: 26px; }
 .acol-head .role { margin: 6px 0 0; font-size: 16.5px; color: var(--ink-3); }
-.gpu-chips { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 14px; color: var(--ink-3); white-space: nowrap; }
+/* a long label (the Qwen INT4 names its build) pushes the chips onto their own line, right-aligned */
+.gpu-chips { display: flex; align-items: center; gap: 6px; margin-left: auto; font-family: var(--mono); font-size: 14px; color: var(--ink-3); white-space: nowrap; }
 .gpu-chips i { width: 24px; height: 17px; border-radius: 4px; background: var(--c); }
 .answer {
     margin: 0; padding: 18px 24px; overflow: auto; min-height: 0;
@@ -296,7 +297,7 @@ kbd {
 .route { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: 17px; color: var(--ink-2); }
 .route b { color: var(--ink); }
 .route .arrow { color: var(--ink-3); }
-.mcard .mhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mcard .mhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .router-note { margin: -8px 4px 0; font-size: 17px; color: var(--ink-3); }
 
 /* under load (replay of the load test) */
@@ -340,7 +341,7 @@ kbd {
 .mcard .nums.three { grid-template-columns: 1.1fr 1fr 1fr; }
 .mcard .nums.three b { font-size: 46px; }
 .numbers-foot { margin: -10px 4px 0; font-size: 14.5px; color: var(--ink-3); line-height: 1.45; }
-.lcard .mhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lcard .mhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .astats b.na { font-family: var(--text); font-size: 16px; font-weight: 600; color: var(--ink-3); line-height: 29px; }
 .tab[hidden] { display: none; }
 .takeaway-big .pending-note { display: block; margin-top: 6px; font-family: var(--text); font-weight: 500; font-size: 19px; color: var(--ink-3); }

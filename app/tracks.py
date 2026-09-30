@@ -25,9 +25,13 @@ class Track:
     model: str
     short: str  # what the corner badge calls it
     checkpoint: str
-    devices: dict[str, tuple[str, int]]  # setup -> (device name, count)
+    devices: dict[str, tuple[str, int, int]]  # setup -> (device name, count, devices of that kind per H200)
     lanes: dict[str, str]  # setup -> the router lane text on the Numbers strip
     paths: dict[str, str] | None = None  # settings field names for benchmark_file, quality_dir, bench_dir
+    captures: dict[str, str] = field(default_factory=dict)  # setup -> recordings folder, if not the setup key
+    labels: dict[str, str] = field(default_factory=dict)  # setup -> on-screen label, when not the default
+    builds: dict[str, str] = field(default_factory=dict)  # setup -> which build it runs, when worth saying
+    copy: dict[str, dict[str, str]] = field(default_factory=dict)  # setup -> the card wording (see COPY)
     _cache: dict = field(default_factory=dict, compare=False, repr=False)
 
     def _setting(self, name: str) -> str:
@@ -67,41 +71,124 @@ class Track:
         return self._cache["data"]
 
     def device(self, setup: str) -> dict:
-        name, count = self.devices.get(setup, ("H200", 1))
-        return {"name": name, "count": count}
+        """What the setup runs on. per_h200 is how many of that device fit one card (1 for a full H200):
+        the factor behind every "per H200" number, which the app labels as arithmetic wherever it shows it."""
+        name, count, per_h200 = self.devices.get(setup, (H200, 1, 1))
+        return {"name": name, "count": count, "per_h200": per_h200}
 
 
+TITLE = "Not Every Question Needs the Whole GPU"  # one title for both tracks
 H200 = "H200"
-SLICE = "71 GB slice"
+SLICE_71 = "71 GB slice"  # nvidia.com/mig-3g.71gb, two per H200
+SLICE_35 = "35 GB slice"  # nvidia.com/mig-2g.35gb, three per H200
+
+# The wording on the cards, per setup: "role" under the name on Ask, "gets" / "best" / "watch" on Numbers
+# ("bestWithFP8" when FP8 is on screen), "acc" / "accNote" when the accuracy cell isn't a measured score,
+# and for spec decode what drafts ("drafter"), what checks ("pass") and the long form for the footnote.
+# Lines that carry a ratio are computed from the benchmark in the page instead, so words never drift
+# from the numbers under them. The Llama copy is the approved Sep 29 wording; the Qwen copy is a DRAFT
+# that states only what the setup is, pending the measured numbers and b7's approval.
+LLAMA_COPY = {
+    "BF16": {
+        "role": "The reference",
+        "gets": "The reference the others are measured against",
+        "best": "Your hardest questions, until the others are tested on them",
+        "watch": "Every replica needs two GPUs",
+        "acc": "100%", "accNote": "the reference",
+    },
+    "INT4": {
+        "role": "Half the GPUs",
+        "gets": "Half the GPUs, and about the same output per GPU under load",
+        "best": "Everyday chat and easy questions",
+        "bestWithFP8": "When 73 GB of weights won't fit: memory-tight GPUs",
+        "watch": "3 to 4 points lower on 280 MMLU-Pro questions, too few to call it, so the hardest "
+                 "questions stay on BF16 until it's tested further",
+    },
+    "SPEC_DECODE": {
+        "role": "Same 2 GPUs, 70B + 8B draft",
+        "gets": "Faster answers on the same GPUs, with BF16 quality",
+        "best": "Latency-sensitive, low-traffic work",
+        "watch": "A slower first token, and about half of BF16's tokens per GPU under load: it's a latency "
+                 "tool",
+        "acc": "= BF16", "accNote": "by design, the 70B checks every token",
+        "drafter": "8B draft", "pass": "70B pass", "drafterLong": "Llama 3.1 8B as the draft",
+    },
+    "FP8": {
+        "role": "One GPU, 8-bit",
+        "gets": "BF16 speed on one GPU, and the most tokens per GPU under load",
+        "best": "Everyday chat and easy questions, on Ada, Hopper and newer",
+        "watch": "Needs FP8 tensor cores (Ada, Hopper and newer; on A100 vLLM falls back to a slower "
+                 "weight-only kernel) and 73 GB for the weights, so less KV cache room than INT4",
+    },
+}
+QWEN_COPY = {
+    "BF16": {
+        "role": "The reference, one full H200",
+        "gets": "The reference the others are measured against",
+        "best": "Your hardest questions, until the others are tested on them",
+        "watch": "Needs a full H200: 52 GiB of weights at 32K context",
+        "acc": "100%", "accNote": "the reference",
+    },
+    "INT4": {
+        "role": "A third of an H200",
+        "gets": "The smallest slice, three per H200, with 4-bit weights",
+        "best": "When 71 GB is too much: the smallest slice that serves the model",
+        "watch": "Speed here is the 35 GB slice's; accuracy is the checkpoint's, measured on a 71 GB slice "
+                 "(the footnote has the 71 GB like-for-like line against FP8)",
+    },
+    "SPEC_DECODE": {
+        "role": "Same H200, the model's own MTP head",
+        "gets": "Faster answers on the same GPU, with BF16 quality",
+        "best": "Latency-sensitive, low-traffic work",
+        "watch": "A slower first token, and fewer of BF16's tokens per GPU under load: it's a latency tool",
+        "acc": "= BF16", "accNote": "by design, the 27B checks every token",
+        "drafter": "MTP head", "pass": "27B pass", "drafterLong": "the model's own MTP head as the draft",
+    },
+    "FP8": {
+        "role": "Half an H200, 8-bit",
+        "gets": "8-bit weights and activations on a 71 GB slice, two per H200",
+        "best": "Everyday chat and easy questions, on Ada, Hopper and newer",
+        "watch": "Needs FP8 tensor cores (Ada, Hopper and newer; on A100 vLLM falls back to a slower "
+                 "weight-only kernel)",
+    },
+}
 
 TRACKS = {
     "llama": Track(
         key="llama",
-        title="Not Every Question Needs Two GPUs",
-        subtitle="When to use BF16, INT4, or speculative decoding, and when a router earns its keep",
+        title=TITLE,
+        subtitle="When to use BF16, FP8, INT4, or speculative decoding, and when a router earns its keep",
         model="Llama 3.1 70B Instruct",
         short="Llama 70B",
         checkpoint="meta-llama/Meta-Llama-3.1-70B-Instruct",
-        devices={"BF16": (H200, 2), "FP8": (H200, 1), "INT4": (H200, 1), "SPEC_DECODE": (H200, 2)},
+        devices={
+            "BF16": (H200, 2, 1), "FP8": (H200, 1, 1), "INT4": (H200, 1, 1), "SPEC_DECODE": (H200, 2, 1),
+        },
         lanes={
             "BF16": "A wrong answer is expensive",
             "FP8": "Everyday questions",
             "INT4": "73 GB won't fit",
             "SPEC_DECODE": "Latency-sensitive, low traffic",
         },
+        copy=LLAMA_COPY,
     ),
     "qwen": Track(
         key="qwen",
-        title="Not Every Question Needs the Whole GPU",
+        title=TITLE,
         subtitle="When a 71 GB slice is enough, when it isn't, and when a router earns its keep",
         model="Qwen3.8-27B",
         short="Qwen 27B",
         checkpoint="Qwen/Qwen3.8-27B",
-        devices={"BF16": (H200, 1), "FP8": (SLICE, 1), "INT4": (SLICE, 1), "SPEC_DECODE": (H200, 1)},
+        # the INT4 card is the 35 GB slice: its speed, load numbers and recordings come from that run
+        # (INT4_35 in the raw folder), its accuracy from the same checkpoint on a 71 GB slice
+        devices={
+            "BF16": (H200, 1, 1), "FP8": (SLICE_71, 1, 2), "INT4": (SLICE_35, 1, 3),
+            "SPEC_DECODE": (H200, 1, 1),
+        },
         lanes={
             "BF16": "A wrong answer is expensive",
             "FP8": "Everyday questions",
-            "INT4": "The smallest slice",
+            "INT4": "When 71 GB is too much",
             "SPEC_DECODE": "Latency-sensitive, low traffic",
         },
         paths={
@@ -109,6 +196,12 @@ TRACKS = {
             "quality_dir": "qwen_quality_dir",
             "bench_dir": "qwen_bench_dir",
         },
+        captures={"INT4": "INT4_35"},
+        # RedHatAI/Qwen3.8-27B-INT4 is an LLM Compressor build (compressed-tensors, AWQ smoothing + GPTQ,
+        # W4A16), unlike the Llama W4A16, which is AutoGPTQ format
+        labels={"INT4": "INT4 (LLM Compressor W4A16)"},
+        builds={"INT4": "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ)"},
+        copy=QWEN_COPY,
     ),
 }
 
@@ -164,5 +257,6 @@ def describe(track: Track | None = None) -> dict:
         "checkpoint": t.checkpoint,
         "status": t.status,
         "lanes": t.lanes,
+        "copy": t.copy,
         "tracks": listing(),
     }

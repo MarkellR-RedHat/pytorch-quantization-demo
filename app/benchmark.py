@@ -55,6 +55,8 @@ def at_target(points: list[dict], target_ms: float) -> dict | None:
     return {
         "concurrency": best["concurrency"],
         "output_tokens_per_second_per_gpu": best["output_tokens_per_second_per_gpu"],
+        "output_tokens_per_second_per_h200": best.get("output_tokens_per_second_per_h200"),
+        "slices_per_h200": best.get("slices_per_h200", 1),
         "tpot_tail_ms": best["tpot_tail_ms"],
         "tpot_tail_kind": best["tpot_tail_kind"],
     }
@@ -122,6 +124,7 @@ class BenchmarkData:
         if not folder.is_dir():
             return []
         gpus = self.gpus(key)
+        slices = self.slices_per_h200(key)
         points = []
         for f in folder.glob("c*.json"):
             m = re.fullmatch(r"c(\d+)\.json", f.name)
@@ -143,6 +146,10 @@ class BenchmarkData:
                 "concurrency": int(m.group(1)),
                 "output_tokens_per_second": round(float(tput), 1),
                 "output_tokens_per_second_per_gpu": round(float(tput) / gpus, 1),
+                # per device times the devices per card: arithmetic, not a measurement (equal to per GPU
+                # on a full card); the dashboard labels it so and never puts it in a ratio with per-slice
+                "output_tokens_per_second_per_h200": round(float(tput) / gpus * slices, 1),
+                "slices_per_h200": slices,
                 "latency_ms": round(float(latency), 1) if latency else None,
                 "latency_kind": "median" if isinstance(data.get("median_e2el_ms"), int | float) else "mean",
                 "latency_p95_ms": _round(data.get("p95_e2el_ms")),
@@ -165,9 +172,15 @@ class BenchmarkData:
             "p95_latency_ms": v.get("p95_latency_ms"),
             "throughput_tps": tps,
             "tokens_per_second_per_gpu": round(tps / gpus, 2) if isinstance(tps, int | float) else None,
+            "slices_per_h200": self.slices_per_h200(key),
+            "per_h200": v.get("per_h200"),
+            "device": v.get("device"),
             "avg_tokens_per_request": v.get("avg_tokens_per_request"),
             "weights_gib_per_gpu": self.weights_gib_per_gpu(key),
             "mean_acceptance_length": v.get("mean_acceptance_length"),
+            "num_speculative_tokens": v.get("num_speculative_tokens"),
+            "throughput_tps_k1": v.get("throughput_tps_k1"),
+            "throughput_tps_k2": v.get("throughput_tps_k2"),
             # round-2 fields, passed through as they are so every number on screen traces to the file
             "ttft_ms_avg": v.get("ttft_ms_avg"),
             "speed_vs_baseline": v.get("speed_vs_baseline"),
@@ -178,8 +191,25 @@ class BenchmarkData:
             "build": v.get("build"),
             "kernel": v.get("kernel"),
             "accuracy": v.get("accuracy"),
+            "accuracy_note": v.get("accuracy_note"),
             "acceptance": v.get("acceptance"),
             "reference": self._reference(v.get("reference")),
+            "int4_71": self._footnote(v.get("int4_71")),
+        }
+
+    @staticmethod
+    def _footnote(run: dict | None) -> dict | None:
+        """The Qwen INT4 card's like-for-like line: the same checkpoint on the 71 GB slice FP8 ran on."""
+        if not run:
+            return None
+        return {
+            "device": run.get("device"),
+            "throughput_tps": run.get("throughput_tps"),
+            "speed_vs_baseline": run.get("speed_vs_baseline"),
+            "weights_gib_per_gpu": run.get("weights_gib_per_gpu"),
+            "kv_cache_tokens": run.get("kv_cache_tokens"),
+            "per_h200": run.get("per_h200"),
+            "note": run.get("note"),
         }
 
     @staticmethod
@@ -206,6 +236,10 @@ class BenchmarkData:
 
     def gpus(self, key: str) -> int:
         return int(self.variant(key).get("gpus") or DEFAULT_GPUS.get(key, 1))
+
+    def slices_per_h200(self, key: str) -> int:
+        """How many of the setup's device fit one H200: 1 for a full card, 2 for 71 GB slices, 3 for 35 GB."""
+        return int(self.variant(key).get("slices_per_h200") or 1)
 
     def weights_gib_per_gpu(self, key: str) -> float | None:
         """Model weights per GPU rank in GiB, from the vLLM startup log ("Model loading took")."""

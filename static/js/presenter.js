@@ -39,6 +39,12 @@
         },
     };
     const ORDER = ['BF16', 'FP8', 'INT4', 'SPEC_DECODE'];
+    // the card wording comes from the track (the Qwen track's INT4 isn't "half the GPUs"); the SETUPS
+    // strings above are the Llama wording and stay as the fallback
+    function setupCopy(key) {
+        const c = config && config.track && config.track.copy;
+        return (c && c[key]) || SETUPS[key] || {};
+    }
 
     let config = null;
     let running = [];
@@ -109,8 +115,22 @@
     function chips(key) {
         const v = config && config.variants.find(x => x.key === key);
         const d = (v && v.device) || { name: 'H200', count: gpus(key) };
-        return `<span class="gpu-chips">${'<i></i>'.repeat(d.count)}${d.count} × ${esc(d.name)}</span>`;
+        const per = d.per_h200 > 1 ? ` · ${d.per_h200} per H200` : '';
+        return `<span class="gpu-chips">${'<i></i>'.repeat(d.count)}${d.count} × ${esc(d.name)}${per}</span>`;
     }
+    // Per-device numbers are per GPU on a full card and per slice on a MIG slice. When any setup on
+    // screen runs on a slice, comparisons use the per-H200 figure (per device times the slices per
+    // card, arithmetic and not a measurement) for every setup, so a per-slice number is never put
+    // in a ratio with a per-GPU one, and the text says which it is showing.
+    function sliced() {
+        return !!(config && config.variants.some(v => v.device && v.device.per_h200 > 1));
+    }
+    function unit(key) {
+        const v = config && config.variants.find(x => x.key === key);
+        return v && v.device && v.device.per_h200 > 1 ? 'slice' : 'GPU';
+    }
+    function norm(p) { return sliced() ? p.output_tokens_per_second_per_h200 : p.output_tokens_per_second_per_gpu; }
+    const normLabel = () => sliced() ? 'per H200 (slice setups scaled to a full card, arithmetic, not measured)' : 'per GPU';
     function glyph(key) { return `<span class="glyph" style="--c: var(${color(key)})"></span>`; }
     function markdownToText(t) { return t.replace(/^```[a-z]*\n?/gim, '').replace(/\*\*(.+?)\*\*/g, '$1'); }
     const one = x => (Math.round(x * 10 + 1e-6) / 10).toFixed(1);
@@ -139,7 +159,7 @@
 
     function roleText(key) {
         const v = config && config.variants.find(x => x.key === key);
-        const role = (SETUPS[key] || {}).role || '';
+        const role = setupCopy(key).role || '';
         // the build note is dropped when the label already names the build
         return v && v.build && !label(key).includes('W4A16') ? `${role}, ${v.build}` : role;
     }
@@ -336,15 +356,15 @@
     // from the numbers under them.
     function getsText(key, s, b, bf) {
         if (key === 'SPEC_DECODE' && b && bf && b.throughput_tps && bf.throughput_tps) {
-            return `About ${(b.throughput_tps / bf.throughput_tps).toFixed(2)}× faster answers on the same GPUs, with BF16 quality`;
+            return `About ${(b.throughput_tps / bf.throughput_tps).toFixed(2)}× faster answers on the same ${gpus('BF16') === 1 ? 'GPU' : 'GPUs'}, with BF16 quality`;
         }
         return s.gets || '';
     }
     function watchText(key, s, b, bf) {
         if (key === 'SPEC_DECODE' && b && bf && b.ttft_ms_avg && bf.ttft_ms_avg) {
             const t = targetInfo(), sb = t.best.SPEC_DECODE, bb = t.best.BF16;
-            const share = sb && bb ? `about ${Math.round(100 * sb.output_tokens_per_second_per_gpu / bb.output_tokens_per_second_per_gpu)}%` : 'about half';
-            return `First token about ${(b.ttft_ms_avg / bf.ttft_ms_avg).toFixed(0)}× slower than BF16's, and ${share} of BF16's tokens per GPU under load: it's a latency tool`;
+            const share = sb && bb ? `about ${Math.round(100 * norm(sb) / norm(bb))}%` : 'about half';
+            return `First token about ${(b.ttft_ms_avg / bf.ttft_ms_avg).toFixed(0)}× slower than BF16's, and ${share} of BF16's tokens ${sliced() ? 'per H200' : 'per GPU'} under load: it's a latency tool`;
         }
         return s.watch || '';
     }
@@ -353,7 +373,7 @@
     function laneText(k, hasFP8) {
         const lanes = config && config.track && config.track.lanes;
         if (lanes && lanes[k] && (k !== 'INT4' || hasFP8)) return lanes[k];
-        return hasFP8 && SETUPS[k].routeWithFP8 || SETUPS[k].route;
+        return hasFP8 && SETUPS[k].routeWithFP8 || SETUPS[k].route || '';
     }
 
     function buildNumbers() {
@@ -364,7 +384,7 @@
         grid.innerHTML = '';
         const bf = bench('BF16');
         for (const key of keys) {
-            const s = SETUPS[key] || {}, b = bench(key), n = gpus(key);
+            const s = setupCopy(key), b = bench(key), n = gpus(key);
             const tps = b ? b.throughput_tps : null;
             const mean = b ? b.avg_latency_ms : null;
             const gsm = b && b.accuracy && b.accuracy.gsm8k;
@@ -391,10 +411,12 @@
         if (bf && q && bf.throughput_tps && q.throughput_tps) {
             const speed = q.throughput_tps / bf.throughput_tps;
             const sp = bench('SPEC_DECODE');
-            const spTxt = sp && sp.throughput_tps ? `, and ${esc(shortLabel('SPEC_DECODE'))} <b>about ${(sp.throughput_tps / bf.throughput_tps).toFixed(2)}× faster</b> on the same GPUs` : '';
+            const spTxt = sp && sp.throughput_tps ? `, and ${esc(shortLabel('SPEC_DECODE'))} <b>about ${(sp.throughput_tps / bf.throughput_tps).toFixed(2)}× faster</b> on the same ${gpus('BF16') === 1 ? 'GPU' : 'GPUs'}` : '';
             const f8 = bench('FP8');
-            const f8Txt = f8 && f8.throughput_tps ? `${esc(shortLabel('FP8'))} <b>matches ${esc(shortLabel('BF16'))} on one GPU</b> (${(f8.throughput_tps / bf.throughput_tps).toFixed(2)}×), ` : '';
-            $('#takeaway').innerHTML = `One request at a time, ${f8Txt}${esc(shortLabel('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(shortLabel('BF16'))}'s speed on half the GPUs</b>${spTxt}.`
+            const f8Ratio = f8 && f8.throughput_tps ? f8.throughput_tps / bf.throughput_tps : 0;
+            const f8Claim = f8Ratio >= 0.97 ? `matches ${esc(shortLabel('BF16'))}` : `runs at ${Math.round(100 * f8Ratio)}% of ${esc(shortLabel('BF16'))}'s speed`;
+            const f8Txt = f8Ratio ? `${esc(shortLabel('FP8'))} <b>${f8Claim} ${esc(runsOn('FP8'))}</b> (${f8Ratio.toFixed(2)}×), ` : '';
+            $('#takeaway').innerHTML = `One request at a time, ${f8Txt}${esc(shortLabel('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(shortLabel('BF16'))}'s speed ${esc(runsOn('INT4'))}</b>${spTxt}.`
                 + (loadData().keys.length ? costLine() : ' <span class="pending-note">Under heavy batching on high-end GPUs, Red Hat\'s study found 8-bit (W8A8) more cost-efficient than 4-bit, and the load test shows where these three land.</span>');
         }
         const strip = $('#routerStrip');
@@ -417,25 +439,56 @@
             + (keys.includes('FP8') ? '' : ' FP8 (one H200, 99.9% of BF16 on OpenLLM v1 in Red Hat\'s tests) is the next to measure.');
     }
 
+    // Where a setup runs, for the takeaway line: on a slice it names the slice; on full cards it keeps
+    // the Llama wording ("on one GPU" against BF16's two, "half the GPUs" for INT4)
+    function runsOn(key) {
+        const v = config && config.variants.find(x => x.key === key), d = v && v.device;
+        if (d && d.per_h200 > 1) return `on a ${d.name}`;
+        if (gpus(key) < gpus('BF16')) return key === 'INT4' ? 'on half the GPUs' : 'on one GPU';
+        return gpus('BF16') === 1 ? 'on the same GPU' : 'on the same GPUs';
+    }
+
     // The accuracy footnote, with the sample sizes and the standard error, so the claim is exactly as
-    // strong as the data: GSM8K on all 1,319 questions, MMLU-Pro on 280.
+    // strong as the data: GSM8K on all 1,319 questions, MMLU-Pro on 280. The verdicts are computed from
+    // the scores and the standard error, so a track where INT4 lands inside the error says so.
     function accuracyFoot() {
         const bf = bench('BF16'), q = bench('INT4');
         const a = bf && bf.accuracy, qa = q && q.accuracy;
         if (!a || !qa) return '';
         const ref = q.reference;
         const g = a.gsm8k, qg = qa.gsm8k, m = a.mmlu_pro, qm = qa.mmlu_pro;
+        if (!g || !qg || !m || !qm) return '';
         const pts = m.score - qm.score;
+        const gsmVerdict = qg.score >= g.score - g.stderr ? 'no loss' : `INT4 ${(g.score - qg.score).toFixed(1)} points lower`;
+        const mmluVerdict = Math.abs(pts) <= m.stderr
+            ? `inside the standard error on ${m.questions} questions, too few to call it either way`
+            : pts > 0
+                ? `INT4 ${Math.floor(pts)} to ${Math.ceil(pts)} points lower on ${m.questions} questions, too few to call it, so the hard questions stay on BF16 until it's tested further`
+                : `INT4 ${Math.floor(-pts)} to ${Math.ceil(-pts)} points higher on ${m.questions} questions, too few to call it`;
+        const where = q.accuracy_note ? ` INT4's scores are the checkpoint's, measured on a ${q.int4_71 && q.int4_71.device ? q.int4_71.device.name : '71 GB slice'}.` : '';
+        const like = q.int4_71 && q.int4_71.throughput_tps && bf.throughput_tps
+            ? ` Like for like on FP8's ${q.int4_71.device ? q.int4_71.device.name : '71 GB slice'}, INT4 does ${one(q.int4_71.throughput_tps)} tokens/s (${Math.round(100 * q.int4_71.throughput_tps / bf.throughput_tps)}% of BF16).`
+            : '';
         const naive = ref ? `The naive pick, the ${ref.build.replace(', the naive pick', '')}: ${one(ref.throughput_tps)} tokens/s (${Math.round(100 * ref.speed_vs_baseline)}% of BF16), GSM8K ${ref.gsm8k.toFixed(1)}%, MMLU-Pro ${ref.mmlu_pro.toFixed(1)}%. ` : '';
         const f8 = bench('FP8'), fa = f8 && f8.accuracy;
         const f8g = fa ? `, FP8 ${fa.gsm8k.score.toFixed(1)}%` : '', f8m = fa ? `, FP8 ${fa.mmlu_pro.score.toFixed(1)}%` : '';
-        return naive + `GSM8K (${g.fewshot}-shot chain of thought, all ${g.questions.toLocaleString('en-US')} questions): BF16 ${g.score.toFixed(1)}%, INT4 ${qg.score.toFixed(1)}%${f8g}: no loss. MMLU-Pro (${m.fewshot}-shot, the first ${m.per_subject} questions of ${m.subjects} subjects, ${m.questions} in all, standard error about ±${m.stderr.toFixed(1)} points): BF16 ${m.score.toFixed(1)}%${f8m}, INT4 ${qm.score.toFixed(1)}%: INT4 ${Math.floor(pts)} to ${Math.ceil(pts)} points lower on ${m.questions} questions, too few to call it, so the hard questions stay on BF16 until it's tested further. `;
+        return naive + `GSM8K (${g.fewshot}-shot chain of thought, all ${g.questions.toLocaleString('en-US')} questions): BF16 ${g.score.toFixed(1)}%, INT4 ${qg.score.toFixed(1)}%${f8g}: ${gsmVerdict}. MMLU-Pro (${m.fewshot}-shot, the first ${m.per_subject} questions of ${m.subjects} subjects, ${m.questions} in all, standard error about ±${m.stderr.toFixed(1)} points): BF16 ${m.score.toFixed(1)}%${f8m}, INT4 ${qm.score.toFixed(1)}%: ${mmluVerdict}.${where}${like} `;
     }
     function specFoot(sd) {
+        const c = setupCopy('SPEC_DECODE'), drafter = c.drafter || '8B draft', pass = c.pass || '70B pass';
+        const k = sd.num_speculative_tokens || 5;
         const acc = sd.acceptance;
-        if (!acc) return `Spec Decode used Llama 3.1 8B as the draft, proposing 5 tokens per step${sd.mean_acceptance_length ? `, and averaged ${one(sd.mean_acceptance_length)} tokens per 70B pass.` : '.'}`;
-        const a0 = acc['0'], a7 = acc['0.7'];
-        return `Spec Decode's 8B draft proposes 5 tokens per step: ${(100 * a0.rate).toFixed(1)}% accepted at temperature 0 (${(100 * a7.rate).toFixed(1)}% at 0.7), ${one(a0.mean_acceptance_length)} tokens per 70B pass (${one(a7.mean_acceptance_length)}), over ${a0.drafts.toLocaleString('en-US')} and ${a7.drafts.toLocaleString('en-US')} drafts.`;
+        if (!sd.throughput_tps) return '';
+        if (!acc) return `Spec Decode used ${c.drafterLong || 'Llama 3.1 8B as the draft'}, proposing ${k} tokens per step${sd.mean_acceptance_length ? `, and averaged ${one(sd.mean_acceptance_length)} tokens per ${pass}.` : '.'}`;
+        // the Llama file keys acceptance by temperature; the Qwen file by temperature and speculative tokens
+        const a0 = acc['0'] || acc[`t0-k${k}`], a7 = acc['0.7'] || acc[`t0.7-k${k}`];
+        if (!a0 || !a7 || a0.rate == null || a7.rate == null) return '';
+        let text = `Spec Decode's ${drafter} proposes ${k} tokens per step: ${(100 * a0.rate).toFixed(1)}% accepted at temperature 0 (${(100 * a7.rate).toFixed(1)}% at 0.7), ${one(a0.mean_acceptance_length)} tokens per ${pass} (${one(a7.mean_acceptance_length)}), over ${a0.drafts.toLocaleString('en-US')} and ${a7.drafts.toLocaleString('en-US')} drafts.`;
+        const fewer = [1, 2].map(kk => ({ kk, a: acc[`t0-k${kk}`], tps: sd[`throughput_tps_k${kk}`] })).filter(o => o.a && o.a.rate != null);
+        if (fewer.length) {
+            text += ` With ${fewer.map(o => o.kk).join(' and ')} speculative tokens (temperature 0): ${fewer.map(o => `${(100 * o.a.rate).toFixed(1)}% accepted${o.tps ? `, ${one(o.tps)} tokens/s` : ''}`).join('; ')} (${one(sd.throughput_tps)} with ${k}).`;
+        }
+        return text;
     }
 
     // The cost line: output tokens per GPU at the latency target, from the load test, and a price
@@ -446,12 +499,13 @@
         if (!keys.length) return '';
         const usd = config && config.gpu_hourly_usd;
         const items = keys.map(k => {
-            const tps = t.best[k].output_tokens_per_second_per_gpu;
+            const tps = norm(t.best[k]);
             const price = usd > 0 ? ` ($${(usd / (tps * 3600) * 1e6).toFixed(2)} per 1M tokens)` : '';
-            return `${esc(shortLabel(k))} ${tps.toFixed(0)}${price}`;
+            const per = sliced() && t.best[k].slices_per_h200 > 1 ? ` (${t.best[k].output_tokens_per_second_per_gpu.toFixed(0)} per slice × ${t.best[k].slices_per_h200})` : '';
+            return `${esc(shortLabel(k))} ${tps.toFixed(0)}${per}${price}`;
         });
-        const assumed = usd > 0 ? `, at an assumed $${usd}/GPU-hour` : '';
-        return ` <span class="pending-note">Under load, output tokens/s per GPU while the ${t.kind || 'tail'} time per token stays under ${t.ms} ms${assumed}: ${items.join(' · ')}.</span>`;
+        const assumed = usd > 0 ? `, at an assumed $${usd}/${sliced() ? 'H200' : 'GPU'}-hour` : '';
+        return ` <span class="pending-note">Under load, output tokens/s ${normLabel()} while the ${t.kind || 'tail'} time per token stays under ${t.ms} ms${assumed}: ${items.join(' · ')}.</span>`;
     }
 
     // under load (replay of the load test)
@@ -504,7 +558,7 @@
             card.style.setProperty('--c', `var(${color(key)})`);
             card.innerHTML = `
                 <div class="mhead"><h3>${glyph(key)}${esc(benchLabel(key))}</h3>${chips(key)}</div>
-                <div class="big"><b class="num l-pergpu">–</b><span>output tokens/s per GPU</span></div>
+                <div class="big"><b class="num l-pergpu">–</b><span>output tokens/s per ${unit(key)}</span></div>
                 <div class="spark-box"><svg class="spark"></svg></div>
                 <div class="tpot-wrap"><span class="tpot-title"></span><svg class="tpot"></svg></div>
                 <div class="lstats">
@@ -551,7 +605,7 @@
             drawTpot(card, pts, levels, i);
             const t = targetInfo(), best = t.best[card.dataset.key];
             $('.l-target', card).innerHTML = i < levels.length - 1 ? '' : best
-                ? `Under the ${t.ms} ms target: <b>${best.output_tokens_per_second_per_gpu.toFixed(0)} tokens/s per GPU</b> at ${best.concurrency} in flight`
+                ? `Under the ${t.ms} ms target: <b>${best.output_tokens_per_second_per_gpu.toFixed(0)} tokens/s per ${unit(card.dataset.key)}</b> at ${best.concurrency} in flight`
                 : `Never stayed under the ${t.ms} ms target`;
         }
         const play = $('#loadPlay');
@@ -607,7 +661,7 @@
         const parts = [];
         const gb = gpus('BF16'), gq = gpus('INT4');
         const pair = [...levels].reverse().map(c => ({ c, bf: pointAt(bfPts, c), q: pointAt(qPts, c * gq / gb) })).find(o => o.bf && o.q);
-        if (pair) {
+        if (pair && !sliced()) {
             const perGpu = pair.c / gb;
             const r = pair.q.output_tokens_per_second_per_gpu / pair.bf.output_tokens_per_second_per_gpu;
             parts.push(`At ${perGpu} requests per GPU, ${esc(benchLabel('INT4'))} serves <b>${one(r)}× the output tokens per GPU</b> of ${esc(benchLabel('BF16'))}`);
@@ -617,15 +671,17 @@
             const r = same.sp.latency_ms / same.bf.latency_ms;
             const kind = same.bf.latency_kind === 'mean' ? 'mean' : 'median';
             const verdict = Math.abs(r - 1) < 0.03 ? 'about the same as' : r < 1 ? `<b>${Math.round(100 * (1 - r))}% lower</b> than` : `<b>${Math.round(100 * (r - 1))}% higher</b> than`;
-            parts.push(`at ${same.c} requests on the same 2 GPUs, ${esc(benchLabel('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(benchLabel('BF16'))}'s`);
+            const sameDev = gpus('BF16') === 1 ? 'the same GPU' : `the same ${gpus('BF16')} GPUs`;
+            parts.push(`at ${same.c} requests on ${sameDev}, ${esc(benchLabel('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(benchLabel('BF16'))}'s`);
         }
         // what sets cost: output tokens per GPU while the tail time per token stays under the target
         const t = targetInfo(), bfBest = t.best.BF16;
         const cost = ['FP8', 'INT4', 'SPEC_DECODE'].filter(k => bfBest && t.best[k]).map(k =>
-            `${esc(shortLabel(k))} <b>${one(t.best[k].output_tokens_per_second_per_gpu / bfBest.output_tokens_per_second_per_gpu)}×</b>`);
+            `${esc(shortLabel(k))} <b>${one(norm(t.best[k]) / norm(bfBest))}×</b>`);
         if (cost.length) {
-            // with a latency target, the per-GPU comparison at the target replaces the equal-load one
-            const lead = `Within a ${t.ms} ms ${t.kind || 'tail'} time per token, output tokens per GPU against ${esc(shortLabel('BF16'))}: ${cost.join(', ')}.`;
+            // with a latency target, the per-GPU comparison at the target replaces the equal-load one;
+            // with slices on screen every side of the ratio is the per-H200 figure, and the line says so
+            const lead = `Within a ${t.ms} ms ${t.kind || 'tail'} time per token, output tokens ${normLabel()} against ${esc(shortLabel('BF16'))}: ${cost.join(', ')}.`;
             $('#loadResult').innerHTML = lead + (same ? ` ${parts[parts.length - 1].replace(/^at/, 'At')}.` : '');
             return;
         }

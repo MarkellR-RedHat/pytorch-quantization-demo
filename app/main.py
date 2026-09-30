@@ -74,7 +74,8 @@ def active_variants() -> list[str]:
 
 def bench_label(key: str) -> str:
     """The benchmark's own label for a setup, which for INT4 follows the checkpoint that was measured."""
-    if key == "INT4" and "RedHatAI" in str(bench().variant(key).get("checkpoint") or ""):
+    if key == "INT4" and not tracks.active().labels.get(key) \
+            and "RedHatAI" in str(bench().variant(key).get("checkpoint") or ""):
         return "INT4 (Red Hat W4A16)"
     return benchmark_label(key)
 
@@ -298,7 +299,9 @@ async def presenter_view(
     return templates.TemplateResponse(
         request=request,
         name="presenter.html",
-        context={"simulation_mode": simulator.is_enabled(), "demo_state": state_payload()},
+        context={
+            "simulation_mode": simulator.is_enabled(), "demo_state": state_payload(), "title": tracks.TITLE,
+        },
     )
 
 

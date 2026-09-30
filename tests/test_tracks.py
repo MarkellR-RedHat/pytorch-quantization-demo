@@ -57,7 +57,8 @@ def test_default_track_is_llama(client):
     assert body["track"]["key"] == "llama" and body["track"]["model"].startswith("Llama 3.1 70B")
     assert [t["key"] for t in body["track"]["tracks"]] == ["llama", "qwen"]
     devices = {v["key"]: v["device"] for v in body["variants"]}
-    assert devices["BF16"] == {"name": "H200", "count": 2} and devices["FP8"] == {"name": "H200", "count": 1}
+    assert devices["BF16"] == {"name": "H200", "count": 2, "per_h200": 1}
+    assert devices["FP8"] == {"name": "H200", "count": 1, "per_h200": 1}
 
 
 def test_a_pending_track_is_refused(client):
@@ -91,9 +92,9 @@ def test_switching_tracks_swaps_benchmark_devices_and_recordings(client, qwen_da
     assert body["track"]["key"] == "qwen" and body["track"]["status"] == "ready"
     assert body["benchmark"]["variants"]["BF16"]["throughput_tps"] == 60.0
     devices = {v["key"]: v["device"] for v in body["variants"]}
-    assert devices["BF16"] == {"name": "H200", "count": 1}
-    assert devices["FP8"] == {"name": "71 GB slice", "count": 1}
-    assert devices["INT4"] == {"name": "71 GB slice", "count": 1}
+    assert devices["BF16"] == {"name": "H200", "count": 1, "per_h200": 1}
+    assert devices["FP8"] == {"name": "71 GB slice", "count": 1, "per_h200": 2}
+    assert devices["INT4"] == {"name": "35 GB slice", "count": 1, "per_h200": 3}
     stream = client.post("/ask/BF16", json={"preset": "reasoning"}).text
     lines = [json.loads(line) for line in stream.splitlines()]
     assert "".join(e["text"] for e in lines if e["t"] == "delta") == "Qwen says 9 sheep."
@@ -107,8 +108,14 @@ def test_switching_tracks_swaps_benchmark_devices_and_recordings(client, qwen_da
 def test_the_badge_and_title_name_the_track(client, qwen_data):
     client.post("/track/qwen")
     body = client.get("/api/config").json()
-    assert body["track"]["title"] == "Not Every Question Needs the Whole GPU"
+    assert body["track"]["title"] == tracks.TITLE == "Not Every Question Needs the Whole GPU"
     assert body["track"]["model"] == "Qwen3.8-27B"
+
+
+def test_both_tracks_share_the_title(client):
+    body = client.get("/api/config").json()
+    assert body["track"]["title"] == tracks.TITLE
+    assert "FP8" in body["track"]["subtitle"]
     assert body["track"]["lanes"]["INT4"]  # the routing strip reads its lane text from the track
 
 

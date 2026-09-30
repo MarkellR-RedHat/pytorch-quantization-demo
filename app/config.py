@@ -91,10 +91,18 @@ class Settings(BaseSettings):
         return "recorded" if mode == "recorded" else "live"
 
     def captures_for(self, key: str) -> str:
-        """The quality/ folder holding this column's recordings."""
+        """The folder under the track's recordings dir holding this column's recordings."""
+        if folder := _track().captures.get(key):
+            return folder
         if key == "INT4":
             return self.model_int4_captures.strip() or "INT4"
         return key
+
+
+def _track():
+    from app import tracks  # here and not at the top: tracks imports this module
+
+    return tracks.active()
 
 
 BASE_VARIANTS = ["BF16", "INT4", "SPEC_DECODE"]
@@ -111,6 +119,8 @@ INT4_BUILDS = {
 
 def build_note(key: str) -> str | None:
     """Which checkpoint a column runs, when there's more than one it could be."""
+    if build := _track().builds.get(key):
+        return build
     if key != "INT4":
         return None
     return INT4_BUILDS.get(settings.captures_for(key), settings.captures_for(key))
@@ -118,14 +128,18 @@ def build_note(key: str) -> str | None:
 
 def variant_label(key: str) -> str:
     """The label of a live (or recorded) column, which follows the INT4 build it runs."""
+    if label := _track().labels.get(key):
+        return label
     if key == "INT4" and settings.captures_for(key) == "INT4_RH":
         return "INT4 (Red Hat W4A16)"
     return benchmark_label(key)
 
 
 def benchmark_label(key: str) -> str:
-    """The label of a setup's benchmark numbers. The Sep 29 INT4 numbers are the AWQ build's,
-    whatever the INT4 column runs today."""
+    """The label of a setup's benchmark numbers. On the Llama track the Sep 29 INT4 numbers are the AWQ
+    build's, whatever the INT4 column runs today; a track that measured what it runs names it once."""
+    if label := _track().labels.get(key):
+        return label
     labels = {
         "BF16": "BF16",
         "FP8": "FP8",
