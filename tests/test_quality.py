@@ -1,6 +1,7 @@
 """Quality panel: only captured output is shown, and the sheep checker is right"""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -138,3 +139,13 @@ def test_sheep_captures_grade():
         samples = json.loads(sampled.read_text())["responses"]
         assert sheep_verdict(greedy), variant
         assert sum(sheep_verdict(t) for t in samples) == len(samples) == 20, variant
+
+
+def test_delivered_variant_name_is_accepted():
+    """The Sep 29 recordings say "variant": "FP16" inside; the Oct 19 ones will say BF16. The loader keys
+    on the folder and the prompt, never on that field."""
+    path = Path(__file__).resolve().parent.parent / "quality" / "BF16" / "complex_reasoning.json"
+    delivered = json.loads(path.read_text())
+    assert delivered["variant"] == "FP16"
+    shown = get_comparison("complex_reasoning", ["BF16"])["responses"]["BF16"]["text"]
+    assert shown == delivered["response_text"]
