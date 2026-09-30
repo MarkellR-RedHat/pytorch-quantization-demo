@@ -1,11 +1,16 @@
+# INT4, the community AWQ build on one GPU: the naive pick the talk starts from, kept as the reference.
+# Measured footprint: 37.9 GiB of weights, so it fits a 71 GB MIG slice (nvidia.com/mig-3g.71gb on
+# H200) with about 30 GB left for KV cache; on a full H200 it had 280K tokens of cache.
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
   name: benchmark-int4
   namespace: <your-namespace>
   annotations:
+    # Plain Deployment behind a Service, no Knative; drop it if your KServe defaults to raw already.
     serving.kserve.io/deploymentMode: RawDeployment
   labels:
+    # Our cluster hands out GPUs through Kueue; drop this label if yours doesn't.
     kueue.x-k8s.io/queue-name: reserved
 spec:
   predictor:
@@ -14,12 +19,18 @@ spec:
     model:
       modelFormat:
         name: vLLM
+      # A ServingRuntime on our cluster that wraps the same vLLM image the other files pin, on one GPU;
+      # KServe passes the downloaded weights as --model=/mnt/models and the service name as
+      # --served-model-name. Point this at your cluster's vLLM runtime, or use the raw-container
+      # form in isvc-fp8.yaml with --model=hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4.
       runtime: vllm-gpu-benchmark
       storageUri: hf://hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4
       resources:
-        limits:
-          nvidia.com/gpu: "1"
         requests:
-          nvidia.com/gpu: "1"
+          cpu: 4
           memory: 48Gi
-          cpu: "4"
+          nvidia.com/gpu: 1
+        limits:
+          cpu: 8
+          memory: 96Gi
+          nvidia.com/gpu: 1

@@ -17,72 +17,31 @@ spec:
         app: pytorch-quantization-demo
     spec:
       containers:
-      - name: demo-app
-        image: quay.io/your-org/pytorch-quantization-demo:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8000
-          name: http
-          protocol: TCP
-        env:
-        - name: OPENSHIFT_AI_ENDPOINT
-          valueFrom:
-            secretKeyRef:
-              name: openshift-ai-config
-              key: endpoint
-        - name: OPENSHIFT_AI_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: openshift-ai-config
-              key: token
-        - name: PRESENTER_KEY
-          valueFrom:
-            secretKeyRef:
-              name: openshift-ai-config
-              key: presenter_key
-        - name: MODEL_FP16_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: model-endpoints
-              key: fp16_endpoint
-        - name: MODEL_INT4_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: model-endpoints
-              key: int4_endpoint
-        - name: MODEL_SPEC_DECODE_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: model-endpoints
-              key: spec_decode_endpoint
-        - name: MODEL_FP8_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: model-endpoints
-              key: fp8_endpoint
-              optional: true
-        - name: TRUST_PROXY
-          value: "true"
-        - name: SIMULATION_MODE
-          value: "false"
-        - name: LOG_LEVEL
-          value: "INFO"
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "1"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 10
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: app
+          image: quay.io/<your-org>/pytorch-quantization-demo:latest
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: pytorch-quantization-demo
+            - secretRef:
+                name: pytorch-quantization-demo
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30

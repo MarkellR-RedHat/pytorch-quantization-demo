@@ -43,10 +43,14 @@ To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 
 Five H200s on Oct 20, so three setups are live and one is recorded by plan:
 
-- BF16 Llama 3.1 70B: 2x H200 (tensor parallel), live
-- Speculative decoding (Llama 3.1 70B BF16 target + Llama 3.1 8B draft, both tensor parallel 2): 2x H200, live
-- FP8 Llama 3.1 70B, Red Hat's build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8`): 1x H200, live
-- INT4 Llama 3.1 70B, Red Hat's LLM Compressor build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16`): not deployed on the day. Its column plays the recordings made on Oct 19 (`MODEL_INT4_MODE=recorded`), labeled "Recorded <date>", and the corner badge says so.
+| Setup | GPUs on the day | Weights as loaded | Fits a 71 GB MIG slice? |
+|---|---|---|---|
+| BF16 Llama 3.1 70B, tensor parallel 2 | 2x H200, live | 65.7 GiB per GPU | No |
+| Speculative decoding (BF16 70B target + Llama 3.1 8B draft, both tensor parallel 2) | 2x H200, live | 73.2 GiB per GPU | No |
+| FP8 Llama 3.1 70B, Red Hat's build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8`) | 1x H200, live | 67.7 GiB (72.7 GB) | No, the weights alone are more than the slice |
+| INT4 Llama 3.1 70B, Red Hat's LLM Compressor build (`RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16`) | none: recorded by plan | 37.1 GiB | Yes, with about 30 GB left for KV cache |
+
+INT4's column plays the recordings made on Oct 19 (`MODEL_INT4_MODE=recorded`), labeled "Recorded <date>", and the corner badge says so. If INT4 were live it wouldn't need a full H200: a 71 GB MIG slice would do, and the full GPUs would stay free for other people's work. FP8 needs the full GPU.
 
 ### Pre-Demo Checklist (Day Before)
 

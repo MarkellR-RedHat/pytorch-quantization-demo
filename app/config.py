@@ -23,8 +23,7 @@ class Settings(BaseSettings):
     port: int = 8000
     log_level: str = "INFO"
 
-    # OpenShift AI (live mode)
-    openshift_ai_endpoint: str = ""
+    # Bearer token for the vLLM endpoints, if they need one
     openshift_ai_token: str = ""
 
     # Model endpoints, one vLLM OpenAI-compatible chat completions URL per variant

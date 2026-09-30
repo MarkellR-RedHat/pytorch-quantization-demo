@@ -192,10 +192,25 @@ For the talk the app runs on the presenter laptop with `.env` pointing at the vL
 ```bash
 podman build -t quay.io/<your-org>/pytorch-quantization-demo:latest .
 podman push quay.io/<your-org>/pytorch-quantization-demo:latest
-oc create secret generic openshift-ai-config --from-literal=endpoint=<url> --from-literal=token=<token> \
-  --from-literal=presenter_key=$(openssl rand -hex 16)
+oc create secret generic pytorch-quantization-demo --from-literal=PRESENTER_KEY=$(openssl rand -hex 16)
 oc apply -f kubernetes/configmap.yaml -f kubernetes/deployment.yaml -f kubernetes/service.yaml -f kubernetes/route.yaml
 ```
+
+`kubernetes/configmap.yaml` holds the same variables as `.env`; edit the endpoints and served names there first. The vLLM deployments themselves are in `kubernetes/models/` as KServe InferenceServices, one per setup, written for our OpenShift AI cluster (raw deployment mode, GPUs scheduled through Kueue; each file says what to drop elsewhere).
+
+### GPU sizing
+
+Not every setup needs a full H200 either. From the vLLM startup logs ("Model loading took"), the weights as loaded:
+
+| Setup | Weights | GPUs | Fits a 71 GB MIG slice? |
+|---|---|---|---|
+| BF16, tensor parallel 2 | 65.7 GiB per GPU | 2 full H200s | No |
+| Spec decode, tensor parallel 2 | 73.2 GiB per GPU (target plus draft) | 2 full H200s | No |
+| FP8 | 67.7 GiB (72.7 GB) | 1 full H200 | No: the weights alone are more than the slice, before any KV cache |
+| INT4, Red Hat's build | 37.1 GiB | 1 GPU | Yes, with about 30 GB left for KV cache |
+| INT4, AWQ build | 37.9 GiB | 1 GPU | Yes |
+
+The measurements here ran on full H200s (INT4 had 283K tokens of KV cache on one), and the manifests request whole GPUs so the startup logs match. On a MIG-partitioned cluster the INT4 files would request `nvidia.com/mig-3g.71gb` instead and leave the full GPUs to the two-GPU setups. Every file uses `--max-model-len 131072`, the model's full context and what was measured; 32768 is plenty for a demo and leaves more room for KV cache.
 
 The deployment runs one replica on purpose. Metrics and websocket connections live in memory, so a second replica would split the presenter screen's metrics across two pods.
 
