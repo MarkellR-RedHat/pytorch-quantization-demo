@@ -34,11 +34,12 @@ def stamp(seconds: int) -> str:
 
 
 def bench_json(model: str, tput: float, tpot: float, n: int, c: int, start: int | None = None) -> dict:
-    """A vllm bench serve result. Runs are 60 s long and sequential unless a start is given (an overlap)."""
+    """A vllm bench serve result. Runs are 60 s long and sequential unless a start is given (an overlap).
+    `date` is stamped when the result is written, after the run, as vllm bench serve does."""
     if start is None:
         start, _CLOCK[0] = _CLOCK[0], _CLOCK[0] + 70
     return {
-        "date": stamp(start), "duration": 60.0,
+        "date": stamp(start + 60), "duration": 60.0,
         "backend": "vllm", "model_id": model, "num_prompts": n, "max_concurrency": c,
         "completed": n, "failed": 0, "total_input_tokens": n * 512, "total_output_tokens": n * 256,
         "output_throughput": tput, "mean_ttft_ms": 40.0 + c, "median_ttft_ms": 35.0 + c, "p95_ttft_ms": 60.0 + c,

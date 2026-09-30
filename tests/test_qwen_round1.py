@@ -43,6 +43,22 @@ def test_recordings_complete_and_graded(setup):
     assert all(puzzle_verdict(r) for r in samples["responses"]), setup
 
 
+def test_under_load_at_the_target_from_clean_points():
+    from app.benchmark import BenchmarkData
+    from app.config import settings
+
+    b = BenchmarkData(ROOT / "benchmark_results.qwen.json", ROOT / settings.qwen_bench_dir)
+    best = b.meta()["at_target"]
+    got = {k: (t["concurrency"], t["output_tokens_per_second_per_gpu"], t["lower_bound"])
+           for k, t in best.items()}
+    assert got == {
+        "BF16": (64, 1980.0, False), "FP8": (64, 1540.9, False), "INT4": (32, 1017.9, False),
+        "SPEC_DECODE": (32, 1597.8, False),
+    }
+    assert best["FP8"]["output_tokens_per_second_per_h200"] == 3081.9  # arithmetic, two slices per card
+    assert all(not p["overlapped_with"] for pts in b.meta()["load"].values() for p in pts)
+
+
 def test_the_facts_the_talk_quotes():
     v = BENCH["variants"]
     assert BENCH["vllm_version"] == "0.24.0+rhaiv.13" and BENCH["date"] == "2026-09-30"
@@ -74,14 +90,13 @@ def test_the_facts_the_talk_quotes():
     assert sd["mean_acceptance_length"] == 3.22
     assert sd["acceptance"]["t0-k4"]["accepted_per_position"] == [0.7871, 0.6057, 0.4636, 0.3603]
     assert [sd[f"throughput_tps_k{k}"] for k in (1, 2, 8)] == [105.2, 128.6, 142.7]
-    # the excluded runs, with their reason, and the overlapped ones annotated
-    assert v["BF16"]["at_temperature_0_7"] is None and v["INT4"]["at_temperature_0_7"] is None
-    assert "MMLU-Pro eval" in v["BF16"]["excluded_runs"][0]["reason"]
-    assert v["FP8"]["at_temperature_0_7"]["throughput_tps"] == 62.9
-    assert v["BF16"]["sweep_runs"]["c64.json"]["overlapped_with"] == []
-    c16 = v["BF16"]["sweep_runs"]["c16.json"]["overlapped_with"]
-    assert [o["file"] for o in c16] == ["sharegpt-c64.json"]
-    assert all(v["INT4"]["sweep_runs"][f"c{c}.json"]["overlapped_with"] for c in (1, 8, 16, 32, 64))
+    # the evening pass: clean temperature-0.7 runs, one client per pod, the afternoon pass set aside
+    assert [v[k]["at_temperature_0_7"]["throughput_tps"] for k in SETUPS] == [65.3, 62.9, 56.3, 135.4]
+    for k in SETUPS:
+        assert all(r["overlapped_with"] == [] for r in v[k]["sweep_runs"].values()), k
+        assert v[k]["first_pass"]["folder"] == f"sweeps/{k}/first-pass" and "excluded_runs" not in v[k]
+    assert "GSM8K eval" in v["BF16"]["first_pass"]["note"]
+    assert all(r["overlapped_with"] == [] for r in s35["sweep_runs"].values())
     # per-H200 stays arithmetic: two slices at once weren't borrowable
     assert v["FP8"]["per_h200"] == {"slices": 2, "throughput_tps": 127.0, "note": BENCH["per_h200_note"]}
     assert "measured" not in v["FP8"]["per_h200"]

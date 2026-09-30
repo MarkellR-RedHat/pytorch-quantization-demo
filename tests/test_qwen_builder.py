@@ -83,15 +83,32 @@ def test_per_h200_is_separate_and_labeled(built):
     assert v["INT4"]["speed_vs_baseline"] == round(52.0 / 60.0, 3)  # per device, never the x2 figure
 
 
-def test_excluded_runs_carry_their_reason(built):
+def test_temperature_0_7_and_first_pass(built):
     _raw, out = built
     v = out["variants"]
-    for key in ("BF16", "INT4"):
-        assert v[key]["at_temperature_0_7"] is None and v[key]["speed_vs_baseline_t0_7"] is None
-        assert v[key]["excluded_runs"][0]["file"] == f"sweeps/{key}/single-t0.7.json"
-        assert "MMLU-Pro eval" in v[key]["excluded_runs"][0]["reason"]
+    assert v["BF16"]["at_temperature_0_7"]["throughput_tps"] == 59.0
     assert v["FP8"]["at_temperature_0_7"]["throughput_tps"] == 60.5
-    assert "excluded_runs" not in v["FP8"]
+    assert v["FP8"]["speed_vs_baseline_t0_7"] == round(60.5 / 59.0, 3)
+    assert "excluded_runs" not in v["FP8"] and "first_pass" not in v["FP8"]  # no first-pass/ folder here
+
+
+def test_a_first_pass_folder_is_named_and_not_read(built, tmp_path):
+    raw, _out = built
+    first = raw / "sweeps" / "INT4" / "first-pass"
+    first.mkdir()
+    (first / "c64.json").write_text(json.dumps(qwen_synthetic.bench_json("qwen-int4", 1.0, 999.0, 64, 64)))
+    try:
+        builder = load_module("build_qwen_file")
+        for key, spec in builder.SETUPS.items():
+            spec["pod"] = f"{qwen_synthetic.SETUPS[key][0]}-predictor-abc12-xyz34"
+        builder.INT4_35["pod"] = f"{qwen_synthetic.SETUPS['INT4_35'][0]}-predictor-abc12-xyz34"
+        int4 = builder.build(raw)["variants"]["INT4"]
+        assert int4["first_pass"]["folder"] == "sweeps/INT4/first-pass"
+        assert "GSM8K eval" in int4["first_pass"]["note"]
+        assert "c64.json" in int4["sweep_runs"] and int4["sweep_runs"]["c64.json"]["overlapped_with"] == []
+    finally:
+        (first / "c64.json").unlink()
+        first.rmdir()
 
 
 def test_overlapping_runs_are_annotated(built):

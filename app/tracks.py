@@ -143,9 +143,10 @@ QWEN_COPY = {
     "SPEC_DECODE": {
         "role": "Same H200, the model's own MTP head",
         "gets": "Faster answers on the same GPU, with BF16 quality",
-        "best": "Latency-sensitive, low-traffic work, and anything else: it comes free with this model",
+        "best": "Anything a person is waiting on: spec decode comes built in with this model",
         "watch": "A slower first token, and fewer of BF16's tokens per GPU under load",
-        "watchVerdict": ", on the same card with no extra model to serve",
+        "watchVerdict": ", on the same card with no extra model to serve, so it's the default for anything "
+                        "a person is waiting on",
         "acc": "= BF16", "accNote": "by design, the 27B checks every token",
         "drafter": "MTP head", "pass": "27B pass", "drafterLong": "the model's own MTP head as the draft",
     },

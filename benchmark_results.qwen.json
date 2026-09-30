@@ -13,7 +13,7 @@
     "35 GB slice"
   ],
   "per_h200_note": "per device times the slices per H200: arithmetic, not a measurement",
-  "notes": "Qwen3.8-27B on vLLM 0.24.0+rhaiv.13 (the Llama track ran on 0.18; 0.24 is needed for MTP). Single stream: vllm bench serve inside each pod, 30 ShareGPT prompts one at a time, temperature 0 (headline) and 0.7, --max-model-len 32768. BF16 and the MTP speculator on one full H200 with CUDA graphs; FP8 and INT4 on 71 GB MIG slices (two per H200, the same profile, also with CUDA graphs); INT4 once more on a 35 GB slice (three per H200) in eager mode, the workaround for an NVML CUDA-graph profiling failure on that slice. The slices were borrowed on a shared node. Every throughput is per device; per_h200 is that number times the slices per card, arithmetic and not a measurement. Under load, some runs shared their pod with another vllm bench serve run (sweep_runs lists every window); those points are lower bounds. The temperature-0.7 single-stream runs of BF16 and INT4 ran while their MMLU-Pro eval hit the same pod and are excluded. Accuracy is lm_eval: GSM8K (gsm8k_cot, not the Llama prompt format, so not comparable with the Llama track's figures) on all questions and MMLU-Pro on the first 20 of each subject. Spec decode counters were read before and after each single-stream run, per temperature and per number of speculative tokens (k). Thinking mode: Thinking mode: OFF (server-side); off server-side in every pod (--default-chat-template-kwargs enable_thinking=false). nvidia-smi inside a MIG slice reports no utilization, so the GPU-util CSVs of the slice setups are empty.",
+  "notes": "Qwen3.8-27B on vLLM 0.24.0+rhaiv.13 (the Llama track ran on 0.18; 0.24 is needed for MTP). Single stream: vllm bench serve inside each pod, 30 ShareGPT prompts one at a time, temperature 0 (headline) and 0.7, --max-model-len 32768. BF16 and the MTP speculator on one full H200 with CUDA graphs; FP8 and INT4 on 71 GB MIG slices (two per H200, the same profile, also with CUDA graphs); INT4 once more on a 35 GB slice (three per H200) in eager mode, the workaround for an NVML CUDA-graph profiling failure on that slice. The slices were borrowed on a shared node. Every throughput is per device; per_h200 is that number times the slices per card, arithmetic and not a measurement. The sweeps and the BF16 and INT4 temperature-0.7 runs are the evening pass, one client per pod; the afternoon pass, where runs shared their pod, is kept under sweeps/<V>/first-pass/ and nothing is read from it (sweep_runs lists every run's window and any overlap, and the app labels an overlapped point as a lower bound). Accuracy is lm_eval: GSM8K (gsm8k_cot, not the Llama prompt format, so not comparable with the Llama track's figures) on all questions and MMLU-Pro on the first 20 of each subject. Spec decode counters were read before and after each single-stream run, per temperature and per number of speculative tokens (k). Thinking mode: Thinking mode: OFF (server-side); off server-side in every pod (--default-chat-template-kwargs enable_thinking=false). nvidia-smi inside a MIG slice reports no utilization, so the GPU-util CSVs of the slice setups are empty.",
   "single_stream": {
     "dataset": "ShareGPT",
     "prompts": 30,
@@ -46,13 +46,19 @@
       "avg_tokens_per_request": 225.2,
       "avg_input_tokens": 226.9,
       "temperature": 0,
-      "at_temperature_0_7": null,
-      "excluded_runs": [
-        {
-          "file": "sweeps/BF16/single-t0.7.json",
-          "reason": "the BF16 MMLU-Pro eval (lm_eval, 32 concurrent) ran against the same pod during this run: per-token time doubled at the same output length"
-        }
-      ],
+      "at_temperature_0_7": {
+        "prompts": 30,
+        "throughput_tps": 65.3,
+        "avg_latency_ms": 3334.1,
+        "median_latency_ms": 2006.3,
+        "p95_latency_ms": 11503.0,
+        "ttft_ms_avg": 40.6,
+        "ttft_ms_median": 35.8,
+        "ttft_ms_p95": 73.7,
+        "tpot_ms_median": 15.19,
+        "avg_tokens_per_request": 217.8,
+        "avg_input_tokens": 226.9
+      },
       "pod": "qwen-bf16-predictor-796d45bfd9-wgmdz",
       "weights_gib_per_gpu": 51.1,
       "kv_cache_tokens": 1099548,
@@ -97,110 +103,74 @@
       },
       "sweep_runs": {
         "c1.json": {
-          "start": "2026-09-30T07:15:46Z",
-          "end": "2026-09-30T07:20:52Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T17:58:09Z",
+          "end": "2026-09-30T18:02:21Z",
+          "overlapped_with": []
         },
         "c16.json": {
-          "start": "2026-09-30T07:50:41Z",
-          "end": "2026-09-30T07:51:41Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c64.json",
-              "concurrency": 64
-            }
-          ]
+          "start": "2026-09-30T18:03:45Z",
+          "end": "2026-09-30T18:04:26Z",
+          "overlapped_with": []
         },
         "c32.json": {
-          "start": "2026-09-30T07:29:32Z",
-          "end": "2026-09-30T07:30:23Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c8.json",
-              "concurrency": 8
-            }
-          ]
+          "start": "2026-09-30T18:04:47Z",
+          "end": "2026-09-30T18:05:36Z",
+          "overlapped_with": []
         },
         "c64.json": {
-          "start": "2026-09-30T07:32:07Z",
-          "end": "2026-09-30T07:33:13Z",
+          "start": "2026-09-30T18:06:00Z",
+          "end": "2026-09-30T18:07:07Z",
           "overlapped_with": []
         },
         "c8.json": {
-          "start": "2026-09-30T07:22:51Z",
-          "end": "2026-09-30T07:23:30Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:02:45Z",
+          "end": "2026-09-30T18:03:21Z",
+          "overlapped_with": []
         },
         "sharegpt-c1.json": {
-          "start": "2026-09-30T07:19:40Z",
-          "end": "2026-09-30T07:23:01Z",
-          "overlapped_with": [
-            {
-              "file": "c1.json",
-              "concurrency": 1
-            },
-            {
-              "file": "c8.json",
-              "concurrency": 8
-            }
-          ]
+          "start": "2026-09-30T18:07:33Z",
+          "end": "2026-09-30T18:10:48Z",
+          "overlapped_with": []
         },
         "sharegpt-c16.json": {
-          "start": "2026-09-30T07:25:38Z",
-          "end": "2026-09-30T07:26:17Z",
+          "start": "2026-09-30T18:12:11Z",
+          "end": "2026-09-30T18:12:52Z",
           "overlapped_with": []
         },
         "sharegpt-c32.json": {
-          "start": "2026-09-30T07:30:34Z",
-          "end": "2026-09-30T07:31:16Z",
+          "start": "2026-09-30T18:13:16Z",
+          "end": "2026-09-30T18:13:59Z",
           "overlapped_with": []
         },
         "sharegpt-c64.json": {
-          "start": "2026-09-30T07:50:46Z",
-          "end": "2026-09-30T07:51:50Z",
-          "overlapped_with": [
-            {
-              "file": "c16.json",
-              "concurrency": 16
-            }
-          ]
+          "start": "2026-09-30T18:14:23Z",
+          "end": "2026-09-30T18:15:18Z",
+          "overlapped_with": []
         },
         "sharegpt-c8.json": {
-          "start": "2026-09-30T07:29:25Z",
-          "end": "2026-09-30T07:30:07Z",
-          "overlapped_with": [
-            {
-              "file": "c32.json",
-              "concurrency": 32
-            }
-          ]
+          "start": "2026-09-30T18:11:11Z",
+          "end": "2026-09-30T18:11:45Z",
+          "overlapped_with": []
         },
         "single-t0.7.json": {
-          "start": "2026-09-30T07:10:12Z",
-          "end": "2026-09-30T07:13:43Z",
+          "start": "2026-09-30T17:55:14Z",
+          "end": "2026-09-30T17:56:55Z",
           "overlapped_with": []
         },
         "single-t0.json": {
-          "start": "2026-09-30T07:06:12Z",
-          "end": "2026-09-30T07:07:54Z",
+          "start": "2026-09-30T07:04:29Z",
+          "end": "2026-09-30T07:06:12Z",
           "overlapped_with": []
         }
       },
-      "overlap_note": "7 of 12 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c16.json, c32.json, c8.json, sharegpt-c1.json, sharegpt-c64.json, sharegpt-c8.json",
+      "first_pass": {
+        "folder": "sweeps/BF16/first-pass",
+        "note": "the afternoon sweep: its random and ShareGPT runs shared the pod for stretches (the bench client runs inside the pod, so two runs at once share one server), and BF16's and INT4's single-t0.7 ran while the GSM8K eval (lm_eval, 32 concurrent) hit the same pod, doubling and tripling the per-token time; redone in the evening with one client per pod, which is what the numbers come from"
+      },
       "sweep_dir": "BF16",
       "captures_dir": "BF16",
       "speed_vs_baseline": 1.0,
-      "speed_vs_baseline_t0_7": null,
+      "speed_vs_baseline_t0_7": 1.0,
       "per_h200": {
         "slices": 1,
         "throughput_tps": 66.0,
@@ -316,118 +286,74 @@
       },
       "sweep_runs": {
         "c1.json": {
-          "start": "2026-09-30T13:50:29Z",
-          "end": "2026-09-30T13:54:50Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:27:16Z",
+          "end": "2026-09-30T18:31:38Z",
+          "overlapped_with": []
         },
         "c16.json": {
-          "start": "2026-09-30T13:57:23Z",
-          "end": "2026-09-30T13:58:09Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:33:03Z",
+          "end": "2026-09-30T18:33:50Z",
+          "overlapped_with": []
         },
         "c32.json": {
-          "start": "2026-09-30T14:01:34Z",
-          "end": "2026-09-30T14:02:48Z",
+          "start": "2026-09-30T18:34:13Z",
+          "end": "2026-09-30T18:35:14Z",
           "overlapped_with": []
         },
         "c64.json": {
-          "start": "2026-09-30T14:06:09Z",
-          "end": "2026-09-30T14:08:01Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c64.json",
-              "concurrency": 64
-            }
-          ]
+          "start": "2026-09-30T18:35:37Z",
+          "end": "2026-09-30T18:37:03Z",
+          "overlapped_with": []
         },
         "c8.json": {
-          "start": "2026-09-30T13:55:25Z",
-          "end": "2026-09-30T13:56:04Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:32:02Z",
+          "end": "2026-09-30T18:32:42Z",
+          "overlapped_with": []
         },
         "sharegpt-c1.json": {
-          "start": "2026-09-30T13:54:27Z",
-          "end": "2026-09-30T13:58:04Z",
-          "overlapped_with": [
-            {
-              "file": "c1.json",
-              "concurrency": 1
-            },
-            {
-              "file": "c16.json",
-              "concurrency": 16
-            },
-            {
-              "file": "c8.json",
-              "concurrency": 8
-            },
-            {
-              "file": "sharegpt-c8.json",
-              "concurrency": 8
-            }
-          ]
+          "start": "2026-09-30T18:37:28Z",
+          "end": "2026-09-30T18:40:56Z",
+          "overlapped_with": []
         },
         "sharegpt-c16.json": {
-          "start": "2026-09-30T14:00:00Z",
-          "end": "2026-09-30T14:01:07Z",
+          "start": "2026-09-30T18:42:16Z",
+          "end": "2026-09-30T18:43:02Z",
           "overlapped_with": []
         },
         "sharegpt-c32.json": {
-          "start": "2026-09-30T14:03:38Z",
-          "end": "2026-09-30T14:05:21Z",
+          "start": "2026-09-30T18:43:33Z",
+          "end": "2026-09-30T18:44:24Z",
           "overlapped_with": []
         },
         "sharegpt-c64.json": {
-          "start": "2026-09-30T14:07:43Z",
-          "end": "2026-09-30T14:08:54Z",
-          "overlapped_with": [
-            {
-              "file": "c64.json",
-              "concurrency": 64
-            }
-          ]
+          "start": "2026-09-30T18:44:48Z",
+          "end": "2026-09-30T18:46:00Z",
+          "overlapped_with": []
         },
         "sharegpt-c8.json": {
-          "start": "2026-09-30T13:56:18Z",
-          "end": "2026-09-30T13:56:49Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:41:20Z",
+          "end": "2026-09-30T18:41:53Z",
+          "overlapped_with": []
         },
         "single-t0.7.json": {
-          "start": "2026-09-30T13:45:18Z",
-          "end": "2026-09-30T13:47:05Z",
+          "start": "2026-09-30T13:43:30Z",
+          "end": "2026-09-30T13:45:18Z",
           "overlapped_with": []
         },
         "single-t0.json": {
-          "start": "2026-09-30T13:42:13Z",
-          "end": "2026-09-30T13:43:53Z",
+          "start": "2026-09-30T13:40:32Z",
+          "end": "2026-09-30T13:42:13Z",
           "overlapped_with": []
         }
       },
-      "overlap_note": "7 of 12 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c16.json, c64.json, c8.json, sharegpt-c1.json, sharegpt-c64.json, sharegpt-c8.json",
+      "first_pass": {
+        "folder": "sweeps/FP8/first-pass",
+        "note": "the afternoon sweep: its random and ShareGPT runs shared the pod for stretches (the bench client runs inside the pod, so two runs at once share one server), and BF16's and INT4's single-t0.7 ran while the GSM8K eval (lm_eval, 32 concurrent) hit the same pod, doubling and tripling the per-token time; redone in the evening with one client per pod, which is what the numbers come from"
+      },
       "sweep_dir": "FP8",
       "captures_dir": "FP8",
       "speed_vs_baseline": 0.962,
-      "speed_vs_baseline_t0_7": null,
+      "speed_vs_baseline_t0_7": 0.963,
       "per_h200": {
         "slices": 2,
         "throughput_tps": 127.0,
@@ -460,13 +386,19 @@
       "avg_tokens_per_request": 214.4,
       "avg_input_tokens": 226.9,
       "temperature": 0,
-      "at_temperature_0_7": null,
-      "excluded_runs": [
-        {
-          "file": "sweeps/INT4/single-t0.7.json",
-          "reason": "the INT4 MMLU-Pro eval (lm_eval, 32 concurrent) ran against the same pod during this run: per-token time tripled at the same output length"
-        }
-      ],
+      "at_temperature_0_7": {
+        "prompts": 30,
+        "throughput_tps": 56.3,
+        "avg_latency_ms": 3738.5,
+        "median_latency_ms": 2134.2,
+        "p95_latency_ms": 13293.6,
+        "ttft_ms_avg": 63.8,
+        "ttft_ms_median": 45.0,
+        "ttft_ms_p95": 143.1,
+        "tpot_ms_median": 17.53,
+        "avg_tokens_per_request": 210.5,
+        "avg_input_tokens": 226.9
+      },
       "pod": "qwen-int4-predictor-5d5c69c57b-qcrcc",
       "weights_gib_per_gpu": 17.73,
       "kv_cache_tokens": 1236992,
@@ -513,140 +445,70 @@
       },
       "sweep_runs": {
         "c1.json": {
-          "start": "2026-09-30T07:25:06Z",
-          "end": "2026-09-30T07:30:03Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T17:58:22Z",
+          "end": "2026-09-30T18:03:15Z",
+          "overlapped_with": []
         },
         "c16.json": {
-          "start": "2026-09-30T07:34:28Z",
-          "end": "2026-09-30T07:35:42Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            },
-            {
-              "file": "sharegpt-c32.json",
-              "concurrency": 32
-            }
-          ]
+          "start": "2026-09-30T18:04:48Z",
+          "end": "2026-09-30T18:05:41Z",
+          "overlapped_with": []
         },
         "c32.json": {
-          "start": "2026-09-30T07:33:07Z",
-          "end": "2026-09-30T07:34:24Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            },
-            {
-              "file": "sharegpt-c8.json",
-              "concurrency": 8
-            }
-          ]
+          "start": "2026-09-30T18:06:04Z",
+          "end": "2026-09-30T18:07:09Z",
+          "overlapped_with": []
         },
         "c64.json": {
-          "start": "2026-09-30T07:37:16Z",
-          "end": "2026-09-30T07:39:18Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c16.json",
-              "concurrency": 16
-            }
-          ]
+          "start": "2026-09-30T18:07:33Z",
+          "end": "2026-09-30T18:09:25Z",
+          "overlapped_with": []
         },
         "c8.json": {
-          "start": "2026-09-30T07:31:10Z",
-          "end": "2026-09-30T07:32:01Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:03:39Z",
+          "end": "2026-09-30T18:04:24Z",
+          "overlapped_with": []
         },
         "sharegpt-c1.json": {
-          "start": "2026-09-30T07:29:55Z",
-          "end": "2026-09-30T07:34:28Z",
-          "overlapped_with": [
-            {
-              "file": "c1.json",
-              "concurrency": 1
-            },
-            {
-              "file": "c16.json",
-              "concurrency": 16
-            },
-            {
-              "file": "c32.json",
-              "concurrency": 32
-            },
-            {
-              "file": "c8.json",
-              "concurrency": 8
-            },
-            {
-              "file": "sharegpt-c8.json",
-              "concurrency": 8
-            }
-          ]
+          "start": "2026-09-30T18:09:51Z",
+          "end": "2026-09-30T18:13:45Z",
+          "overlapped_with": []
         },
         "sharegpt-c16.json": {
-          "start": "2026-09-30T07:36:40Z",
-          "end": "2026-09-30T07:38:26Z",
-          "overlapped_with": [
-            {
-              "file": "c64.json",
-              "concurrency": 64
-            }
-          ]
+          "start": "2026-09-30T18:15:15Z",
+          "end": "2026-09-30T18:16:06Z",
+          "overlapped_with": []
         },
         "sharegpt-c32.json": {
-          "start": "2026-09-30T07:34:46Z",
-          "end": "2026-09-30T07:35:59Z",
-          "overlapped_with": [
-            {
-              "file": "c16.json",
-              "concurrency": 16
-            }
-          ]
+          "start": "2026-09-30T18:16:30Z",
+          "end": "2026-09-30T18:17:27Z",
+          "overlapped_with": []
         },
         "sharegpt-c64.json": {
-          "start": "2026-09-30T07:39:29Z",
-          "end": "2026-09-30T07:41:16Z",
+          "start": "2026-09-30T18:17:53Z",
+          "end": "2026-09-30T18:19:24Z",
           "overlapped_with": []
         },
         "sharegpt-c8.json": {
-          "start": "2026-09-30T07:32:49Z",
-          "end": "2026-09-30T07:34:01Z",
-          "overlapped_with": [
-            {
-              "file": "c32.json",
-              "concurrency": 32
-            },
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:14:10Z",
+          "end": "2026-09-30T18:14:50Z",
+          "overlapped_with": []
         },
         "single-t0.7.json": {
-          "start": "2026-09-30T07:12:31Z",
-          "end": "2026-09-30T07:17:52Z",
+          "start": "2026-09-30T17:55:17Z",
+          "end": "2026-09-30T17:57:10Z",
           "overlapped_with": []
         },
         "single-t0.json": {
-          "start": "2026-09-30T07:06:40Z",
-          "end": "2026-09-30T07:08:33Z",
+          "start": "2026-09-30T07:04:46Z",
+          "end": "2026-09-30T07:06:40Z",
           "overlapped_with": []
         }
       },
-      "overlap_note": "9 of 12 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c16.json, c32.json, c64.json, c8.json, sharegpt-c1.json, sharegpt-c16.json, sharegpt-c32.json, sharegpt-c8.json",
+      "first_pass": {
+        "folder": "sweeps/INT4/first-pass",
+        "note": "the afternoon sweep: its random and ShareGPT runs shared the pod for stretches (the bench client runs inside the pod, so two runs at once share one server), and BF16's and INT4's single-t0.7 ran while the GSM8K eval (lm_eval, 32 concurrent) hit the same pod, doubling and tripling the per-token time; redone in the evening with one client per pod, which is what the numbers come from"
+      },
       "sweep_dir": "INT4",
       "captures_dir": "INT4",
       "int4_35": {
@@ -711,101 +573,71 @@
         "image_digest": "registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:c056e61672b6aea489ad5dde0bd2f8497230f5333e87f7cf6c494eba3bfdc808",
         "sweep_runs": {
           "c1.json": {
-            "start": "2026-09-30T16:54:30Z",
-            "end": "2026-09-30T17:11:29Z",
-            "overlapped_with": [
-              {
-                "file": "c8.json",
-                "concurrency": 8
-              },
-              {
-                "file": "sharegpt-c1.json",
-                "concurrency": 1
-              }
-            ]
+            "start": "2026-09-30T16:37:30Z",
+            "end": "2026-09-30T16:54:30Z",
+            "overlapped_with": []
           },
           "c16.json": {
-            "start": "2026-09-30T16:16:45Z",
-            "end": "2026-09-30T16:19:16Z",
+            "start": "2026-09-30T16:14:13Z",
+            "end": "2026-09-30T16:16:45Z",
             "overlapped_with": []
           },
           "c32.json": {
-            "start": "2026-09-30T16:22:49Z",
-            "end": "2026-09-30T16:25:42Z",
+            "start": "2026-09-30T16:19:55Z",
+            "end": "2026-09-30T16:22:49Z",
             "overlapped_with": []
           },
           "c64.json": {
-            "start": "2026-09-30T16:30:23Z",
-            "end": "2026-09-30T16:34:37Z",
-            "overlapped_with": [
-              {
-                "file": "sharegpt-c64.json",
-                "concurrency": 64
-              }
-            ]
+            "start": "2026-09-30T16:26:08Z",
+            "end": "2026-09-30T16:30:23Z",
+            "overlapped_with": []
           },
           "c8.json": {
-            "start": "2026-09-30T16:57:00Z",
-            "end": "2026-09-30T16:59:23Z",
-            "overlapped_with": [
-              {
-                "file": "c1.json",
-                "concurrency": 1
-              }
-            ]
+            "start": "2026-09-30T16:54:36Z",
+            "end": "2026-09-30T16:57:00Z",
+            "overlapped_with": []
           },
           "sharegpt-c1.json": {
-            "start": "2026-09-30T17:10:44Z",
-            "end": "2026-09-30T17:24:06Z",
-            "overlapped_with": [
-              {
-                "file": "c1.json",
-                "concurrency": 1
-              }
-            ]
+            "start": "2026-09-30T16:57:21Z",
+            "end": "2026-09-30T17:10:44Z",
+            "overlapped_with": []
           },
           "sharegpt-c16.json": {
-            "start": "2026-09-30T16:19:37Z",
-            "end": "2026-09-30T16:22:08Z",
+            "start": "2026-09-30T16:17:05Z",
+            "end": "2026-09-30T16:19:37Z",
             "overlapped_with": []
           },
           "sharegpt-c32.json": {
-            "start": "2026-09-30T16:25:49Z",
-            "end": "2026-09-30T16:28:27Z",
+            "start": "2026-09-30T16:23:10Z",
+            "end": "2026-09-30T16:25:49Z",
             "overlapped_with": []
           },
           "sharegpt-c64.json": {
-            "start": "2026-09-30T16:34:20Z",
-            "end": "2026-09-30T16:37:55Z",
-            "overlapped_with": [
-              {
-                "file": "c64.json",
-                "concurrency": 64
-              }
-            ]
+            "start": "2026-09-30T16:30:44Z",
+            "end": "2026-09-30T16:34:20Z",
+            "overlapped_with": []
           },
           "sharegpt-c8.json": {
-            "start": "2026-09-30T16:13:55Z",
-            "end": "2026-09-30T16:16:09Z",
+            "start": "2026-09-30T16:11:40Z",
+            "end": "2026-09-30T16:13:55Z",
             "overlapped_with": []
           },
           "single-t0.7.json": {
-            "start": "2026-09-30T15:54:06Z",
-            "end": "2026-09-30T16:00:52Z",
+            "start": "2026-09-30T15:47:19Z",
+            "end": "2026-09-30T15:54:06Z",
             "overlapped_with": []
           },
           "single-t0.json": {
-            "start": "2026-09-30T15:44:47Z",
-            "end": "2026-09-30T15:51:32Z",
+            "start": "2026-09-30T15:38:01Z",
+            "end": "2026-09-30T15:44:47Z",
             "overlapped_with": []
           }
         },
-        "overlap_note": "5 of 12 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c64.json, c8.json, sharegpt-c1.json, sharegpt-c64.json",
         "sweep_dir": "INT4_35",
         "captures_dir": "INT4_35",
         "note": "the same checkpoint on a 35 GB slice (three per H200): it loads and answers, in eager mode (the NVML CUDA-graph profiling bug on that slice), and never got under the 50 ms p95 budget under load",
         "speed_vs_baseline": 0.241,
-        "speed_vs_baseline_t0_7": null,
+        "speed_vs_baseline_t0_7": 0.239,
         "per_h200": {
           "slices": 3,
           "throughput_tps": 47.7,
@@ -813,7 +645,7 @@
         }
       },
       "speed_vs_baseline": 0.861,
-      "speed_vs_baseline_t0_7": null,
+      "speed_vs_baseline_t0_7": 0.862,
       "per_h200": {
         "slices": 2,
         "throughput_tps": 113.7,
@@ -1042,133 +874,89 @@
       "throughput_tps_k8": 142.7,
       "sweep_runs": {
         "c1.json": {
-          "start": "2026-09-30T13:35:27Z",
-          "end": "2026-09-30T13:38:37Z",
-          "overlapped_with": [
-            {
-              "file": "c64.json",
-              "concurrency": 64
-            },
-            {
-              "file": "sharegpt-c32.json",
-              "concurrency": 32
-            },
-            {
-              "file": "sharegpt-c64.json",
-              "concurrency": 64
-            }
-          ]
+          "start": "2026-09-30T18:27:02Z",
+          "end": "2026-09-30T18:29:20Z",
+          "overlapped_with": []
         },
         "c16.json": {
-          "start": "2026-09-30T13:32:52Z",
-          "end": "2026-09-30T13:33:22Z",
+          "start": "2026-09-30T18:30:33Z",
+          "end": "2026-09-30T18:31:02Z",
           "overlapped_with": []
         },
         "c32.json": {
-          "start": "2026-09-30T13:34:38Z",
-          "end": "2026-09-30T13:35:20Z",
+          "start": "2026-09-30T18:31:23Z",
+          "end": "2026-09-30T18:32:05Z",
           "overlapped_with": []
         },
         "c64.json": {
-          "start": "2026-09-30T13:37:02Z",
-          "end": "2026-09-30T13:38:14Z",
-          "overlapped_with": [
-            {
-              "file": "c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:32:28Z",
+          "end": "2026-09-30T18:33:40Z",
+          "overlapped_with": []
         },
         "c8.json": {
-          "start": "2026-09-30T13:31:23Z",
-          "end": "2026-09-30T13:31:47Z",
-          "overlapped_with": [
-            {
-              "file": "single-t0.7.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:29:42Z",
+          "end": "2026-09-30T18:30:12Z",
+          "overlapped_with": []
         },
         "sharegpt-c1.json": {
-          "start": "2026-09-30T13:38:52Z",
-          "end": "2026-09-30T13:41:57Z",
-          "overlapped_with": [
-            {
-              "file": "sharegpt-c64.json",
-              "concurrency": 64
-            }
-          ]
+          "start": "2026-09-30T18:34:05Z",
+          "end": "2026-09-30T18:35:52Z",
+          "overlapped_with": []
         },
         "sharegpt-c16.json": {
-          "start": "2026-09-30T13:33:37Z",
-          "end": "2026-09-30T13:34:01Z",
+          "start": "2026-09-30T18:36:59Z",
+          "end": "2026-09-30T18:37:23Z",
           "overlapped_with": []
         },
         "sharegpt-c32.json": {
-          "start": "2026-09-30T13:35:30Z",
-          "end": "2026-09-30T13:36:01Z",
-          "overlapped_with": [
-            {
-              "file": "c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:37:46Z",
+          "end": "2026-09-30T18:38:18Z",
+          "overlapped_with": []
         },
         "sharegpt-c64.json": {
-          "start": "2026-09-30T13:38:15Z",
-          "end": "2026-09-30T13:39:07Z",
-          "overlapped_with": [
-            {
-              "file": "c1.json",
-              "concurrency": 1
-            },
-            {
-              "file": "sharegpt-c1.json",
-              "concurrency": 1
-            }
-          ]
+          "start": "2026-09-30T18:38:43Z",
+          "end": "2026-09-30T18:39:35Z",
+          "overlapped_with": []
         },
         "sharegpt-c8.json": {
-          "start": "2026-09-30T13:32:03Z",
-          "end": "2026-09-30T13:32:21Z",
+          "start": "2026-09-30T18:36:17Z",
+          "end": "2026-09-30T18:36:35Z",
           "overlapped_with": []
         },
         "single-t0-k1.json": {
-          "start": "2026-09-30T13:57:09Z",
-          "end": "2026-09-30T13:58:13Z",
+          "start": "2026-09-30T13:56:04Z",
+          "end": "2026-09-30T13:57:09Z",
           "overlapped_with": []
         },
         "single-t0-k2.json": {
-          "start": "2026-09-30T13:47:01Z",
-          "end": "2026-09-30T13:47:53Z",
+          "start": "2026-09-30T13:46:08Z",
+          "end": "2026-09-30T13:47:01Z",
           "overlapped_with": []
         },
         "single-t0-k8.json": {
-          "start": "2026-09-30T17:33:55Z",
-          "end": "2026-09-30T17:34:42Z",
+          "start": "2026-09-30T17:33:07Z",
+          "end": "2026-09-30T17:33:55Z",
           "overlapped_with": []
         },
         "single-t0.7.json": {
-          "start": "2026-09-30T13:31:10Z",
-          "end": "2026-09-30T13:31:59Z",
-          "overlapped_with": [
-            {
-              "file": "c8.json",
-              "concurrency": 8
-            }
-          ]
+          "start": "2026-09-30T13:30:20Z",
+          "end": "2026-09-30T13:31:10Z",
+          "overlapped_with": []
         },
         "single-t0.json": {
-          "start": "2026-09-30T13:29:38Z",
-          "end": "2026-09-30T13:30:22Z",
+          "start": "2026-09-30T13:28:53Z",
+          "end": "2026-09-30T13:29:38Z",
           "overlapped_with": []
         }
       },
-      "overlap_note": "7 of 15 runs shared the pod with another vllm bench serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are lower bounds and the app labels them: c1.json, c64.json, c8.json, sharegpt-c1.json, sharegpt-c32.json, sharegpt-c64.json, single-t0.7.json",
+      "first_pass": {
+        "folder": "sweeps/SPEC_DECODE/first-pass",
+        "note": "the afternoon sweep: its random and ShareGPT runs shared the pod for stretches (the bench client runs inside the pod, so two runs at once share one server), and BF16's and INT4's single-t0.7 ran while the GSM8K eval (lm_eval, 32 concurrent) hit the same pod, doubling and tripling the per-token time; redone in the evening with one client per pod, which is what the numbers come from"
+      },
       "sweep_dir": "SPEC_DECODE",
       "captures_dir": "SPEC_DECODE",
       "speed_vs_baseline": 2.291,
-      "speed_vs_baseline_t0_7": null,
+      "speed_vs_baseline_t0_7": 2.073,
       "per_h200": {
         "slices": 1,
         "throughput_tps": 151.2,

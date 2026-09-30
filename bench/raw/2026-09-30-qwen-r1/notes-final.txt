@@ -1,0 +1,29 @@
+Final clean sweep — 2026-09-30
+==============================
+
+All sweeps redone because the earlier run had two clients hitting the same pod
+simultaneously (random and sharegpt running in parallel against one server).
+The single-request numbers, accuracy tests, captures, and k=1/2/4/8 spec decode
+passes from the earlier run are clean and kept in results-qwen/.
+
+Order of work (one client per pod at all times):
+  1. Deployed BF16 (full H200) + INT4 (71GB slice)
+  2. Live demo check with both pods (step 1)
+  3. Clean single-t0.7 for BF16 and INT4 (step 2, parallel — different pods)
+  4. Full sweep BF16 + INT4 (step 3, parallel — different pods)
+  5. Swapped: BF16 → MTP (k=4, full H200), INT4 → FP8 (71GB slice)
+  6. Full sweep MTP + FP8 (step 3, parallel — different pods)
+  7. Deleted all pods
+
+No two clients ran against one pod at any time during this run.
+
+Temperature-0.7 TPOT (clean redo):
+  BF16: 15.17 ms (was 30 ms contaminated)
+  INT4: 17.52 ms (was 46 ms contaminated)
+
+Live demo check:
+  BF16 and INT4 columns streamed live answers (1st/2nd markers)
+  FP8 and Spec Decode showed "didn't answer" (no pods, expected)
+  Badge: LIVE MODELS
+  Preflight: BF16+INT4 endpoints PASS, recordings FAIL (expected, not recorded yet)
+  8 screenshots saved in live/

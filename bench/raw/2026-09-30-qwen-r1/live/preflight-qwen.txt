@@ -1,0 +1,17 @@
+Setup                 Check               Result  Detail
+BF16                  models list         PASS    serves 'qwen-bf16'
+BF16                  1-token completion  PASS    122 ms
+BF16                  warm-up             PASS    3 requests, 224 ms, 226 ms, 289 ms
+BF16                  recordings          FAIL    no recording in quality/BF16/ for: Explain KV cache
+FP8                   models list         FAIL    ConnectError: [Errno 61] Connection refused
+FP8                   recordings          FAIL    no recording in quality/FP8/ for: Explain KV cache
+INT4 (Red Hat W4A16)  models list         PASS    serves 'qwen-int4'
+INT4 (Red Hat W4A16)  1-token completion  PASS    123 ms
+INT4 (Red Hat W4A16)  warm-up             PASS    3 requests, 246 ms, 248 ms, 241 ms
+INT4 (Red Hat W4A16)  recordings          FAIL    no recording in quality/INT4_RH/ for: Explain KV cache
+INT4 (Red Hat W4A16)  INT4 build          WARN    served name 'qwen-int4' but recordings come from quality/INT4_RH/
+Spec Decode           models list         FAIL    ConnectError: [Errno 61] Connection refused
+Spec Decode           recordings          FAIL    no recording in quality/SPEC_DECODE/ for: Explain KV cache
+app                   corner badge        PASS    "Live models"
+
+FAIL: 6 failed, 1 warnings, 14 checks

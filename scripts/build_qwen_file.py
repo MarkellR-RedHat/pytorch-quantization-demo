@@ -60,12 +60,17 @@ INT4_35 = {"raw": "INT4_35", "pod": "qwen-int4-35gb-predictor-7ccb746499-qcbgv",
            "pod_note": "the later of the two 35 GB pods, the one with the GPU record; both ran in eager mode"}
 
 # Runs the file keeps but no number is taken from, with the reason (the raw files stay as delivered).
-EXCLUDED = {
-    ("BF16", "single-t0.7.json"): "the BF16 MMLU-Pro eval (lm_eval, 32 concurrent) ran against the same pod "
-                                  "during this run: per-token time doubled at the same output length",
-    ("INT4", "single-t0.7.json"): "the INT4 MMLU-Pro eval (lm_eval, 32 concurrent) ran against the same pod "
-                                  "during this run: per-token time tripled at the same output length",
-}
+# Empty since the final pass: the runs it named are in sweeps/<V>/first-pass/ (see FIRST_PASS).
+EXCLUDED: dict[tuple[str, str], str] = {}
+
+# A setup's first-pass/ folder holds the Sep 30 afternoon sweep, redone in the evening with one client
+# per pod. Nothing is read from it; the note says why it was redone.
+FIRST_PASS = (
+    "the afternoon sweep: its random and ShareGPT runs shared the pod for stretches (the bench client "
+    "runs inside the pod, so two runs at once share one server), and BF16's and INT4's single-t0.7 ran "
+    "while the GSM8K eval (lm_eval, 32 concurrent) hit the same pod, doubling and tripling the per-token "
+    "time; redone in the evening with one client per pod, which is what the numbers come from"
+)
 
 
 def pod_file(raw: Path, pod: str, suffix: str) -> Path:
@@ -242,16 +247,18 @@ def snapshot_keys(raw: Path) -> set[tuple[str, int]]:
 
 
 def sweep_runs(raw: Path, folder: str) -> dict:
-    """Every vllm bench serve run in the setup's folder with its window (the pod's clock, from the
-    result's date and duration) and which other runs on the same pod overlapped it. The bench client
-    runs inside the pod, so two runs at once share one server: an overlapped point is a lower bound."""
+    """Every vllm bench serve run in the setup's folder with its window (the pod's clock) and which other
+    runs on the same pod overlapped it. vllm bench serve stamps `date` when it writes the result, after
+    the run, and `duration` is the run's length, so the window is [date - duration, date]. The bench
+    client runs inside the pod, so two runs at once share one server: an overlapped point is a lower
+    bound."""
     runs = {}
     for path in sorted((raw / "sweeps" / folder).glob("*.json")):
         d = load(path)
         if not d.get("date") or d.get("duration") is None:
             continue
-        start = datetime.strptime(d["date"], "%Y%m%d-%H%M%S")
-        runs[path.name] = {"start": start, "end": start + timedelta(seconds=float(d["duration"])),
+        end = datetime.strptime(d["date"], "%Y%m%d-%H%M%S")
+        runs[path.name] = {"start": end - timedelta(seconds=float(d["duration"])), "end": end,
                            "concurrency": d.get("max_concurrency")}
     out = {}
     for name, r in runs.items():
@@ -321,6 +328,8 @@ def setup(raw: Path, spec: dict) -> dict:
             "serve run (the random and ShareGPT sweeps ran side by side for stretches); those points are "
             "lower bounds and the app labels them: " + ", ".join(overlapped)
         )
+    if (raw / "sweeps" / spec["raw"] / "first-pass").is_dir():
+        out["first_pass"] = {"folder": f"sweeps/{spec['raw']}/first-pass", "note": FIRST_PASS}
     out["sweep_dir"] = spec["raw"]
     out["captures_dir"] = spec["raw"]
     return out
@@ -406,10 +415,11 @@ def build(raw: Path) -> dict:
             "also with CUDA graphs); INT4 once more on a 35 GB slice (three per H200) in eager mode, the "
             "workaround for an NVML CUDA-graph profiling failure on that slice. The slices were borrowed "
             "on a shared node. Every throughput is per device; per_h200 is that number times the slices "
-            "per card, arithmetic and not a measurement. Under load, some runs shared their pod with "
-            "another vllm bench serve run (sweep_runs lists every window); those points are lower bounds. "
-            "The temperature-0.7 single-stream runs of BF16 and INT4 ran while their MMLU-Pro eval hit the "
-            "same pod and are excluded. Accuracy is lm_eval: GSM8K (gsm8k_cot, not the Llama prompt "
+            "per card, arithmetic and not a measurement. The sweeps and the BF16 and INT4 temperature-0.7 "
+            "runs are the evening pass, one client per pod; the afternoon pass, where runs shared their "
+            "pod, is kept under sweeps/<V>/first-pass/ and nothing is read from it (sweep_runs lists every "
+            "run's window and any overlap, and the app labels an overlapped point as a lower bound). "
+            "Accuracy is lm_eval: GSM8K (gsm8k_cot, not the Llama prompt "
             "format, so not comparable with the Llama track's figures) on all questions and MMLU-Pro on "
             "the first 20 of each subject. Spec decode counters were read before and after each "
             "single-stream run, per temperature and per number of speculative tokens (k). Thinking mode: "
