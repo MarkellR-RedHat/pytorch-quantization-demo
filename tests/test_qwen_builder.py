@@ -41,7 +41,7 @@ def test_four_setups_with_devices(built):
     assert v["FP8"]["device"] == v["INT4"]["device"] == {"name": "71 GB slice", "count": 1, "per_h200": 2}
     assert v["INT4"]["int4_35"]["device"] == {"name": "35 GB slice", "count": 1, "per_h200": 3}
     assert out["vllm_version"] == "0.24.0+rhaiv.13" and out["transformers_version"] == "5.16.1"
-    assert out["thinking"].startswith("thinking: off; off server-side in every pod")
+    assert out["thinking"].startswith("off; off server-side in every pod")
     assert out["date"] == "2026-10-02"
 
 

@@ -46,7 +46,7 @@ def test_puzzle_samples(setup):
 
 
 def test_graders_on_captures():
-    """b7's grading of the recordings: sheep 9, Carol on Monday, and all three JSON values, on all four."""
+    """The recordings graded: sheep 9, Carol on Monday, and all three JSON values, on all four."""
     for setup in SETUPS:
         folder = ROOT / "quality" / setup
         assert sheep_verdict(json.loads((folder / "complex_reasoning.json").read_text())["response_text"])

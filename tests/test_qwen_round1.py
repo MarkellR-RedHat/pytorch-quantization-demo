@@ -97,6 +97,6 @@ def test_the_facts_the_talk_quotes():
         assert v[k]["first_pass"]["folder"] == f"sweeps/{k}/first-pass" and "excluded_runs" not in v[k]
     assert "GSM8K eval" in v["BF16"]["first_pass"]["note"]
     assert all(r["overlapped_with"] == [] for r in s35["sweep_runs"].values())
-    # per-H200 stays arithmetic: two slices at once weren't borrowable
+    # per-H200 stays arithmetic: two slices were not loaded at once
     assert v["FP8"]["per_h200"] == {"slices": 2, "throughput_tps": 127.0, "note": BENCH["per_h200_note"]}
     assert "measured" not in v["FP8"]["per_h200"]

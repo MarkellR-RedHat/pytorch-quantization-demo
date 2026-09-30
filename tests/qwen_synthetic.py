@@ -1,4 +1,4 @@
-"""A synthetic results-qwen/ folder in the layout RUN-QWEN.md asks the work laptop for, so the Qwen builder
+"""A synthetic results-qwen/ folder in the layout RUN-QWEN.md defines, so the Qwen builder
 and the app can be tested before the real files land. Every number here is made up and marked so."""
 
 import json
