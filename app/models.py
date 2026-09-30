@@ -55,4 +55,6 @@ class AskRequest(BaseModel):
     """Presenter-only: a question typed on the presenter laptop, or one of the preset questions."""
 
     prompt: str = Field(default="", max_length=2000)
-    preset: Literal["reasoning", "code", "summary"] | None = None
+    preset: Literal["reasoning", "code", "summary", "decline", "fact", "puzzle", "explain", "json"] | None = (
+        None
+    )

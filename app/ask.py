@@ -1,8 +1,11 @@
 """Ask scene: one question streamed to every variant at once, with timing measured per variant.
 
-Live mode streams from the vLLM endpoints. Replay mode (no models connected) streams text at the
-speed measured for that variant in the benchmark, using that variant's captured output for the preset
-questions. A setup with no capture shows a note instead, so replay never shows an answer no model gave.
+Live mode streams from the vLLM endpoints. If a live request fails, or its first token takes longer than
+FIRST_TOKEN_TIMEOUT_S, or it stalls for STALL_TIMEOUT_S, a preset question falls back to that setup's
+recorded answer, labeled as recorded and never passed off as live. Replay mode (no models connected)
+streams text at the speed measured for that variant in the benchmark, using that variant's captured
+output for the preset questions. A setup with no capture shows a note instead, so replay never shows
+an answer no model gave.
 """
 
 import asyncio
@@ -12,17 +15,24 @@ import random
 import re
 import time
 from collections.abc import AsyncIterator
+from datetime import datetime
 
 from app.config import settings
 from app.openshift import openshift_client
-from app.quality import PROMPTS, get_comparison
+from app.quality import PROMPTS, get_comparison, recorded_answer
 
 logger = logging.getLogger(__name__)
 
+# preset key -> (scenario, button label). The order is the order of the buttons.
 PRESETS = {
-    "reasoning": "complex_reasoning",
-    "code": "code_generation",
-    "summary": "summarization",
+    "reasoning": ("complex_reasoning", "Sheep riddle"),
+    "code": ("code_generation", "Python function"),
+    "summary": ("summarization", "Three bullet summary"),
+    "decline": ("polite_decline", "Decline a meeting"),
+    "fact": ("quick_fact", "Quick fact"),
+    "puzzle": ("logic_puzzle", "Logic puzzle"),
+    "explain": ("long_explanation", "Explain KV cache"),
+    "json": ("json_extraction", "Extract to JSON"),
 }
 REPLAY_NOTE = (
     "Replay mode: the live models aren't connected right now, so this column plays back the speed "
@@ -33,7 +43,12 @@ NOT_CAPTURED_NOTE = (
     "Replay mode: no answer to this question was captured for this setup, so this column plays back "
     "the speed it measured on the H200s without calling a model."
 )
+NO_RECORDING_TYPED = "Live request failed. No recording exists for a typed question."
+NO_RECORDING_PRESET = "Live request failed, and no answer to this question was recorded for this setup."
 MAX_TOKENS = 1024  # high enough that answer length differences between setups show up
+# A healthy first token takes about 0.3 s, so 8 s only trips on a real failure.
+FIRST_TOKEN_TIMEOUT_S = 8.0
+STALL_TIMEOUT_S = 10.0
 _sleep = asyncio.sleep  # indirection so tests can replay instantly
 
 
@@ -41,9 +56,18 @@ def event(kind: str, **data) -> bytes:
     return (json.dumps({"t": kind, **data}) + "\n").encode()
 
 
+def scenario_for(preset: str | None) -> str | None:
+    found = PRESETS.get(preset or "")
+    return found[0] if found else None
+
+
+def preset_list() -> list[dict]:
+    return [{"key": key, "label": label, "prompt": PROMPTS[sc]} for key, (sc, label) in PRESETS.items()]
+
+
 def replay_text(variant: str, preset: str | None) -> tuple[str, str, int | None]:
     """(text, where it came from, completion tokens if known): "captured" model output or a replay "note"."""
-    scenario = PRESETS.get(preset or "")
+    scenario = scenario_for(preset)
     if not scenario:
         return REPLAY_NOTE, "note", None
     found = get_comparison(scenario, [variant])["responses"].get(variant)
@@ -53,17 +77,15 @@ def replay_text(variant: str, preset: str | None) -> tuple[str, str, int | None]
 
 
 def preset_prompt(preset: str | None) -> str | None:
-    scenario = PRESETS.get(preset or "")
+    scenario = scenario_for(preset)
     return PROMPTS[scenario] if scenario else None
 
 
-async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIterator[bytes]:
-    text, text_source, captured_tokens = replay_text(variant, preset)
+async def paced(text: str, tps: float) -> AsyncIterator[bytes]:
+    """Stream text as delta events at roughly tps tokens per second."""
     pieces = re.findall(r"\S+\s*|\s+", text)
-    tps = float(benchmark.variant(variant).get("throughput_tps") or 40.0)
     # about 1.3 tokens per word piece for English text
     per_piece = 1.3 / tps
-    yield event("start", source="replay", text_source=text_source)
     buf, due = "", 0.0
     for piece in pieces:
         buf += piece
@@ -75,6 +97,14 @@ async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIte
     if buf:
         await _sleep(due)
         yield event("delta", text=buf)
+
+
+async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIterator[bytes]:
+    text, text_source, captured_tokens = replay_text(variant, preset)
+    tps = float(benchmark.variant(variant).get("throughput_tps") or 40.0)
+    yield event("start", source="replay", text_source=text_source)
+    async for chunk in paced(text, tps):
+        yield chunk
     # Replay only paces the text at the measured speed. It reports the benchmark's measured speed and
     # first-token time (BF16 and INT4 only; spec decode's wasn't measured), plus a captured answer's
     # real token count. Total time wasn't measured for this text, so it stays "live only".
@@ -83,9 +113,55 @@ async def replay_stream(variant: str, preset: str | None, benchmark) -> AsyncIte
                 completion_tokens=captured_tokens, tokens_per_second=round(tps, 1))
 
 
+def recorded_label(captured_at: str | None, live_tokens: int) -> str:
+    try:
+        when = datetime.fromisoformat(captured_at).strftime("%b %-d") if captured_at else None
+    except ValueError:
+        when = None
+    label = f"Recorded {when}" if when else "Recorded earlier"
+    label += " · live request failed"
+    if live_tokens:
+        label += f" after {live_tokens} tokens"
+    return label
+
+
+async def recorded_stream(
+    variant: str, preset: str | None, live_tokens: int, benchmark
+) -> AsyncIterator[bytes]:
+    """After a live failure: that setup's recorded answer for the preset, labeled as recorded."""
+    scenario = scenario_for(preset)
+    found = recorded_answer(variant, scenario) if scenario else None
+    if not found:
+        yield event("error", detail=NO_RECORDING_PRESET if scenario else NO_RECORDING_TYPED)
+        return
+    yield event("fallback", label=recorded_label(found["captured_at"], live_tokens), live_tokens=live_tokens)
+    measured_tps = found["tokens_per_second"]
+    tps = float(measured_tps or benchmark.variant(variant).get("throughput_tps") or 40.0)
+    async for chunk in paced(found["text"], tps):
+        yield chunk
+    # Every number here was measured when the answer was recorded. Older recordings have no timings,
+    # so their speed is the benchmark's, and the done event says which one it is.
+    yield event("done", source="recorded", ttft_ms=found["ttft_ms"], total_ms=found["total_ms"],
+                completion_tokens=found["completion_tokens"], tokens_per_second=round(tps, 1),
+                tps_basis="recorded" if measured_tps else "benchmark")
+
+
+async def _next_line(lines, timeout: float) -> str:
+    return await asyncio.wait_for(lines.__anext__(), timeout=max(timeout, 0.01))
+
+
+class LiveFailed(Exception):
+    """A live request failed after streaming some tokens."""
+
+    def __init__(self, tokens: int, cause: BaseException):
+        super().__init__(f"after {tokens} tokens: {cause!r}")
+        self.tokens = tokens
+
+
 async def live_stream(variant: str, prompt: str) -> AsyncIterator[bytes]:
     endpoint = openshift_client.endpoint(variant)
     await openshift_client.start()
+    client = openshift_client._client
     payload = {
         "model": settings.served_name_for(variant),
         "messages": [{"role": "user", "content": prompt}],
@@ -99,27 +175,45 @@ async def live_stream(variant: str, prompt: str) -> AsyncIterator[bytes]:
     chunks = 0
     usage_tokens = None
     yield event("start", source="live")
-    async with openshift_client._client.stream("POST", endpoint, json=payload) as response:
-        response.raise_for_status()
-        async for line in response.aiter_lines():
-            if not line.startswith("data:"):
-                continue
-            data = line[5:].strip()
-            if data == "[DONE]":
-                break
-            try:
-                chunk = json.loads(data)
-            except ValueError:
-                continue
-            if chunk.get("usage"):
-                usage_tokens = chunk["usage"].get("completion_tokens")
-            for choice in chunk.get("choices") or []:
-                text = (choice.get("delta") or {}).get("content")
-                if text:
-                    if first is None:
-                        first = time.perf_counter()
-                    chunks += 1
-                    yield event("delta", text=text)
+    try:
+        request = client.build_request("POST", endpoint, json=payload)
+        response = await asyncio.wait_for(client.send(request, stream=True), FIRST_TOKEN_TIMEOUT_S)
+        try:
+            response.raise_for_status()
+            lines = response.aiter_lines()
+            while True:
+                # the first token must arrive within FIRST_TOKEN_TIMEOUT_S of sending, and after that
+                # the stream may not go quiet for longer than STALL_TIMEOUT_S
+                if first is None:
+                    limit = FIRST_TOKEN_TIMEOUT_S - (time.perf_counter() - start)
+                else:
+                    limit = STALL_TIMEOUT_S
+                try:
+                    line = await _next_line(lines, limit)
+                except StopAsyncIteration:
+                    break
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                except ValueError:
+                    continue
+                if chunk.get("usage"):
+                    usage_tokens = chunk["usage"].get("completion_tokens")
+                for choice in chunk.get("choices") or []:
+                    text = (choice.get("delta") or {}).get("content")
+                    if text:
+                        if first is None:
+                            first = time.perf_counter()
+                        chunks += 1
+                        yield event("delta", text=text)
+        finally:
+            await response.aclose()
+    except Exception as e:  # noqa: BLE001 - timeouts, HTTP errors and dropped connections alike
+        raise LiveFailed(chunks, e) from e
     end = time.perf_counter()
     tokens = int(usage_tokens or chunks)
     yield event(
@@ -138,8 +232,14 @@ async def ask_stream(
 ) -> AsyncIterator[bytes]:
     try:
         if live:
-            async for chunk in live_stream(variant, prompt):
-                yield chunk
+            try:
+                async for chunk in live_stream(variant, prompt):
+                    yield chunk
+            except Exception as e:  # noqa: BLE001 - any live failure falls back for this column only
+                logger.warning(f"Live ask for {variant} failed: {e}")
+                tokens = e.tokens if isinstance(e, LiveFailed) else 0
+                async for chunk in recorded_stream(variant, preset, tokens, benchmark):
+                    yield chunk
         else:
             async for chunk in replay_stream(variant, preset, benchmark):
                 yield chunk

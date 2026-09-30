@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.ask import ask_stream, preset_prompt
+from app.ask import ask_stream, preset_list, preset_prompt
 from app.benchmark import benchmark_data
 from app.config import ALL_VARIANTS, REPO_ROOT, settings, variant_label
 from app.metrics import metrics_collector
@@ -322,6 +322,7 @@ async def get_config(request: Request):
         "gpu_hourly_usd": settings.gpu_hourly_usd,
         "auto_traffic": settings.auto_traffic and settings.auto_traffic_rps > 0,
         "benchmark": benchmark_data.meta(variant_label),
+        "presets": preset_list(),
     }
 
 

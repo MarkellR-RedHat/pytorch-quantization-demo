@@ -257,7 +257,6 @@ kbd {
 .verdict.fail { background: var(--brand-wash); color: var(--brand-ink); }
 .verdict svg { width: 20px; height: 20px; flex: none; fill: currentColor; }
 .src-badge { font-family: var(--mono); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
-.src-badge.illustrative { background: var(--surface-3); color: var(--ink-2); }
 .src-badge.captured { background: var(--good-wash); color: var(--good); }
 
 /* ------------------------------------------------------------ footer */
@@ -278,8 +277,9 @@ kbd {
 .ask-bar input::placeholder { color: var(--ink-3); }
 .ask-bar input:focus { border-color: var(--v-bf16); }
 .ask-bar .btn { height: 68px; padding: 0 30px; font-size: 20px; border-radius: 14px; }
-.ask-meta { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 44px; }
-.presets { display: flex; align-items: center; gap: 10px; }
+.ask-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.presets { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+.router[hidden] { display: block; visibility: hidden; }
 .presets-label { font-size: 17px; color: var(--ink-3); margin-right: 4px; }
 .presets button {
     height: 40px; padding: 0 16px; border-radius: 999px; cursor: pointer;
@@ -287,7 +287,7 @@ kbd {
     font-weight: 600; font-size: 16px;
 }
 .presets button:hover { color: var(--ink); border-color: var(--ink-3); }
-.router { margin: 0; font-size: 18px; color: var(--ink-2); white-space: nowrap; }
+.router { margin: 0; min-height: 26px; font-size: 18px; color: var(--ink-2); white-space: nowrap; }
 .router b { color: var(--ink); }
 .router .glyph { width: 20px; height: 15px; vertical-align: -1px; margin: 0 6px 0 4px; }
 
@@ -306,6 +306,13 @@ kbd {
 }
 .answer.idle { color: var(--ink-3); }
 .answer.err { color: var(--brand-ink); }
+.answer .live-part { color: var(--ink-2); }
+.answer .fb-divider {
+    display: block; margin: 14px 0 12px; padding-top: 10px; border-top: 2px dashed var(--brand-ink);
+    font-family: var(--mono); font-size: 14px; font-weight: 700; letter-spacing: .02em; color: var(--brand-ink);
+}
+.answer .live-part + .fb-divider { margin-top: 16px; }
+.answer > .fb-divider:first-child { margin-top: 0; }
 .astats { display: grid; grid-template-columns: repeat(4, 1fr) auto; align-items: end; gap: 10px; padding: 14px 24px 18px; border-top: 1px solid var(--line); }
 .astats div { display: flex; flex-direction: column; gap: 2px; }
 .astats b { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--ink); }
@@ -373,4 +380,6 @@ kbd {
 .mcard .gets { line-height: 1.3; min-height: 2.6em; }
 .mcard .nums span { min-height: 2.6em; }
 .mcard .nums b.small { font-size: 34px; line-height: 46px; color: var(--ink-3); }
+.acol-head .src.recorded { color: var(--brand-ink); border: 1px solid var(--brand-ink); background: var(--brand-wash); }
 .acol-head .src { margin-left: 10px; font-family: var(--mono); font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); padding: 3px 8px; border-radius: 999px; border: 1px dashed var(--line-strong); }
+.bottom a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--line-strong); }

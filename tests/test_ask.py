@@ -112,3 +112,121 @@ def test_replay_uses_each_setups_captured_answer(client):
         path = settings.resolve(settings.quality_dir) / key / "complex_reasoning.json"
         captured = json.loads(path.read_text())
         assert text == captured["response_text"]
+
+
+# ---------------------------------------------------------------- live failure falls back to a recording
+
+
+def fake_vllm(monkeypatch, handler):
+    """Point every setup at a mock vLLM endpoint served by handler, and switch to live mode."""
+    import httpx
+
+    from app.openshift import openshift_client
+
+    for key in ("fp16", "int4", "spec_decode"):
+        monkeypatch.setattr(settings, f"model_{key}_endpoint", "http://vllm.test/v1/chat/completions")
+    mock = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(openshift_client, "_client", mock)
+    monkeypatch.setattr(ask_module, "FIRST_TOKEN_TIMEOUT_S", 0.3)
+    monkeypatch.setattr(ask_module, "STALL_TIMEOUT_S", 0.3)
+    main.simulator.disable()
+
+
+def sse(*words, stall_after=None, delay_first=0.0):
+    """A streamed chat completion that can wait before its first token or go quiet partway."""
+    import asyncio
+
+    async def body():
+        if delay_first:
+            await asyncio.sleep(delay_first)
+        for i, w in enumerate(words):
+            if stall_after is not None and i == stall_after:
+                await asyncio.sleep(5)
+            yield f'data: {json.dumps({"choices": [{"delta": {"content": w}}]})}\n\n'.encode()
+        yield b"data: [DONE]\n\n"
+
+    return body()
+
+
+def captured(key, scenario="complex_reasoning"):
+    return json.loads((settings.resolve(settings.quality_dir) / key / f"{scenario}.json").read_text())
+
+
+def test_live_error_plays_the_recorded_answer_labeled_as_recorded(client, monkeypatch):
+    import httpx
+
+    fake_vllm(monkeypatch, lambda request: httpx.Response(503))
+    ev = events(client.post("/ask/FP16", json={"preset": "reasoning"}))
+    assert ev[0] == {"t": "start", "source": "live"}
+    fb = next(e for e in ev if e["t"] == "fallback")
+    assert fb["label"] == "Recorded Sep 29 · live request failed"
+    text = "".join(e["text"] for e in ev if e["t"] == "delta")
+    assert text == captured("FP16")["response_text"]
+    done = ev[-1]
+    assert done["t"] == "done" and done["source"] == "recorded"
+    assert done["completion_tokens"] == captured("FP16")["usage"]["completion_tokens"]
+    # the Sep 29 recordings carry no timings, so nothing is shown as if it had been measured
+    assert done["ttft_ms"] is None and done["total_ms"] is None and done["tps_basis"] == "benchmark"
+
+
+def test_a_stalled_stream_keeps_its_live_tokens_and_says_how_many(client, monkeypatch):
+    import httpx
+
+    stalls = sse("The ", "farmer ", "has", stall_after=2)
+    fake_vllm(monkeypatch, lambda request: httpx.Response(200, content=stalls))
+    ev = events(client.post("/ask/INT4", json={"preset": "reasoning"}))
+    kinds = [e["t"] for e in ev]
+    assert kinds[:3] == ["start", "delta", "delta"] and kinds[3] == "fallback"
+    assert ev[3]["label"] == "Recorded Sep 29 · live request failed after 2 tokens"
+    assert ev[3]["live_tokens"] == 2
+    recorded = "".join(e["text"] for e in ev[4:] if e["t"] == "delta")
+    assert recorded == captured("INT4")["response_text"]
+
+
+def test_a_slow_first_token_falls_back(client, monkeypatch):
+    import httpx
+
+    fake_vllm(monkeypatch, lambda request: httpx.Response(200, content=sse("Hi", delay_first=2)))
+    ev = events(client.post("/ask/SPEC_DECODE", json={"preset": "reasoning"}))
+    assert any(e["t"] == "fallback" for e in ev) and ev[-1]["source"] == "recorded"
+
+
+def test_a_healthy_live_stream_is_not_labeled_recorded(client, monkeypatch):
+    import httpx
+
+    fake_vllm(monkeypatch, lambda request: httpx.Response(200, content=sse("Nine ", "sheep.")))
+    ev = events(client.post("/ask/FP16", json={"preset": "reasoning"}))
+    assert not any(e["t"] == "fallback" for e in ev)
+    assert ev[-1]["source"] == "live" and ev[-1]["completion_tokens"] == 2
+
+
+def test_a_typed_question_has_no_recording_to_fall_back_on(client, monkeypatch):
+    import httpx
+
+    fake_vllm(monkeypatch, lambda request: httpx.Response(503))
+    ev = events(client.post("/ask/FP16", json={"prompt": "What is the capital of France?"}))
+    assert ev[-1] == {"t": "error", "detail": ask_module.NO_RECORDING_TYPED}
+
+
+def test_an_unrecorded_preset_says_so_instead_of_inventing_one(client, monkeypatch, no_captures):
+    import httpx
+
+    fake_vllm(monkeypatch, lambda request: httpx.Response(503))
+    ev = events(client.post("/ask/FP16", json={"preset": "puzzle"}))
+    assert ev[-1] == {"t": "error", "detail": ask_module.NO_RECORDING_PRESET}
+
+
+def test_recorded_label_formats():
+    label = ask_module.recorded_label("2026-09-30T14:02:11-04:00", 0)
+    assert label == "Recorded Sep 30 · live request failed"
+    assert ask_module.recorded_label(None, 12) == "Recorded earlier · live request failed after 12 tokens"
+
+
+def test_every_preset_is_offered_with_its_exact_prompt(client):
+    from app.quality import PROMPTS
+
+    presets = client.get("/api/config").json()["presets"]
+    assert len(presets) == 8
+    for p in presets:
+        assert p["prompt"] == PROMPTS[ask_module.PRESETS[p["key"]][0]]
+        assert client.post("/ask/FP16", json={"preset": p["key"]}).status_code == 200

@@ -37,11 +37,6 @@
         },
     };
     const ORDER = ['FP16', 'INT4', 'SPEC_DECODE', 'FP8'];
-    const PRESET_TEXT = {
-        reasoning: 'A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left? Explain your reasoning step by step.',
-        code: 'Write a Python function that returns the second largest number in a list. Handle edge cases.',
-        summary: 'Summarize the key trade-offs of model quantization for production LLM deployments in 3 bullet points.',
-    };
 
     let config = null;
     let running = [];
@@ -113,10 +108,10 @@
         if (/\b(legal|contract|diagnos\w*|compliance|medical|financial|audit)\b/.test(t)) {
             return { key: 'FP16', why: 'a wrong answer here is expensive' };
         }
-        if (/\b(why|prove|step by step|how many|calculate|reason\w*|riddle|puzzle|math)\b/.test(t)) {
+        if (/\b(prove|step by step|how many|calculate|reason\w*|riddle|puzzle|logic|math)\b/.test(t)) {
             return { key: 'FP16', why: 'it\'s multi-step reasoning, where INT4 hasn\'t been tested on a benchmark suite yet' };
         }
-        if (/\b(write|draft|explain|describe|story|essay|report)\b/.test(t) && t.length > 60) {
+        if (/\b(explain|describe|essay|report|story|function|code|script)\b|\b\d{3,} words\b/.test(t)) {
             return { key: 'SPEC_DECODE', why: 'it\'s a long answer with someone waiting, and Spec Decode answers fastest' };
         }
         return { key: 'INT4', why: 'nothing here needs the full model, so the cheapest tokens win' };
@@ -144,7 +139,7 @@
                     <div><b class="num s-ttft">–</b><span class="s-ttft-label">first token</span></div>
                     <div><b class="num s-tps">–</b><span class="s-tps-label">tokens/s</span></div>
                     <div><b class="num s-len">–</b><span>tokens in answer</span></div>
-                    <div><b class="num s-total">–</b><span>total</span></div>
+                    <div><b class="num s-total">–</b><span class="s-total-label">total</span></div>
                     <span class="place"></span>
                 </div>`;
             grid.appendChild(col);
@@ -178,7 +173,15 @@
         running.push(ctrl);
         const t0 = performance.now();
         const tick = setInterval(() => { $('.s-total', col).textContent = secs(performance.now() - t0); }, 100);
-        let raw = '';
+        let raw = '', live = '', recorded = false;
+        const render = () => {
+            if (!recorded) { out.textContent = markdownToText(raw); return; }
+            // the live tokens stay visible above the divider, the recording goes below it
+            out.replaceChildren();
+            if (live) out.append(Object.assign(document.createElement('span'), { className: 'live-part', textContent: markdownToText(live) }));
+            out.append(Object.assign(document.createElement('span'), { className: 'fb-divider', textContent: recorded }));
+            out.append(Object.assign(document.createElement('span'), { className: 'rec-part', textContent: markdownToText(raw) }));
+        };
         try {
             const res = await fetch(`/ask/${key}`, {
                 method: 'POST', credentials: 'same-origin', signal: ctrl.signal,
@@ -204,32 +207,50 @@
                         const tag = ev.source === 'replay' ? { captured: 'captured answer' }[ev.text_source] : '';
                         src.hidden = !tag;
                         src.textContent = tag || '';
+                        src.classList.remove('recorded');
+                    } else if (ev.t === 'fallback') {
+                        live = raw;
+                        raw = '';
+                        recorded = ev.label;
+                        const src = $('.src', col);
+                        src.hidden = false;
+                        src.textContent = 'recorded';
+                        src.classList.add('recorded');
+                        render();
                     } else if (ev.t === 'delta') {
                         raw += ev.text;
-                        out.textContent = markdownToText(raw);
+                        render();
                         out.scrollTop = out.scrollHeight;
                     } else if (ev.t === 'done') {
                         clearInterval(tick);
-                        // Replay shows the Sep 29 benchmark's average first-token time (BF16 and INT4 only).
+                        // Replay shows the Sep 29 benchmark's average first-token time (BF16 and INT4 only). A live
+                        // first token goes over the VPN or a port-forward, so it isn't comparable to the in-pod benchmark.
+                        const missing = ev.source === 'recorded' ? 'not recorded' : 'live only';
                         const ttft = $('.s-ttft', col);
                         ttft.classList.toggle('na', ev.ttft_ms == null);
-                        ttft.textContent = ev.ttft_ms != null ? secs(ev.ttft_ms) : 'live only';
-                        $('.s-ttft-label', col).textContent = ev.source === 'replay' && ev.ttft_ms != null ? 'benchmark TTFT' : 'first token';
+                        ttft.textContent = ev.ttft_ms != null ? secs(ev.ttft_ms) : missing;
+                        $('.s-ttft-label', col).textContent = ev.ttft_ms == null ? 'first token' : {
+                            replay: 'benchmark TTFT',
+                            recorded: 'recorded TTFT',
+                            live: 'TTFT + network',
+                        }[ev.source] || 'first token';
                         $('.s-tps', col).textContent = ev.tokens_per_second != null ? ev.tokens_per_second.toFixed(0) : '–';
-                        $('.s-tps-label', col).textContent = ev.source === 'replay' ? 'benchmark tok/s' : 'tokens/s';
+                        $('.s-tps-label', col).textContent = ev.source === 'replay' || ev.tps_basis === 'benchmark' ? 'benchmark tok/s'
+                            : ev.source === 'recorded' ? 'recorded tok/s' : 'tokens/s';
                         const total = $('.s-total', col);
                         total.classList.toggle('na', ev.total_ms == null);
-                        total.textContent = ev.total_ms != null ? secs(ev.total_ms) : 'live only';
+                        total.textContent = ev.total_ms != null ? secs(ev.total_ms) : missing;
+                        $('.s-total-label', col).textContent = ev.source === 'recorded' && ev.total_ms != null ? 'recorded total' : 'total';
                         const len = $('.s-len', col);
                         len.classList.toggle('na', ev.completion_tokens == null);
-                        len.textContent = ev.completion_tokens != null ? ev.completion_tokens : 'live only';
+                        len.textContent = ev.completion_tokens != null ? ev.completion_tokens : missing;
                         if (ev.source === 'live') {
                             finished += 1;
                             place.textContent = ['1st', '2nd', '3rd', '4th'][finished - 1] || '';
                             if (finished === 1) place.classList.add('first');
                         }
                     } else if (ev.t === 'error') {
-                        throw new Error('This model didn\'t answer.');
+                        throw new Error(ev.detail && ev.detail.startsWith('Live request failed') ? ev.detail : 'This model didn\'t answer.');
                     }
                 }
             }
@@ -250,11 +271,33 @@
         const q = $('#askInput').value.trim();
         if (q) ask(q, null);
     });
-    $$('#presets button').forEach(b => b.addEventListener('click', () => {
-        b.blur();
-        $('#askInput').value = PRESET_TEXT[b.dataset.preset];
-        ask(PRESET_TEXT[b.dataset.preset], b.dataset.preset);
-    }));
+    // A long question shrinks to fit the box instead of running off its right edge on the big screen.
+    function fitInput() {
+        const input = $('#askInput');
+        input.style.fontSize = '';
+        let size = parseFloat(getComputedStyle(input).fontSize);
+        while (input.scrollWidth > input.clientWidth && size > 15) {
+            size -= 1;
+            input.style.fontSize = `${size}px`;
+        }
+    }
+    $('#askInput').addEventListener('input', fitInput);
+
+    function buildPresets() {
+        const box = $('#presets');
+        $$('button', box).forEach(b => b.remove());
+        for (const p of (config && config.presets) || []) {
+            const b = Object.assign(document.createElement('button'), { type: 'button', textContent: p.label });
+            b.dataset.preset = p.key;
+            b.addEventListener('click', () => {
+                b.blur();
+                $('#askInput').value = p.prompt;
+                fitInput();
+                ask(p.prompt, p.key);
+            });
+            box.append(b);
+        }
+    }
 
     // ------------------------------------------------------------ numbers (the money slide)
 
@@ -454,6 +497,7 @@
             badge.className = 'mode';
             $('span', badge).textContent = 'Offline';
         }
+        buildPresets();
         buildAsk();
         buildLoad();
         buildNumbers();
@@ -472,6 +516,7 @@
             }
             case 'Space': if ($('#scene-load').classList.contains('is-active')) { e.preventDefault(); playLoad(); } break;
             case 'Slash': e.preventDefault(); show('ask'); $('#askInput').focus(); break;
+            case 'KeyR': toggleReplay(); break;
             case 'KeyT': setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); break;
             case 'KeyF':
                 if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
@@ -479,6 +524,17 @@
             default: break;
         }
     });
+
+    // R flips every column between the live models and replay in one keystroke, for when the network dies.
+    async function toggleReplay() {
+        try {
+            const res = await fetch('/simulation/toggle', { method: 'POST', credentials: 'same-origin' });
+            if (!res.ok) throw new Error(res.status);
+        } catch (e) { return; }
+        running.forEach(c => c.abort());
+        running = [];
+        await loadConfig();
+    }
 
     fit();
     loadConfig();

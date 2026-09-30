@@ -11,7 +11,7 @@ Step-by-step guide for presenting "Not Every Question Needs Two GPUs" at PyTorch
 - [ ] All model variants deployed and answering on OpenShift AI
 - [ ] Demo app deployed with `PRESENTER_KEY` set
 - [ ] Presenter laptop opened `/presenter?key=<value>` once
-- [ ] One typed question and all three presets answered live
+- [ ] One typed question and all eight presets answered live
 - [ ] `/presenter?mode=sim` tested as the fallback
 - [ ] Backup video recorded
 
@@ -36,18 +36,21 @@ The talk flow and the full speaker script live in the speaker notes of `slides.h
 | `Space` | Play the load run (on Under load) |
 | `/` | Jump to the question box |
 | `Enter` | Send the question to every setup |
+| `R` | Switch every column between live models and replay |
 | `T` | Light or dark theme |
 | `F` | Full screen |
 
-To force replay mode while presenting, open `/presenter?mode=sim`.
+To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 
 ## Backup Plans
 
-**If the models stop responding:** open `/presenter?mode=sim` in the same tab. The Numbers scene doesn't change, because it shows the measured benchmark. In Ask, a "Replay" badge appears and each column plays back the speed that setup measured, and preset questions still show a full answer.
+**If one model stops responding:** nothing to do for the presets. After 8 seconds with no first token, or 10 seconds of silence mid-answer, that column plays its recorded answer under a red line that says "Recorded <date> · live request failed", and its badge says RECORDED. Mention it when it happens.
+
+**If all the models stop responding:** press `R` (or open `/presenter?mode=sim`). The Numbers scene doesn't change, because it shows the measured benchmark. In Ask, a "Replay" badge appears and each column plays its recorded answer at the speed that setup measured. Press `R` again to go back to live.
 
 **If the venue network is bad:** run the app on the demo laptop with `./scripts/run-local.sh`. Fonts and everything else are bundled, so the screen renders correctly with no network.
 
-**If nobody calls out a question:** use the preset buttons under the question box.
+**If nobody calls out a question:** use the eight preset buttons under the question box. Sheep riddle and Logic puzzle go to BF16, the four everyday ones go to INT4, and Python function and Explain KV cache go to Spec Decode. Explain KV cache is the long-answer, latency case, where Spec Decode's speed shows most.
 
 **If everything fails:** play the backup video from the USB drive, narrate over it, and move to Q&A.
 

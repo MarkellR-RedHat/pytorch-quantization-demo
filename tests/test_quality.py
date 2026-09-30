@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from app.quality import PROMPTS, get_comparison, sheep_verdict
+from app.quality import PROMPTS, get_comparison, json_verdict, puzzle_verdict, sheep_verdict
 
 VARIANTS = ["FP16", "INT4", "SPEC_DECODE"]
 
@@ -33,20 +33,80 @@ def test_nothing_is_shown_when_nothing_was_captured(tmp_path):
         assert result["prompt"] == PROMPTS[scenario]
 
 
-def test_prompts_match_the_captures():
+def test_every_capture_answers_its_preset_prompt():
+    """Presets can be uncaptured (they show "not captured"), but a capture that exists must answer the
+    exact preset prompt, and the Sep 29 three stay captured for the three setups."""
     from pathlib import Path
 
     root = Path(__file__).resolve().parent.parent / "quality"
+    for path in root.glob("*/*.json"):
+        if path.stem in PROMPTS:
+            assert json.loads(path.read_text())["prompt"] == PROMPTS[path.stem], path
     for variant in VARIANTS:
-        for scenario, prompt in PROMPTS.items():
-            assert json.loads((root / variant / f"{scenario}.json").read_text())["prompt"] == prompt
+        for scenario in ("complex_reasoning", "code_generation", "summarization"):
+            assert (root / variant / f"{scenario}.json").is_file(), (variant, scenario)
+
+
+def test_uncaptured_preset_reports_not_captured():
+    result = get_comparison("logic_puzzle", VARIANTS)
+    if not result["responses"]:
+        assert result["source"] == "not_captured"
+        assert result["prompt"] == PROMPTS["logic_puzzle"]
+
+
+def test_a_capture_of_a_different_prompt_is_ignored(tmp_path):
+    (tmp_path / "FP16").mkdir()
+    (tmp_path / "FP16" / "quick_fact.json").write_text(json.dumps({
+        "prompt": "What is the capital of Australia?", "response_text": "Canberra.",
+    }))
+    assert get_comparison("quick_fact", ["FP16"], tmp_path)["source"] == "not_captured"
+
+
+def test_capture_script_sends_the_same_prompts():
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "scripts" / "capture_presets.py"
+    spec = importlib.util.spec_from_file_location("capture_presets", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.PROMPTS == PROMPTS
+    assert module.MAX_TOKENS == 1024
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Alice is Tuesday, Bob is Wednesday.\n\nCarol's meeting is on Monday.", True),
+        ("If Carol's were on Tuesday, Alice... So the answer is Monday.", True),
+        ("Step 1: Carol's can't be Wednesday. Therefore Carol's meeting is on **Monday**.", True),
+        ("Carol's meeting is on Wednesday.", False),
+        ("Alice is on Tuesday and Bob on Wednesday.", False),
+    ],
+)
+def test_puzzle_verdict(text, expected):
+    assert puzzle_verdict(text) is expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ('```json\n{"name": "Sam Ortiz", "company": "Acme Robotics", "date": "October 21"}\n```', True),
+        ('{"sender_name": "Sam Ortiz", "company_name": "Acme Robotics", "date": "october 21"}', True),
+        ('{"name": "Sam Ortiz", "company": "Acme Robotics", "date": "2026-10-21"}', False),
+        ('{"name": "Sam", "company": "Acme Robotics", "date": "October 21"}', False),
+        ("Name: Sam Ortiz, company: Acme Robotics, date: October 21", False),
+    ],
+)
+def test_json_verdict(text, expected):
+    assert json_verdict(text) is expected
 
 
 def test_captured_output_is_used(tmp_path):
     folder = tmp_path / "BF16"
     folder.mkdir()
     (folder / "sheep.json").write_text(json.dumps({
-        "prompt": "A farmer has 17 sheep...",
+        "prompt": PROMPTS["complex_reasoning"],
         "temperature": 0,
         "model": "meta-llama/Llama-3.1-70B-Instruct",
         "response_text": "The farmer has 9 sheep left.",

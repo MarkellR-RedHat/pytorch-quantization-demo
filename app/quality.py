@@ -20,11 +20,13 @@ VARIANT_DIRS = {
     "FP8": ("FP8", "fp8"),
     "INT4": ("INT4", "INT4_AWQ", "int4", "int4_awq"),
     "SPEC_DECODE": ("SPEC_DECODE", "SPEC", "spec_decode", "spec"),
+    "INT4_RH": ("INT4_RH", "int4_rh"),
 }
 
-# The exact prompts behind the Sep 29 captures in quality/<VARIANT>/<scenario>.json. There is no
-# made-up fallback text: a setup with no capture shows no answer. The spec decode captures match
-# the BF16 ones on the sheep riddle only; the code and summary answers diverge partway through.
+# The exact prompts behind the captures in quality/<VARIANT>/<scenario>.json, and the same ones
+# scripts/capture_presets.py sends. There is no made-up fallback text: a setup with no capture
+# shows no answer. The Sep 29 spec decode captures match the BF16 ones on the sheep riddle only;
+# the code and summary answers diverge partway through.
 PROMPTS = {
     "complex_reasoning": "A farmer has 17 sheep. All but 9 run away. "
     "How many sheep does the farmer have left? Explain your reasoning step by step.",
@@ -32,6 +34,15 @@ PROMPTS = {
     "Handle edge cases.",
     "summarization": "Summarize the key trade-offs of model quantization for production LLM deployments "
     "in 3 bullet points.",
+    "polite_decline": "Write a short, polite reply declining a meeting on Friday at 3pm, "
+    "and suggest next week instead.",
+    "quick_fact": "What is the capital of Australia, and why isn't it Sydney? Answer in two sentences.",
+    "logic_puzzle": "Alice, Bob and Carol each have one meeting, on Monday, Tuesday or Wednesday, "
+    "each on a different day. Alice's isn't on Monday. Bob's is the day after Alice's. "
+    "Which day is Carol's? Explain step by step.",
+    "long_explanation": "Explain the KV cache to a new engineer in about 300 words.",
+    "json_extraction": "Extract the name, company and meeting date from this message as JSON: "
+    "\"Hi, this is Sam Ortiz from Acme Robotics. Can we meet on October 21 to review the pilot?\"",
 }
 
 SCENARIOS = tuple(PROMPTS)
@@ -55,19 +66,80 @@ def sheep_verdict(text: str) -> bool:
     return bool(stated) and stated[-1] == "9"
 
 
+_DAY = r"(monday|tuesday|wednesday)"
+_FINAL_DAY = (
+    r"carol'?s?\b[^.\n]{0,40}?\b" + _DAY,
+    r"answer\b[^.\n]{0,20}?\b" + _DAY,
+)
+
+
+def puzzle_verdict(text: str) -> bool:
+    """Correct iff the last stated day for Carol (or "the answer is ...") is Monday. The only
+    solution is Alice on Tuesday, Bob on Wednesday, Carol on Monday."""
+    hits = sorted((m.start(), m.group(1).lower()) for p in _FINAL_DAY for m in re.finditer(p, text, re.I))
+    return bool(hits) and hits[-1][1] == "monday"
+
+
+_EXPECTED_JSON = {"name": "sam ortiz", "company": "acme robotics", "date": "october 21"}
+
+
+def json_verdict(text: str) -> bool:
+    """Correct iff the answer holds a JSON object with exactly the stated values: name Sam Ortiz,
+    company Acme Robotics, date October 21. A date with an invented year doesn't count."""
+    for match in re.finditer(r"\{[^{}]*\}", text):
+        try:
+            data = json.loads(match.group(0))
+        except ValueError:
+            continue
+        found = {}
+        for key, value in data.items():
+            k = key.lower()
+            field = next((f for f in ("company", "date", "name") if f in k), None)
+            if field and isinstance(value, str):
+                found[field] = " ".join(value.lower().split())
+        if found == _EXPECTED_JSON:
+            return True
+    return False
+
+
+GRADERS = {
+    "complex_reasoning": sheep_verdict,
+    "logic_puzzle": puzzle_verdict,
+    "json_extraction": json_verdict,
+}
+
+
 def _verdict(scenario: str, text: str) -> str | None:
-    if scenario != "complex_reasoning":
+    grader = GRADERS.get(scenario)
+    if grader is None:
         return None
-    return "pass" if sheep_verdict(text) else "fail"
+    return "pass" if grader(text) else "fail"
 
 
 def _find_capture(quality_dir: Path, key: str, scenario: str) -> Path | None:
     for vdir in VARIANT_DIRS.get(key, (key,)):
-        for name in SCENARIO_ALIASES[scenario]:
+        for name in SCENARIO_ALIASES.get(scenario, (scenario,)):
             path = quality_dir / vdir / f"{name}.json"
             if path.is_file():
                 return path
     return None
+
+
+def _load_capture(quality_dir: Path, key: str, scenario: str) -> dict | None:
+    """A capture for this setup and scenario, only if it answers the exact preset prompt."""
+    path = _find_capture(quality_dir, key, scenario)
+    if not path:
+        return None
+    try:
+        data = json.loads(path.read_text())
+        data["response_text"] = str(data["response_text"])
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        logger.warning(f"Skipping bad capture {path}: {e}")
+        return None
+    if data.get("prompt") not in (None, PROMPTS.get(scenario)):
+        logger.warning(f"Skipping {path}: it answers a different prompt")
+        return None
+    return data
 
 
 def get_comparison(scenario: str, variants: list[str], quality_dir: Path | None = None) -> dict:
@@ -75,15 +147,10 @@ def get_comparison(scenario: str, variants: list[str], quality_dir: Path | None 
     captured = {}
     prompt, temperature = None, None
     for key in variants:
-        path = _find_capture(quality_dir, key, scenario)
-        if not path:
+        data = _load_capture(quality_dir, key, scenario)
+        if data is None:
             continue
-        try:
-            data = json.loads(path.read_text())
-            text = str(data["response_text"])
-        except (OSError, ValueError, KeyError, TypeError) as e:
-            logger.warning(f"Skipping bad capture {path}: {e}")
-            continue
+        text = data["response_text"]
         prompt = prompt or data.get("prompt")
         temperature = data.get("temperature") if temperature is None else temperature
         captured[key] = {
@@ -96,3 +163,19 @@ def get_comparison(scenario: str, variants: list[str], quality_dir: Path | None 
     if captured:
         return {"source": "captured", "prompt": prompt, "temperature": temperature, "responses": captured}
     return {"source": "not_captured", "prompt": PROMPTS[scenario], "temperature": None, "responses": {}}
+
+
+def recorded_answer(key: str, scenario: str, quality_dir: Path | None = None) -> dict | None:
+    """One setup's recorded answer with what was measured when it was recorded. The Sep 29
+    captures have no timings, so those fields are None for them."""
+    data = _load_capture(quality_dir or settings.resolve(settings.quality_dir), key, scenario)
+    if data is None:
+        return None
+    return {
+        "text": data["response_text"],
+        "completion_tokens": (data.get("usage") or {}).get("completion_tokens"),
+        "captured_at": data.get("captured_at"),
+        "ttft_ms": data.get("ttft_ms"),
+        "total_ms": data.get("total_ms"),
+        "tokens_per_second": data.get("tokens_per_second"),
+    }

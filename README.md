@@ -21,7 +21,24 @@ Open http://localhost:8000/presenter. You need Python 3.11 or newer.
 
 The presenter dashboard is a fixed 1920 by 1080 stage that scales to whatever it's plugged into, so nothing reflows or clips on a 720p projector.
 
-**Ask** (press `1`). Type a question, or pick one of the presets, and it goes to every setup at once. The answers stream side by side with the time to first token, tokens per second, how many tokens each answer used, total time, and how many GPUs each setup uses. Answer length matters, because a setup that writes shorter answers can finish sooner while reasoning less. A line above the answers shows where a simple example router would send that question and why. With live endpoints connected these are real answers from the real deployments. Without them, a small "Replay" badge shows in the corner and each column plays back the speed that setup measured, without calling a model and without inventing a difference in the answers.
+**Ask** (press `1`). Type a question, or pick one of the presets, and it goes to every setup at once. The answers stream side by side with the time to first token, tokens per second, how many tokens each answer used, total time, and how many GPUs each setup uses. Answer length matters, because a setup that writes shorter answers can finish sooner while reasoning less. A line above the answers shows where a simple example router would send that question and why. With live endpoints connected these are real answers from the real deployments, and the first-token time is labeled "TTFT + network", because it crosses the VPN or a port-forward and isn't comparable to the benchmark's. Without them, a small "Replay" badge shows in the corner and each column plays back the speed that setup measured, without calling a model and without inventing a difference in the answers.
+
+The eight preset questions, and the lane the example router gives each one (it matches the router slide):
+
+| Button | Question | Router lane |
+|---|---|---|
+| Sheep riddle | A farmer has 17 sheep. All but 9 run away. How many are left? (step by step) | BF16, the hardest questions |
+| Logic puzzle | Alice, Bob and Carol each have one meeting on a different day of Monday to Wednesday… Which day is Carol's? | BF16 |
+| Three bullet summary | The trade-offs of quantization in 3 bullets | INT4, everyday chat and easy questions |
+| Decline a meeting | A short, polite reply declining a Friday meeting | INT4 |
+| Quick fact | The capital of Australia, and why it isn't Sydney, in two sentences | INT4 |
+| Extract to JSON | Name, company and date from a one-line message | INT4 |
+| Python function | Second largest number in a list, with edge cases | Spec Decode, long answers with someone waiting |
+| Explain KV cache | The KV cache for a new engineer in about 300 words | Spec Decode (the long-answer, latency case) |
+
+The exact wording lives in `app/quality.py` (`PROMPTS`), and `scripts/capture_presets.py` records every setup's answer to each one at temperature 0 with the same 1,024-token cap as live Ask.
+
+**If a live request fails.** When a setup errors, sends no first token within 8 seconds, or goes quiet for 10 seconds mid-answer, that column plays its recorded answer to the preset instead. Any live text it already streamed stays above a red dashed line, the line says "Recorded <date> · live request failed after N tokens", and the column is badged RECORDED, so a recording is never passed off as live. A typed question has no recording, so the column says the live request failed. Press `R` to switch every column between the live models and replay in one keystroke.
 
 **Under load** (press `2`, then `Space`). A replay of the `vllm bench serve` load test: 1, 8, 32, then 64 requests in flight at once against each setup (synthetic random-token prompts), with output tokens per second per GPU, total output tokens per second, and median time per answer at each step. The result line compares INT4 with BF16 at the same load per GPU, and Spec Decode with BF16 on the same GPUs. It plays back whatever sweep files are in `bench/<VARIANT>/c<N>.json` (the `vllm bench serve --save-result` output), and until those exist the scene stays out of the numbered flow, so `1` and `2` go to Ask and Numbers.
 
@@ -148,7 +165,7 @@ oc create secret generic openshift-ai-config --from-literal=endpoint=<url> --fro
 oc apply -f kubernetes/configmap.yaml -f kubernetes/deployment.yaml -f kubernetes/service.yaml -f kubernetes/route.yaml
 ```
 
-The deployment runs one replica on purpose. Metrics, votes, and websocket connections live in memory, so a second replica would split the room in half.
+The deployment runs one replica on purpose. Metrics and websocket connections live in memory, so a second replica would split the presenter screen's metrics across two pods.
 
 ## Keyboard shortcuts
 
@@ -158,10 +175,11 @@ The deployment runs one replica on purpose. Metrics, votes, and websocket connec
 | `Space` | Play the load run (on Under load) |
 | `/` | Jump to the question box |
 | `Enter` | Send the question to every setup |
+| `R` | Switch every column between live models and replay |
 | `T` | Light or dark theme |
 | `F` | Full screen |
 
-To force replay mode while presenting, open `/presenter?mode=sim`.
+To force replay mode while presenting, press `R` or open `/presenter?mode=sim`.
 
 ## Tests
 
