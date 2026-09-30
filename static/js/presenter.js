@@ -33,7 +33,7 @@
         FP8: {
             color: '--v-fp8', role: 'One GPU, 8-bit',
             gets: 'BF16 speed on one GPU, and the most tokens per GPU under load',
-            best: 'Everyday chat and easy questions, on Hopper or newer',
+            best: 'Everyday chat and easy questions, on Ada, Hopper and newer',
             watch: 'Needs FP8 tensor cores (Ada, Hopper and newer; on A100 vLLM falls back to a slower weight-only kernel) and 73 GB for the weights, so less KV cache room than INT4',
             route: 'Everyday questions',
         },
