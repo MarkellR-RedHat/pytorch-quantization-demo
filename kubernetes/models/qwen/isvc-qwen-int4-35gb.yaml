@@ -1,8 +1,8 @@
-# Qwen track, Red Hat's INT4 build on a 71 GB MIG slice, the same profile as FP8: the accuracy run and the like-for-like line against FP8. vLLM 0.24.0+rhaiv.13.
+# Qwen track, Red Hat's INT4 build on a 35 GB MIG slice (three per H200): the INT4 card. vLLM 0.24.0+rhaiv.13.
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: qwen-int4
+  name: qwen-int4-35gb
   annotations:
     serving.kserve.io/deploymentMode: RawDeployment
 spec:
@@ -15,7 +15,7 @@ spec:
         args:
           - --port=8080
           - --model=RedHatAI/Qwen3.8-27B-INT4
-          - --served-model-name=qwen-int4
+          - --served-model-name=qwen-int4-35gb
           - --max-model-len=32768
         env:
           - name: HF_HOME
@@ -24,6 +24,6 @@ spec:
           requests:
             cpu: 4
             memory: 32Gi
-            nvidia.com/mig-3g.71gb: 1
+            nvidia.com/mig-2g.35gb: 1
           limits:
-            nvidia.com/mig-3g.71gb: 1
+            nvidia.com/mig-2g.35gb: 1
