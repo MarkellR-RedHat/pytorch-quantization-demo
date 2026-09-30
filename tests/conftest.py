@@ -16,16 +16,6 @@ def clean_state(monkeypatch):
     main.demo_state.is_running = False
     main.demo_state.start_time = None
     main.metrics_collector.reset()
-    main.arena_votes.reset()
-    main.arena_relay.reset()
-    for limiter in (
-        main.request_limiter,
-        main.ip_limiter,
-        main.vote_limiter,
-        main.hard_client_limiter,
-        main.hard_global_limiter,
-    ):
-        limiter.reset()
     yield
     main.stop_auto_traffic()
     main.demo_state.is_running = False

@@ -171,15 +171,15 @@ pytest
 ## Project layout
 
 ```
-app/                 FastAPI backend (simulation, live vLLM client, metrics, arena relay, rate limits)
+app/                 FastAPI backend (Ask streaming, replay, live vLLM client, benchmark loader, metrics)
 arena/               PyTorch training and quantization for the arena policies
 static/arena/        Exported policy weights the browser runs
 static/js/           Presenter dashboard, arena engine
-templates/           Presenter and audience pages
+templates/           Presenter page and the /arena booth page ("/" redirects to /presenter)
 benchmark_results.json, bench/, quality/   Measured data the dashboard reads
 scripts/             Setup, local run, and benchmark scripts
 kubernetes/          OpenShift manifests
-tests/               API, simulation, metrics, rate limit, and arena tests
+tests/               API, Ask, simulation, metrics, quality, and arena tests
 ```
 
 ## Credits and license

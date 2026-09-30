@@ -33,7 +33,7 @@
             this.rng = mulberry32(seed);
             this.hardFrac = hardFrac === undefined ? WORLD.HARD_FRAC : hardFrac;
             this.nextId = 0;
-            this.forced = [];          // queued hard prompts from the audience or presenter
+            this.forced = [];          // queued hard prompts from the presenter (H key)
             this.pipes = [this.make(WORLD.W + 40)];
         }
 

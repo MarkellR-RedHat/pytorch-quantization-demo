@@ -21,8 +21,6 @@ The backend is one FastAPI process (`app/main.py`) that keeps all state in memor
 - `app/simulation.py` replays those timings, sleeping for the real latency so concurrency builds up the way it would against real GPUs.
 - `app/openshift.py` is the live client for vLLM's OpenAI-compatible chat completions API. It runs at temperature 0 and computes tokens per second from `completion_tokens`.
 - `app/ask.py` streams the Ask scene: one question to every variant, with time to first token, tokens per second, and total time measured per variant. In replay mode it plays back the measured speed, using captured outputs from `quality/<VARIANT>/<scenario>.json` for the presets when they exist and the baseline's text otherwise.
-- `app/arena.py` handles the audience side of the booth arena (anonymous handles, backing a bird, hard prompts).
-- `app/ratelimit.py` holds the token buckets that protect `/request`, `/arena/*`, and the GPUs behind them.
 
 The booth arena (`/arena`) runs entirely in the browser. `static/js/arena-core.js` is the physics and the network forward pass (no DOM, so Node can run it in tests), `static/js/arena.js` is the game loop and renderer, and `static/arena/policy.json` holds the weights exported by `arena/train_policy.py`.
 

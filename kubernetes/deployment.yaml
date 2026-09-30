@@ -61,11 +61,6 @@ spec:
               name: model-endpoints
               key: fp8_endpoint
               optional: true
-        - name: PUBLIC_URL
-          valueFrom:
-            configMapKeyRef:
-              name: model-endpoints
-              key: public_url
         - name: TRUST_PROXY
           value: "true"
         - name: SIMULATION_MODE

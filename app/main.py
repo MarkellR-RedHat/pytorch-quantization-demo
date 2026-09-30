@@ -1,40 +1,30 @@
 """Main FastAPI application"""
 
 import asyncio
-import io
-import json
 import logging
-import math
 import random
-import re
 import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime
 
 import httpx
-import segno
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.arena import HARD_PROMPT_LABELS, MAX_STATE_BYTES, ArenaRelay, ArenaVotes, handle_for
 from app.ask import ask_stream, preset_prompt
 from app.benchmark import benchmark_data
 from app.config import ALL_VARIANTS, REPO_ROOT, settings, variant_label
 from app.metrics import metrics_collector
 from app.models import (
     AskRequest,
-    BackRequest,
     DemoState,
-    HardPromptRequest,
-    InferenceRequest,
     InferenceResponse,
     MetricsSnapshot,
 )
 from app.openshift import VariantNotConfigured, openshift_client
 from app.quality import SCENARIOS, get_comparison
-from app.ratelimit import RateLimiter
 from app.simulation import simulator
 from app.websocket import ConnectionManager
 
@@ -44,7 +34,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Fixed server-side prompts. Phones pick an id; free text never reaches a model or the big screen.
+# Fixed prompts for background traffic; free text only comes from the presenter's Ask box.
 PROMPTS = {
     "chat": "Explain the trade-offs of model quantization for production LLM deployments.",
     "reasoning": "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left?",
@@ -52,7 +42,6 @@ PROMPTS = {
     "summary": "Summarize zero trust security in three bullet points.",
 }
 SIM_MAX_INFLIGHT = 1000
-AID_RE = re.compile(r"[0-9a-f]{8}")
 
 demo_state = DemoState(
     is_running=False,
@@ -64,14 +53,6 @@ if settings.simulation_mode:
     simulator.enable()
 
 connection_manager = ConnectionManager(max_connections=settings.max_connections)
-arena_votes = ArenaVotes()
-arena_relay = ArenaRelay(connection_manager)
-
-request_limiter = RateLimiter(rate=4, burst=8)
-ip_limiter = RateLimiter(rate=50, burst=100)  # ceiling for a whole venue NAT
-vote_limiter = RateLimiter(rate=2, burst=4)
-hard_client_limiter = RateLimiter(rate=1 / 4, burst=1)
-hard_global_limiter = RateLimiter(rate=1.0, burst=1)
 
 live_slots = {k: asyncio.Semaphore(settings.max_inflight_per_variant) for k in ALL_VARIANTS}
 sim_slots = {k: asyncio.Semaphore(SIM_MAX_INFLIGHT) for k in ALL_VARIANTS}
@@ -126,26 +107,6 @@ def cost_per_request(key: str, latency_ms: float, concurrency: int) -> float | N
         return None
     gpu_hours = benchmark_data.gpus(key) * (latency_ms / 1000) / 3600
     return gpu_hours * settings.gpu_hourly_usd / max(1, concurrency)
-
-
-def client_ip(request: Request) -> str:
-    if settings.trust_proxy:
-        forwarded = request.headers.get("x-forwarded-for", "")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
-def client_key(request: Request) -> str:
-    """Anonymous cookie when the client has one, so phones sharing venue NAT get separate buckets."""
-    aid = request.cookies.get("aid", "")
-    return f"aid:{aid}" if AID_RE.fullmatch(aid) else f"ip:{client_ip(request)}"
-
-
-def limit(limiter: RateLimiter, key: str, detail: str = "rate limited"):
-    retry = limiter.take(key)
-    if retry:
-        raise HTTPException(429, detail=detail, headers={"Retry-After": str(max(1, math.ceil(retry)))})
 
 
 def key_matches(key: str | None) -> bool:
@@ -288,26 +249,9 @@ app.mount("/static", StaticFiles(directory=REPO_ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=REPO_ROOT / "templates")
 
 
-@app.middleware("http")
-async def anonymous_id(request: Request, call_next):
-    aid = request.cookies.get("aid", "")
-    issued = None
-    if not AID_RE.fullmatch(aid):
-        aid = issued = secrets.token_hex(4)
-    request.state.aid = aid
-    response = await call_next(request)
-    if issued:
-        response.set_cookie("aid", issued, max_age=7 * 86400, httponly=True, samesite="lax")
-    return response
-
-
-@app.get("/", response_class=HTMLResponse)
-async def audience_view(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={"simulation_mode": simulator.is_enabled()},
-    )
+@app.get("/")
+async def root():
+    return RedirectResponse("/presenter", 307)
 
 
 @app.get("/presenter", response_class=HTMLResponse)
@@ -356,13 +300,6 @@ async def ask(variant: str, body: AskRequest):
     return StreamingResponse(stream, media_type="application/x-ndjson", headers=headers)
 
 
-@app.post("/request", response_model=InferenceResponse)
-async def submit_inference_request(body: InferenceRequest, request: Request):
-    limit(ip_limiter, client_ip(request))
-    limit(request_limiter, client_key(request))
-    return await run_inference(body.model_type, body.prompt_id)
-
-
 @app.get("/quality/{scenario}")
 async def get_quality_comparison(scenario: str):
     if scenario not in SCENARIOS:
@@ -384,74 +321,10 @@ async def get_config(request: Request):
             }
             for k in active_variants()
         ],
-        "public_url": settings.public_url or str(request.base_url),
         "gpu_hourly_usd": settings.gpu_hourly_usd,
         "auto_traffic": settings.auto_traffic and settings.auto_traffic_rps > 0,
         "benchmark": benchmark_data.meta(variant_label),
     }
-
-
-@app.get("/api/me")
-async def get_me(request: Request):
-    return {"handle": handle_for(request.state.aid)}
-
-
-@app.get("/qr.svg")
-async def qr_code(request: Request):
-    url = settings.public_url or str(request.base_url)
-    buffer = io.BytesIO()
-    qr = segno.make(url, error="m")
-    qr.save(buffer, kind="svg", dark="#151515", light=None, border=2, scale=8, xmldecl=False)
-    return Response(buffer.getvalue(), media_type="image/svg+xml", headers={"Cache-Control": "no-store"})
-
-
-@app.post("/arena/hard-prompt", status_code=202)
-async def arena_hard_prompt(body: HardPromptRequest, request: Request):
-    client = client_key(request)
-    limit(hard_client_limiter, client, detail="one hard prompt every 4 seconds")
-    retry = hard_global_limiter.take("global")
-    if retry:
-        hard_client_limiter.refund(client)
-        raise HTTPException(429, detail="queue full", headers={"Retry-After": str(max(1, math.ceil(retry)))})
-    event = {"kind": body.kind, "label": HARD_PROMPT_LABELS[body.kind], "from": handle_for(request.state.aid)}
-    await connection_manager.broadcast({"type": "arena_hard_prompt", "data": event}, target="presenter")
-    return event
-
-
-@app.post("/arena/back")
-async def arena_back(body: BackRequest, request: Request):
-    limit(ip_limiter, client_ip(request))
-    limit(vote_limiter, client_key(request))
-    arena_votes.back(request.state.aid, body.variant)
-    summary = arena_votes.summary()
-    await connection_manager.broadcast({"type": "arena_votes", "data": summary})
-    return summary
-
-
-@app.get("/arena/votes")
-async def get_arena_votes():
-    return arena_votes.summary()
-
-
-@app.get("/arena/state")
-async def get_arena_state():
-    return {"data": arena_relay.latest}
-
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    if not await connection_manager.connect(websocket):
-        return
-    try:
-        await connection_manager.send(websocket, {"type": "arena_votes", "data": arena_votes.summary()})
-        if arena_relay.latest is not None:
-            await connection_manager.send(websocket, {"type": "arena_state", "data": arena_relay.latest})
-        while True:
-            message = await websocket.receive()  # audience messages are ignored
-            if message["type"] == "websocket.disconnect":
-                break
-    finally:
-        connection_manager.disconnect(websocket)
 
 
 @app.websocket("/ws/presenter")
@@ -464,22 +337,9 @@ async def presenter_websocket(websocket: WebSocket):
     await connection_manager.connect(websocket, is_presenter=True)
     try:
         while True:
-            message = await websocket.receive()
+            message = await websocket.receive()  # messages from the screen are ignored
             if message["type"] == "websocket.disconnect":
                 break
-            text = message.get("text")
-            if not text or len(text.encode()) > MAX_STATE_BYTES:
-                continue
-            try:
-                payload = json.loads(text)
-            except ValueError:
-                continue
-            if (
-                isinstance(payload, dict)
-                and payload.get("type") == "arena_state"
-                and isinstance(payload.get("data"), dict)
-            ):
-                await arena_relay.submit(payload["data"])
     finally:
         connection_manager.disconnect(websocket)
 
@@ -531,14 +391,8 @@ async def reset_demo():
     demo_state.start_time = None
     stop_auto_traffic()
     metrics_collector.reset()
-    arena_votes.reset()
-    arena_relay.reset()
-    request_limiter.reset()
-    hard_client_limiter.reset()
-    hard_global_limiter.reset()
     logger.info("Demo reset")
     await connection_manager.broadcast_state(state_payload())
-    await connection_manager.broadcast({"type": "arena_votes", "data": arena_votes.summary()})
     return JSONResponse({"message": "Demo reset"})
 
 

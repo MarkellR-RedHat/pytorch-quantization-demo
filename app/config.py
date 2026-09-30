@@ -44,7 +44,6 @@ class Settings(BaseSettings):
     enable_prometheus: bool = True
     baseline_label: str = "BF16"
     presenter_key: str = ""
-    public_url: str = ""
     trust_proxy: bool = False
 
     # Traffic and protection

@@ -8,4 +8,3 @@ data:
   spec_decode_endpoint: "https://specdec-llama70b.apps.your-cluster.com/v1/chat/completions"
   # Leave empty to hide the FP8 variant
   fp8_endpoint: ""
-  public_url: "https://pytorch-quantization-demo.apps.your-cluster.com"

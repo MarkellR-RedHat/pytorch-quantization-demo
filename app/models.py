@@ -7,18 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 VariantKey = Literal["FP16", "FP8", "INT4", "SPEC_DECODE"]
 PromptId = Literal["chat", "reasoning", "code", "summary"]
-HardPromptKind = Literal["math", "logic", "code", "long_context"]
-ArenaVariant = Literal["BF16", "FP8", "INT4_RTN", "INT4_AWQ", "SPEC"]
-
-
-class InferenceRequest(BaseModel):
-    """Audience request. Prompts are picked server-side from prompt_id; free text is never used."""
-
-    model_config = ConfigDict(extra="ignore", protected_namespaces=())
-
-    model_type: VariantKey
-    prompt_id: PromptId = "chat"
-    prompt: str | None = None  # legacy field, ignored
 
 
 class InferenceResponse(BaseModel):
@@ -62,14 +50,6 @@ class DemoState(BaseModel):
     participant_count: int
     total_requests: int
     start_time: datetime | None = None
-
-
-class HardPromptRequest(BaseModel):
-    kind: HardPromptKind
-
-
-class BackRequest(BaseModel):
-    variant: ArenaVariant
 
 
 class AskRequest(BaseModel):
