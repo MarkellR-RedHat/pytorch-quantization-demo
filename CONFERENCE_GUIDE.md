@@ -49,6 +49,7 @@ The exact wording lives in `app/quality.py` (`PROMPTS`), and `scripts/capture_pr
 | `/` | Jump to the question box |
 | `Enter` | Send the question to every setup |
 | `R` | Switch every column between live models and replay |
+| `Q` | Switch tracks (Llama 3.1 70B, Qwen3.8-27B) once both have data |
 | `T` | Light or dark theme |
 | `F` | Full screen |
 

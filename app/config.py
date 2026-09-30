@@ -66,6 +66,14 @@ class Settings(BaseSettings):
     benchmark_file: str = "benchmark_results.json"
     bench_dir: str = "bench/raw/2026-09-29-r2/sweeps"
     quality_dir: str = "quality"
+
+    # The second track. Its files land when the Qwen run comes back; until then the track is pending
+    # and stays off screen unless ALLOW_PENDING_TRACKS is set.
+    track: str = "llama"
+    allow_pending_tracks: bool = False
+    qwen_benchmark_file: str = "benchmark_results.qwen.json"
+    qwen_quality_dir: str = "quality/qwen"
+    qwen_bench_dir: str = "bench/raw/2026-10-qwen-r1/sweeps"
     sim_time_scale: float = 1.0
 
     def resolve(self, path: str) -> Path:

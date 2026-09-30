@@ -105,7 +105,12 @@
         return (b && b.gpus) || (v && v.gpus) || (key === 'INT4' || key === 'FP8' ? 1 : 2);
     }
     function color(key) { return (SETUPS[key] || {}).color || '--ink-3'; }
-    function chips(key) { const n = gpus(key); return `<span class="gpu-chips">${'<i></i>'.repeat(n)}${n} × H200</span>`; }
+    // GPU icons name the device the setup runs on in this track: "2 × H200" or "1 × 71 GB slice"
+    function chips(key) {
+        const v = config && config.variants.find(x => x.key === key);
+        const d = (v && v.device) || { name: 'H200', count: gpus(key) };
+        return `<span class="gpu-chips">${'<i></i>'.repeat(d.count)}${d.count} × ${esc(d.name)}</span>`;
+    }
     function glyph(key) { return `<span class="glyph" style="--c: var(${color(key)})"></span>`; }
     function markdownToText(t) { return t.replace(/^```[a-z]*\n?/gim, '').replace(/\*\*(.+?)\*\*/g, '$1'); }
     const one = x => (Math.round(x * 10 + 1e-6) / 10).toFixed(1);
@@ -344,6 +349,13 @@
         return s.watch || '';
     }
 
+    // the lane text comes from the track (the Qwen track's INT4 lane isn't "73 GB won't fit")
+    function laneText(k, hasFP8) {
+        const lanes = config && config.track && config.track.lanes;
+        if (lanes && lanes[k] && (k !== 'INT4' || hasFP8)) return lanes[k];
+        return hasFP8 && SETUPS[k].routeWithFP8 || SETUPS[k].route;
+    }
+
     function buildNumbers() {
         const keys = variants();
         const grid = $('#moneyGrid');
@@ -390,7 +402,7 @@
         const hasFP8 = keys.includes('FP8');
         strip.innerHTML = `<h3>Big, mixed traffic? Route it</h3>` + ['BF16', 'FP8', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k)).map(k =>
             // the lane names the setup, not the checkpoint, so "INT4 (Red Hat W4A16)" shows as INT4 here
-            `<div class="route">${esc(hasFP8 && SETUPS[k].routeWithFP8 || SETUPS[k].route)} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k).replace(/ \(.*\)$/, ''))}</b></div>`).join('');
+            `<div class="route">${esc(laneText(k, hasFP8))} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k).replace(/ \(.*\)$/, ''))}</b></div>`).join('');
         const bm = (config && config.benchmark) || {};
         const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
         const sd = bench('SPEC_DECODE') || {};
@@ -399,7 +411,8 @@
         $('#routerNote').textContent = 'A router pays off once your traffic is big and mixed enough to run more than one pool. With small traffic, pick the one setup that fits most of your questions. INT4 + spec decode, a draft model on an INT4 target, is the obvious next lane, untested here.';
         const ss = bm.single_stream || {};
         const q4 = bench('INT4') || {};
-        $('#benchNote').textContent = `Llama 3.1 70B Instruct on NVIDIA H200, vLLM ${bm.vllm_version || ''}, measured ${when} inside the pods with vllm bench serve: ${ss.prompts || 30} ${ss.dataset || 'ShareGPT'} prompts per setup, one at a time, temperature 0.`
+        const modelName = (config && config.track && config.track.model) || 'Llama 3.1 70B Instruct';
+        $('#benchNote').textContent = `${modelName} on NVIDIA H200, vLLM ${bm.vllm_version || ''}, measured ${when} inside the pods with vllm bench serve: ${ss.prompts || 30} ${ss.dataset || 'ShareGPT'} prompts per setup, one at a time, temperature 0.`
             + (q4.build ? ` INT4 is ${q4.build.replace('Red Hat W4A16', 'Red Hat\'s validated W4A16')}${q4.kernel ? ` on vLLM's ${q4.kernel.replace('LinearKernel', '')} kernel` : ''}.` : '')
             + (keys.includes('FP8') ? '' : ' FP8 (one H200, 99.9% of BF16 on OpenLLM v1 in Red Hat\'s tests) is the next to measure.');
     }
@@ -479,7 +492,8 @@
         play.hidden = false;
         const any = load[keys[0]].find(p => p.avg_input_tokens && p.avg_output_tokens);
         const sizes = any ? ` Synthetic random-token prompts of about ${any.avg_input_tokens} tokens, each asking for ${any.avg_output_tokens}.` : ' Synthetic random-token prompts.';
-        $('#loadSetup').textContent = `A replay of the vllm bench serve load test on the H200s: ${levels.join(', ').replace(/, (\d+)$/, ' and $1')} requests in flight at once, sent to each setup.${sizes}`;
+        const where = keys.some(k => (config.variants.find(v => v.key === k) || {}).device && config.variants.find(v => v.key === k).device.name !== 'H200') ? 'on the H200s and their MIG slices' : 'on the H200s';
+        $('#loadSetup').textContent = `A replay of the vllm bench serve load test ${where}: ${levels.join(', ').replace(/, (\d+)$/, ' and $1')} requests in flight at once, sent to each setup.${sizes}`;
         stage.style.setProperty('--cols', keys.length);
         stage.classList.toggle('cols-4', keys.length >= 4);
         const maxPerGpu = Math.max(...keys.flatMap(k => load[k].map(p => p.output_tokens_per_second_per_gpu)));
@@ -638,12 +652,30 @@
 
     // The corner badge says exactly which setups are live and which are playing recordings.
     function badgeState(cfg) {
-        if (cfg.mode !== 'live') return { kind: 'sim', text: 'Replay' };
+        // once two tracks have data the badge leads with the model, so the room knows which one is on screen
+        const ready = cfg.track && cfg.track.tracks ? cfg.track.tracks.filter(t => t.status === 'ready').length : 1;
+        const model = ready > 1 ? `${cfg.track.short || cfg.track.model} · ` : '';
+        if (cfg.mode !== 'live') return { kind: 'sim', text: `${model}Replay` };
         const recorded = cfg.variants.filter(v => v.mode === 'recorded');
-        if (!recorded.length) return { kind: 'live', text: 'Live models' };
+        if (!recorded.length) return { kind: 'live', text: `${model}Live models` };
         const names = list => list.map(v => v.label).join(', ');
         const live = cfg.variants.filter(v => v.mode !== 'recorded');
-        return { kind: 'mixed', text: `${live.length ? `Live: ${names(live)} · ` : ''}Recorded: ${names(recorded)}` };
+        return { kind: 'mixed', text: `${model}${live.length ? `Live: ${names(live)} · ` : ''}Recorded: ${names(recorded)}` };
+    }
+
+    // Q switches to the next track that has data; a pending track is refused by the server and skipped
+    async function nextTrack() {
+        const list = (config && config.track && config.track.tracks) || [];
+        const ready = list.filter(t => t.status === 'ready').map(t => t.key);
+        if (ready.length < 2) return;
+        const next = ready[(ready.indexOf(config.track.key) + 1) % ready.length];
+        try {
+            const res = await fetch(`/track/${next}`, { method: 'POST', credentials: 'same-origin' });
+            if (!res.ok) throw new Error(res.status);
+        } catch (e) { return; }
+        running.forEach(c => c.abort());
+        running = [];
+        await loadConfig();
     }
 
     async function loadConfig() {
@@ -662,6 +694,11 @@
         } else {
             badge.className = 'mode';
             $('span', badge).textContent = 'Offline';
+        }
+        if (config && config.track) {
+            document.title = config.track.title;
+            $('h1').textContent = config.track.title;
+            $('#subtitle').textContent = config.track.subtitle;
         }
         buildPresets();
         buildAsk();
@@ -683,6 +720,7 @@
             case 'Space': if ($('#scene-load').classList.contains('is-active')) { e.preventDefault(); playLoad(); } break;
             case 'Slash': e.preventDefault(); show('ask'); $('#askInput').focus(); break;
             case 'KeyR': toggleReplay(); break;
+            case 'KeyQ': nextTrack(); break;
             case 'KeyT': setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); break;
             case 'KeyF':
                 if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});

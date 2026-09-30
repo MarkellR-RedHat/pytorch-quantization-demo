@@ -53,3 +53,13 @@ class Simulator:
 
 
 simulator = Simulator()
+
+
+def _follow_track(track) -> None:
+    simulator.benchmark = track.benchmark
+
+
+from app import tracks  # noqa: E402 - registered after the simulator exists
+
+tracks.on_change(_follow_track)
+tracks.select_from_settings()

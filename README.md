@@ -28,7 +28,7 @@ make setup
 make run          # replay mode, no GPUs: http://localhost:8000/presenter
 ```
 
-Three scenes, keys `1` `2` `3`: **Ask** streams a question (typed, or one of eight presets) to every setup; **Under load** replays the sweep with the 50 ms target drawn on each card; **Numbers** is the money slide. `R` flips every column between the live models and the recordings, `T` is the theme, `F` full screen. With `.env` pointing at vLLM endpoints (`SIMULATION_MODE=false`), Ask is live, and a column whose request fails or stalls plays its recording under a line that says so. A setup with `MODEL_<VARIANT>_MODE=recorded` never calls its endpoint. `make test` runs the suite; `scripts/preflight.py` checks the endpoints and recordings before a talk. The booth game is at `/arena` ([ARENA.md](ARENA.md)). Talk logistics are in [CONFERENCE_GUIDE.md](CONFERENCE_GUIDE.md).
+Three scenes, keys `1` `2` `3`: **Ask** streams a question (typed, or one of eight presets) to every setup; **Under load** replays the sweep with the 50 ms target drawn on each card; **Numbers** is the money slide. `R` flips every column between the live models and the recordings, `Q` switches tracks once a second track (Qwen3.8-27B on MIG slices, its files pending) has data, `T` is the theme, `F` full screen. With `.env` pointing at vLLM endpoints (`SIMULATION_MODE=false`), Ask is live, and a column whose request fails or stalls plays its recording under a line that says so. A setup with `MODEL_<VARIANT>_MODE=recorded` never calls its endpoint. `make test` runs the suite; `scripts/preflight.py` checks the endpoints and recordings before a talk. The booth game is at `/arena` ([ARENA.md](ARENA.md)). Talk logistics are in [CONFERENCE_GUIDE.md](CONFERENCE_GUIDE.md).
 
 ## Deploy
 

@@ -12,8 +12,9 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app import tracks
 from app.ask import ask_stream, preset_list, preset_prompt
-from app.benchmark import benchmark_data
+from app.benchmark import benchmark_data  # noqa: F401 - tests read the Llama data through main
 from app.config import ALL_VARIANTS, REPO_ROOT, benchmark_label, build_note, settings, variant_label
 from app.metrics import metrics_collector
 from app.models import (
@@ -59,9 +60,13 @@ auto_traffic_tasks: set[asyncio.Task] = set()
 
 # helpers
 
+def bench():
+    return tracks.active().benchmark
+
+
 def active_variants() -> list[str]:
     if simulator.is_enabled():
-        fp8 = benchmark_data.has("FP8")
+        fp8 = bench().has("FP8")
     else:
         fp8 = bool(settings.model_fp8_endpoint) or settings.mode_for("FP8") == "recorded"
     return [k for k in ALL_VARIANTS if k != "FP8" or fp8]
@@ -69,7 +74,7 @@ def active_variants() -> list[str]:
 
 def bench_label(key: str) -> str:
     """The benchmark's own label for a setup, which for INT4 follows the checkpoint that was measured."""
-    if key == "INT4" and "RedHatAI" in str(benchmark_data.variant(key).get("checkpoint") or ""):
+    if key == "INT4" and "RedHatAI" in str(bench().variant(key).get("checkpoint") or ""):
         return "INT4 (Red Hat W4A16)"
     return benchmark_label(key)
 
@@ -89,7 +94,7 @@ def snapshots() -> dict[str, MetricsSnapshot]:
     for key in active_variants():
         in_flight = metrics_collector.active_requests[key]
         if simulator.is_enabled():
-            basis = benchmark_data.latency_model(key, max(1, in_flight))[2] if benchmark_data.has(key) \
+            basis = bench().latency_model(key, max(1, in_flight))[2] if bench().has(key) \
                 else "no benchmark data"
         else:
             basis = f"live · {in_flight} in flight"
@@ -97,8 +102,8 @@ def snapshots() -> dict[str, MetricsSnapshot]:
             "label": variant_label(key),
             "source": current_mode(),
             "basis": basis,
-            "gpus": benchmark_data.gpus(key),
-            "weights_gib_per_gpu": benchmark_data.weights_gib_per_gpu(key),
+            "gpus": bench().gpus(key),
+            "weights_gib_per_gpu": bench().weights_gib_per_gpu(key),
             "include_cost": settings.gpu_hourly_usd > 0,
         }
     return metrics_collector.get_all_snapshots(variants)
@@ -112,7 +117,7 @@ def cost_per_request(key: str, latency_ms: float, concurrency: int) -> float | N
     """GPU-hours this request occupied, shared across concurrent requests (continuous batching)."""
     if settings.gpu_hourly_usd <= 0:
         return None
-    gpu_hours = benchmark_data.gpus(key) * (latency_ms / 1000) / 3600
+    gpu_hours = bench().gpus(key) * (latency_ms / 1000) / 3600
     return gpu_hours * settings.gpu_hourly_usd / max(1, concurrency)
 
 
@@ -262,7 +267,9 @@ async def root():
 
 
 @app.get("/presenter", response_class=HTMLResponse)
-async def presenter_view(request: Request, key: str | None = None, mode: str | None = None):
+async def presenter_view(
+    request: Request, key: str | None = None, mode: str | None = None, track: str | None = None
+):
     if settings.presenter_key:
         if key is not None:
             if not key_matches(key):
@@ -282,6 +289,11 @@ async def presenter_view(request: Request, key: str | None = None, mode: str | N
     if mode == "sim":
         simulator.enable()
         logger.info("Simulation mode enabled via URL parameter")
+    if track:
+        try:
+            tracks.select(track)
+        except (KeyError, tracks.TrackPending) as e:
+            logger.warning(f"?track={track} ignored: {e}")
 
     return templates.TemplateResponse(
         request=request,
@@ -302,7 +314,7 @@ async def ask(variant: str, body: AskRequest):
     prompt = preset_prompt(body.preset) or body.prompt.strip()
     if not prompt:
         raise HTTPException(422, detail="empty question")
-    stream = ask_stream(variant, prompt, body.preset, not simulator.is_enabled(), benchmark_data)
+    stream = ask_stream(variant, prompt, body.preset, not simulator.is_enabled(), bench())
     headers = {"Cache-Control": "no-store", "X-Accel-Buffering": "no"}
     return StreamingResponse(stream, media_type="application/x-ndjson", headers=headers)
 
@@ -325,14 +337,16 @@ async def get_config(request: Request):
                 "label": variant_label(k),
                 "build": build_note(k),
                 "mode": "recorded" if simulator.is_enabled() else settings.mode_for(k),
-                "gpus": benchmark_data.gpus(k),
-                "weights_gib_per_gpu": benchmark_data.weights_gib_per_gpu(k),
+                "gpus": bench().gpus(k),
+                "weights_gib_per_gpu": bench().weights_gib_per_gpu(k),
+                "device": tracks.active().device(k),
             }
             for k in active_variants()
         ],
+        "track": tracks.describe(),
         "gpu_hourly_usd": settings.gpu_hourly_usd,
         "auto_traffic": settings.auto_traffic and settings.auto_traffic_rps > 0,
-        "benchmark": benchmark_data.meta(bench_label),
+        "benchmark": bench().meta(bench_label),
         "presets": preset_list(),
     }
 
@@ -352,6 +366,19 @@ async def presenter_websocket(websocket: WebSocket):
                 break
     finally:
         connection_manager.disconnect(websocket)
+
+
+@app.post("/track/{key}", dependencies=[Depends(require_presenter)])
+async def switch_track(key: str):
+    if key not in tracks.TRACKS:
+        raise HTTPException(404, detail="unknown track")
+    try:
+        track = tracks.select(key)
+    except tracks.TrackPending as e:
+        raise HTTPException(409, detail=str(e)) from e
+    logger.info(f"Track switched to {track.key}")
+    await connection_manager.broadcast({"type": "track_switched", "data": tracks.describe(track)})
+    return JSONResponse({"track": tracks.describe(track)})
 
 
 @app.post("/simulation/toggle", dependencies=[Depends(require_presenter)])

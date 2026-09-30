@@ -74,3 +74,11 @@ def test_badge_text():
     assert badge({"mode": "live", "variants": three}) == {
         "kind": "mixed", "text": "Live: BF16, INT4 (Red Hat W4A16) · Recorded: Spec Decode"}
     assert badge({"mode": "simulated", "variants": three}) == {"kind": "sim", "text": "Replay"}
+    # once two tracks have data the badge leads with the model on screen; a pending second track adds nothing
+    three[2]["mode"] = "live"
+    tracks = [{"key": "llama", "status": "ready"}, {"key": "qwen", "status": "ready"}]
+    two = {"model": "Qwen3.8-27B", "short": "Qwen 27B", "tracks": tracks}
+    got = badge({"mode": "live", "variants": three, "track": two})
+    assert got == {"kind": "live", "text": "Qwen 27B · Live models"}
+    tracks[1]["status"] = "pending"
+    assert badge({"mode": "live", "variants": three, "track": two}) == {"kind": "live", "text": "Live models"}

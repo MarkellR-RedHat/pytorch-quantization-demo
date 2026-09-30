@@ -5,8 +5,6 @@ import logging
 import re
 from pathlib import Path
 
-from app.config import settings
-
 logger = logging.getLogger(__name__)
 
 SCENARIO_ALIASES = {
@@ -117,6 +115,12 @@ def _verdict(scenario: str, text: str) -> str | None:
     return "pass" if grader(text) else "fail"
 
 
+def _active_quality_dir() -> Path:
+    from app import tracks  # the track picks the folder; imported here to keep quality.py free of app state
+
+    return tracks.active().quality_dir
+
+
 def _find_capture(quality_dir: Path, key: str, scenario: str) -> Path | None:
     for vdir in VARIANT_DIRS.get(key, (key,)):
         for name in SCENARIO_ALIASES.get(scenario, (scenario,)):
@@ -144,7 +148,7 @@ def _load_capture(quality_dir: Path, key: str, scenario: str) -> dict | None:
 
 
 def get_comparison(scenario: str, variants: list[str], quality_dir: Path | None = None) -> dict:
-    quality_dir = quality_dir or settings.resolve(settings.quality_dir)
+    quality_dir = quality_dir or _active_quality_dir()
     captured = {}
     prompt, temperature = None, None
     for key in variants:
@@ -169,7 +173,7 @@ def get_comparison(scenario: str, variants: list[str], quality_dir: Path | None 
 def recorded_answer(key: str, scenario: str, quality_dir: Path | None = None) -> dict | None:
     """One setup's recorded answer with what was measured when it was recorded. The Sep 29
     captures have no timings, so those fields are None for them."""
-    data = _load_capture(quality_dir or settings.resolve(settings.quality_dir), key, scenario)
+    data = _load_capture(quality_dir or _active_quality_dir(), key, scenario)
     if data is None:
         return None
     return {
