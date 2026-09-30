@@ -64,6 +64,10 @@ class Settings(BaseSettings):
 
     # Cost model: hourly price of one GPU. 0 hides cost everywhere.
     gpu_hourly_usd: float = 0.0
+    # Latency target for the load test: the tail (p95, or p99 when that's all the run recorded) time
+    # per output token a setup must stay under for its throughput to count. 50 ms is 20 tokens/s
+    # per user, comfortably faster than anyone reads.
+    tpot_target_ms: float = 50.0
 
     # Data files (relative paths resolve against the repo root)
     benchmark_file: str = "benchmark_results.json"

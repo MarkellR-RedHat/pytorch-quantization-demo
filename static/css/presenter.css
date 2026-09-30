@@ -359,16 +359,28 @@ kbd {
 #scene-load { grid-template-rows: auto 1fr auto; gap: 22px; }
 #scene-load .numbers-head { align-items: flex-end; }
 .load-stage { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 22px; min-height: 0; }
-.lcard { padding: 22px 26px; display: grid; grid-template-rows: auto auto 1fr auto; gap: 16px; border-top: 6px solid var(--c); min-height: 0; }
+.lcard { padding: 22px 26px; display: grid; grid-template-rows: auto auto 1fr auto auto auto; gap: 14px; border-top: 6px solid var(--c); min-height: 0; }
 .lcard .mhead h3 { display: flex; align-items: center; gap: 12px; margin: 0; font-family: var(--display); font-weight: 800; font-size: 28px; }
 .lcard .big b { display: block; font-family: var(--display); font-weight: 800; font-size: 76px; line-height: 1; letter-spacing: -0.02em; }
 .lcard .big span { display: block; margin-top: 8px; font-size: 17px; color: var(--ink-3); }
-.lcard .spark { width: 100%; height: 100%; min-height: 120px; }
+/* the box takes the free row; the svg fills it absolutely so its viewBox can't resize the row */
+.lcard .spark-box { position: relative; min-height: 120px; }
+.lcard .spark { position: absolute; inset: 0; width: 100%; height: 100%; }
 .lcard .spark polyline { fill: none; stroke: var(--c); stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
 .lcard .spark circle { fill: var(--c); stroke: var(--surface); stroke-width: 2; }
 .lcard .spark text { font-family: var(--mono); font-size: 16px; fill: var(--ink-3); }
 .lcard .spark line { stroke: var(--line); }
-.lstats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+.lstats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+.tpot-wrap { display: grid; gap: 4px; }
+.tpot-title { font-size: 14.5px; color: var(--ink-3); }
+.lcard .tpot { width: 100%; height: 84px; }
+.lcard .tpot polyline { fill: none; stroke: var(--c); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; opacity: .85; }
+.lcard .tpot circle { fill: var(--c); stroke: var(--surface); stroke-width: 2; }
+.lcard .tpot circle.over { fill: var(--surface); stroke: var(--c); stroke-width: 3; }
+.lcard .tpot .target { stroke: var(--ink-2); stroke-width: 2; stroke-dasharray: 6 5; }
+.lcard .tpot .target-label { font-family: var(--mono); font-size: 14px; fill: var(--ink-2); }
+.l-target { margin: 0; height: 24px; line-height: 24px; font-size: 17px; color: var(--ink-2); }
+.l-target b { color: var(--ink); }
 .lstats div { display: flex; flex-direction: column; gap: 2px; }
 .lstats b { font-family: var(--mono); font-size: 24px; font-weight: 700; }
 .lstats span { font-size: 14.5px; color: var(--ink-3); }
@@ -390,3 +402,6 @@ kbd {
 .acol-head .src.recorded { color: var(--brand-ink); border: 1px solid var(--brand-ink); background: var(--brand-wash); }
 .acol-head .src { margin-left: 10px; font-family: var(--mono); font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); padding: 3px 8px; border-radius: 999px; border: 1px dashed var(--line-strong); }
 .bottom a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+
+/* reserve the result line so the cards (and their charts) keep their size when it appears */
+#loadResult { min-height: 2.6em; }

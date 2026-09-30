@@ -348,7 +348,7 @@
             const sp = bench('SPEC_DECODE');
             const spTxt = sp && sp.throughput_tps ? `, and ${esc(benchLabel('SPEC_DECODE'))} runs <b>about ${one(sp.throughput_tps / bf.throughput_tps)}× faster</b> on the same GPUs` : '';
             $('#takeaway').innerHTML = `One request at a time, ${esc(benchLabel('INT4'))} runs at <b>${Math.round(100 * speed)}% of ${esc(benchLabel('FP16'))}'s speed on half the GPUs</b>${spTxt}.`
-                + (loadData().keys.length ? '' : ' <span class="pending-note">Under heavy batching on high-end GPUs, Red Hat\'s study found 8-bit (W8A8) more cost-efficient than 4-bit, and the load test shows where these three land.</span>');
+                + (loadData().keys.length ? costLine() : ' <span class="pending-note">Under heavy batching on high-end GPUs, Red Hat\'s study found 8-bit (W8A8) more cost-efficient than 4-bit, and the load test shows where these three land.</span>');
         }
         const strip = $('#routerStrip');
         strip.className = 'card router-strip';
@@ -368,6 +368,22 @@
             + (keys.includes('FP8') ? '' : ' FP8 fits on one H200 and recovers 99.9% of BF16 on OpenLLM v1 in Red Hat\'s published tests, so it\'s the next setup to measure.');
     }
 
+    // The cost line: output tokens per GPU at the latency target, from the load test, and a price
+    // per million output tokens only when GPU_HOURLY_USD is set (it's an assumption, and says so).
+    function costLine() {
+        const t = targetInfo();
+        const keys = variants().filter(k => t.best[k]);
+        if (!keys.length) return '';
+        const usd = config && config.gpu_hourly_usd;
+        const items = keys.map(k => {
+            const tps = t.best[k].output_tokens_per_second_per_gpu;
+            const price = usd > 0 ? ` ($${(usd / (tps * 3600) * 1e6).toFixed(2)} per 1M tokens)` : '';
+            return `${esc(benchLabel(k))} ${tps.toFixed(0)}${price}`;
+        });
+        const assumed = usd > 0 ? `, at an assumed $${usd}/GPU-hour` : '';
+        return ` <span class="pending-note">Under load, output tokens/s per GPU while the ${t.kind || 'tail'} time per token stays under ${t.ms} ms${assumed}: ${items.join(' · ')}.</span>`;
+    }
+
     // ------------------------------------------------------------ under load (replay of the load test)
 
     let loadTimer = null;
@@ -380,6 +396,16 @@
     }
 
     function pointAt(pts, c) { return pts.find(p => p.concurrency === c) || null; }
+
+    // The latency target the throughput has to be earned under, and the tail it's measured at.
+    function targetInfo() {
+        const bm = (config && config.benchmark) || {};
+        const load = bm.load || {};
+        const kinds = new Set(Object.values(load).flat().map(p => p.tpot_tail_kind).filter(Boolean));
+        const kind = kinds.size === 1 ? [...kinds][0] : kinds.size ? 'tail' : null;
+        return { ms: bm.tpot_target_ms || 50, kind, best: bm.at_target || {} };
+    }
+    const perToken = t => `${t.kind || 'tail'} time per output token`;
 
     function buildLoad() {
         const { load, keys, levels } = loadData();
@@ -407,13 +433,19 @@
             card.innerHTML = `
                 <div class="mhead"><h3>${glyph(key)}${esc(benchLabel(key))}</h3>${chips(key)}</div>
                 <div class="big"><b class="num l-pergpu">–</b><span>output tokens/s per GPU</span></div>
-                <svg class="spark"></svg>
+                <div class="spark-box"><svg class="spark"></svg></div>
+                <div class="tpot-wrap"><span class="tpot-title"></span><svg class="tpot"></svg></div>
                 <div class="lstats">
-                    <div><b class="num l-total">–</b><span>output tokens/s, whole setup</span></div>
+                    <div><b class="num l-total">–</b><span>tokens/s, whole setup</span></div>
+                    <div><b class="num l-tpot">–</b><span class="l-tpot-label"></span></div>
                     <div><b class="num l-lat">–</b><span class="l-lat-label">median time per answer</span></div>
-                </div>`;
+                </div>
+                <p class="l-target"></p>`;
             card.dataset.max = maxPerGpu;
             stage.appendChild(card);
+            const t = targetInfo();
+            $('.tpot-title', card).textContent = `${perToken(t)}, with the ${t.ms} ms target`;
+            $('.l-tpot-label', card).textContent = perToken(t);
         }
         showLevel(0, false);
     }
@@ -440,25 +472,59 @@
                 tween($('.l-pergpu', card), p.output_tokens_per_second_per_gpu, v => v.toFixed(0), ms);
                 tween($('.l-total', card), p.output_tokens_per_second, v => v.toFixed(0), ms);
                 if (p.latency_ms) tween($('.l-lat', card), p.latency_ms / 1000, v => `${v.toFixed(1)} s`, ms);
+                if (p.tpot_tail_ms != null) tween($('.l-tpot', card), p.tpot_tail_ms, v => `${v.toFixed(0)} ms`, ms);
                 $('.l-lat-label', card).textContent = `${p.latency_kind === 'mean' ? 'mean' : 'median'} time per answer`;
             }
-            // spark: tokens/s per GPU against concurrency, revealed up to this level
-            const el = $('.spark', card);
-            const W = Math.max(200, el.clientWidth), H = Math.max(100, el.clientHeight);
-            el.setAttribute('viewBox', `0 0 ${W} ${H}`);
-            const max = parseFloat(card.dataset.max) * 1.1, L = 12, B = 28;
-            const x = j => L + j * (W - 2 * L) / Math.max(1, levels.length - 1);
-            const y = v => 6 + (1 - v / max) * (H - B - 6);
-            const shown = levels.slice(0, i + 1).map((c, j) => ({ j, p: pointAt(pts, c) })).filter(o => o.p);
-            let svg = `<line x1="${L}" x2="${W - L}" y1="${H - B}" y2="${H - B}"/>`;
-            svg += levels.map((c, j) => `<text x="${x(j)}" y="${H - 5}" text-anchor="${j === 0 ? 'start' : j === levels.length - 1 ? 'end' : 'middle'}">${c}</text>`).join('');
-            if (shown.length > 1) svg += `<polyline points="${shown.map(o => `${x(o.j)},${y(o.p.output_tokens_per_second_per_gpu)}`).join(' ')}"/>`;
-            svg += shown.map(o => `<circle cx="${x(o.j)}" cy="${y(o.p.output_tokens_per_second_per_gpu)}" r="7"/>`).join('');
-            el.innerHTML = svg;
+            drawSpark(card, pts, levels, i);
+            drawTpot(card, pts, levels, i);
+            const t = targetInfo(), best = t.best[card.dataset.key];
+            $('.l-target', card).innerHTML = i < levels.length - 1 ? '' : best
+                ? `Under the ${t.ms} ms target: <b>${best.output_tokens_per_second_per_gpu.toFixed(0)} tokens/s per GPU</b> at ${best.concurrency} in flight`
+                : `Never stayed under the ${t.ms} ms target`;
         }
         const play = $('#loadPlay');
         play.textContent = animate && i < levels.length - 1 ? `${levels[i]} at a time…` : 'Play the load run';
         if (i === levels.length - 1 && animate) loadResult();
+        // redraw once the text around the charts has settled, so each chart measures its final box
+        requestAnimationFrame(() => {
+            for (const card of $$('#loadStage .lcard')) {
+                drawSpark(card, load[card.dataset.key], levels, i);
+                drawTpot(card, load[card.dataset.key], levels, i);
+            }
+        });
+    }
+
+    function drawSpark(card, pts, levels, i) {
+        // spark: tokens/s per GPU against concurrency, revealed up to this level
+        const el = $('.spark', card);
+        const W = Math.max(200, el.clientWidth), H = Math.max(100, el.clientHeight);
+        el.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        const max = parseFloat(card.dataset.max) * 1.1, L = 12, B = 28;
+        const x = j => L + j * (W - 2 * L) / Math.max(1, levels.length - 1);
+        const y = v => 6 + (1 - v / max) * (H - B - 6);
+        const shown = levels.slice(0, i + 1).map((c, j) => ({ j, p: pointAt(pts, c) })).filter(o => o.p);
+        let svg = `<line x1="${L}" x2="${W - L}" y1="${H - B}" y2="${H - B}"/>`;
+        svg += levels.map((c, j) => `<text x="${x(j)}" y="${H - 5}" text-anchor="${j === 0 ? 'start' : j === levels.length - 1 ? 'end' : 'middle'}">${c}</text>`).join('');
+        if (shown.length > 1) svg += `<polyline points="${shown.map(o => `${x(o.j)},${y(o.p.output_tokens_per_second_per_gpu)}`).join(' ')}"/>`;
+        svg += shown.map(o => `<circle cx="${x(o.j)}" cy="${y(o.p.output_tokens_per_second_per_gpu)}" r="7"/>`).join('');
+        el.innerHTML = svg;
+    }
+
+    // tail time per output token against concurrency, with the latency target as a dashed line
+    function drawTpot(card, pts, levels, i) {
+        const el = $('.tpot', card), t = targetInfo();
+        const W = Math.max(200, el.clientWidth), H = Math.max(60, el.clientHeight);
+        el.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        const all = (config.benchmark.load ? Object.values(config.benchmark.load).flat() : []).map(p => p.tpot_tail_ms).filter(v => v != null);
+        const max = Math.max(t.ms * 1.25, ...all) * 1.08, L = 12, B = 6;
+        const x = j => L + j * (W - 2 * L) / Math.max(1, levels.length - 1);
+        const y = v => 4 + (1 - v / max) * (H - B - 4);
+        const shown = levels.slice(0, i + 1).map((c, j) => ({ j, p: pointAt(pts, c) })).filter(o => o.p && o.p.tpot_tail_ms != null);
+        let svg = `<line class="target" x1="${L}" x2="${W - L}" y1="${y(t.ms)}" y2="${y(t.ms)}"/>`;
+        svg += `<text class="target-label" x="${L}" y="${y(t.ms) - 7}">${t.ms} ms target</text>`;
+        if (shown.length > 1) svg += `<polyline points="${shown.map(o => `${x(o.j)},${y(o.p.tpot_tail_ms)}`).join(' ')}"/>`;
+        svg += shown.map(o => `<circle class="${o.p.tpot_tail_ms > t.ms ? 'over' : ''}" cx="${x(o.j)}" cy="${y(o.p.tpot_tail_ms)}" r="6"/>`).join('');
+        el.innerHTML = svg;
     }
 
     // Compare INT4 with BF16 at the same load per GPU (INT4 runs on 1 GPU, BF16 on 2), and
@@ -480,6 +546,16 @@
             const kind = same.bf.latency_kind === 'mean' ? 'mean' : 'median';
             const verdict = Math.abs(r - 1) < 0.03 ? 'about the same as' : r < 1 ? `<b>${Math.round(100 * (1 - r))}% lower</b> than` : `<b>${Math.round(100 * (r - 1))}% higher</b> than`;
             parts.push(`at ${same.c} requests on the same 2 GPUs, ${esc(benchLabel('SPEC_DECODE'))}'s ${kind} time per answer is ${verdict} ${esc(benchLabel('FP16'))}'s`);
+        }
+        // what sets cost: output tokens per GPU while the tail time per token stays under the target
+        const t = targetInfo(), bfBest = t.best.FP16;
+        const cost = ['INT4', 'SPEC_DECODE'].filter(k => bfBest && t.best[k]).map(k =>
+            `${esc(benchLabel(k))} <b>${one(t.best[k].output_tokens_per_second_per_gpu / bfBest.output_tokens_per_second_per_gpu)}×</b>`);
+        if (cost.length) {
+            // with a latency target, the per-GPU comparison at the target replaces the equal-load one
+            const lead = `Within a ${t.ms} ms ${t.kind || 'tail'} time per token, output tokens per GPU against ${esc(benchLabel('FP16'))}: ${cost.join(', ')}.`;
+            $('#loadResult').innerHTML = lead + (same ? ` ${parts[parts.length - 1].replace(/^at/, 'At')}.` : '');
+            return;
         }
         $('#loadResult').innerHTML = parts.length ? parts.join(', and ') + '.' : '';
     }

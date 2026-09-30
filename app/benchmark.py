@@ -36,6 +36,30 @@ def _interp(points: list[tuple[int, float]], n: float) -> float:
     return points[-1][1]
 
 
+def _num(value) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+def _round(value) -> float | None:
+    return round(float(value), 1) if _num(value) else None
+
+
+def at_target(points: list[dict], target_ms: float) -> dict | None:
+    """The most output tokens/s per GPU a setup delivered while its tail time per output token stayed
+    under the target: the number that sets cost, since a GPU is only as useful as the load it can take
+    without users noticing."""
+    ok = [p for p in points if p.get("tpot_tail_ms") is not None and p["tpot_tail_ms"] <= target_ms]
+    if not ok:
+        return None
+    best = max(ok, key=lambda p: p["output_tokens_per_second_per_gpu"])
+    return {
+        "concurrency": best["concurrency"],
+        "output_tokens_per_second_per_gpu": best["output_tokens_per_second_per_gpu"],
+        "tpot_tail_ms": best["tpot_tail_ms"],
+        "tpot_tail_kind": best["tpot_tail_kind"],
+    }
+
+
 def _per_request(data: dict, key: str, done: int) -> int | None:
     value = data.get(key)
     return round(value / done) if done and isinstance(value, int | float) else None
@@ -84,6 +108,8 @@ class BenchmarkData:
         info = {k: self.raw.get(k) for k in ("model", "gpu", "vllm_version", "date", "notes")}
         info["variants"] = {key: self.summary(key, label(key)) for key in DEFAULT_GPUS if self.has(key)}
         info["load"] = {key: pts for key in DEFAULT_GPUS if (pts := self.load_points(key))}
+        target = info["tpot_target_ms"] = settings.tpot_target_ms
+        info["at_target"] = {k: best for k, pts in info["load"].items() if (best := at_target(pts, target))}
         return info
 
     def load_points(self, key: str) -> list[dict]:
@@ -108,6 +134,7 @@ class BenchmarkData:
             found = [data[k] for k in keys if isinstance(data.get(k), int | float)]
             latency = found[0] if found else None
             done = data.get("completed") or 0
+            tail_kind = next((k for k in ("p95", "p99") if _num(data.get(f"{k}_tpot_ms"))), None)
             points.append({
                 "concurrency": int(m.group(1)),
                 "output_tokens_per_second": round(float(tput), 1),
@@ -116,6 +143,9 @@ class BenchmarkData:
                 "latency_kind": "median" if isinstance(data.get("median_e2el_ms"), int | float) else "mean",
                 "avg_input_tokens": _per_request(data, "total_input_tokens", done),
                 "avg_output_tokens": _per_request(data, "total_output_tokens", done),
+                "tpot_median_ms": _round(data.get("median_tpot_ms")),
+                "tpot_tail_ms": _round(data.get(f"{tail_kind}_tpot_ms")) if tail_kind else None,
+                "tpot_tail_kind": tail_kind,
             })
         return sorted(points, key=lambda p: p["concurrency"])
 

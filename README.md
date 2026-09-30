@@ -40,7 +40,7 @@ The exact wording lives in `app/quality.py` (`PROMPTS`), and `scripts/capture_pr
 
 **If a live request fails.** When a setup errors, sends no first token within 8 seconds, or goes quiet for 10 seconds mid-answer, that column plays its recorded answer to the preset instead. Any live text it already streamed stays above a red dashed line, the line says "Recorded <date> · live request failed after N tokens", and the column is badged RECORDED, so a recording is never passed off as live. A typed question has no recording, so the column says the live request failed. Press `R` to switch every column between the live models and replay in one keystroke.
 
-**Under load** (press `2`, then `Space`). A replay of the `vllm bench serve` load test: 1, 8, 32, then 64 requests in flight at once against each setup (synthetic random-token prompts), with output tokens per second per GPU, total output tokens per second, and median time per answer at each step. The result line compares INT4 with BF16 at the same load per GPU, and Spec Decode with BF16 on the same GPUs. It plays back whatever sweep files are in `bench/<VARIANT>/c<N>.json` (the `vllm bench serve --save-result` output), and until those exist the scene stays out of the numbered flow, so `1` and `2` go to Ask and Numbers.
+**Under load** (press `2`, then `Space`). A replay of the `vllm bench serve` load test: 1, 8, 32, then 64 requests in flight at once against each setup (synthetic random-token prompts), with output tokens per second per GPU, total output tokens per second, the tail time per output token (TPOT, p95 when the run recorded it, otherwise vLLM's default p99), and median time per answer at each step. What sets cost is how many tokens a GPU serves while users still get a fast stream, so each card marks a latency target on its TPOT chart (`TPOT_TARGET_MS`, default 50 ms, which is 20 tokens per second per user) and ends with its best output tokens per GPU under that target. The result line compares INT4 and Spec Decode with BF16 on that number, and the Numbers screen's cost line uses it too. It plays back whatever sweep files are in `bench/<VARIANT>/c<N>.json` (the `vllm bench serve --save-result` output), and until those exist the scene stays out of the numbered flow, so `1` and `2` go to Ask and Numbers.
 
 **Numbers** (press `3`, or `2` until the load test exists). The money slide: GPUs, tokens per second and mean time for one request, and accuracy against BF16 for each setup (shown as pending where it hasn't been measured), what each one is best for, what to watch out for, and when a router is worth adding.
 
@@ -148,7 +148,8 @@ Copy `.env.example` to `.env`, set `SIMULATION_MODE=false`, and point the endpoi
 | `MODEL_INT4_CAPTURES` | Which recordings the INT4 column uses: `INT4` (community AWQ build) or `INT4_RH` (Red Hat's LLM Compressor build) |
 | `PRESENTER_KEY` | Protects the Ask box and the controls. Open `/presenter?key=<value>` once on the presenter laptop |
 | `MAX_INFLIGHT_PER_VARIANT` | Caps concurrent requests per deployment (default 32) |
-| `GPU_HOURLY_USD` | Shows cost per request when set, labeled as an assumption |
+| `GPU_HOURLY_USD` | Shows cost per million output tokens at the latency target when set, labeled as an assumption |
+| `TPOT_TARGET_MS` | The tail time per output token a setup must stay under for its load-test throughput to count (default 50) |
 
 The speculative decoding deployment that was benchmarked (the args from `kubernetes/models/isvc-spec-decode.yaml`):
 
