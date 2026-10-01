@@ -223,7 +223,8 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 /* Slide 6, the options */
 .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; margin-top: 52px; }
 .cards4 { grid-template-columns: repeat(4, 1fr); gap: 24px; }
-.cards4 .vcard { padding: 24px 24px 22px; }
+.cards4 .vcard { padding: 24px 24px 14px; }
+.cards4 .kv2 { padding: 13px 0; }
 .cards4 .vcard h3 { font-size: 32px; }
 .cards4 .chips-row { margin: 20px 0 16px; }
 .vcard { background: #fff; border: 1.5px solid var(--line); border-radius: 22px; padding: 30px 32px 30px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
@@ -702,7 +703,7 @@ const TRACKS = {
     sizeBody: 'Four INT4 replicas need four H200s instead of eight, Dana replies with <span class="emo">🎉</span>, and Priya is a hero for about two weeks.',
     sizeFoot: 'Weights as loaded by vLLM. BF16 is 2 × 65.7 GiB, FP8 67.7 GiB, INT4 37.9 GiB',
     fp8Sub: 'LLM COMPRESSOR, W8A8', fp8Buys: "BF16's speed and accuracy on one GPU", fp8Caveat: 'Needs FP8 tensor cores (Ada, Hopper and newer)', fp8Best: 'Everyday traffic on H100 or H200',
-    int4Sub: 'W4A16, GPTQ VIA AUTOGPTQ', int4Buys: "Half of FP8's memory, at 89% of BF16's speed", int4Caveat: '44 vs 50 tokens a second for one request',
+    int4Sub: 'GPTQ VIA AUTOGPTQ', int4Buys: "Half of FP8's memory, at 89% of BF16's speed", int4Caveat: '44 vs 50 tokens a second for one request',
     int4Best: "When 73 GB doesn't fit: 48 GB cards, or more room for KV cache",
     specSub: '70B + SMALL 8B DRAFT', specBuys: 'About 1.25× faster answers, with BF16 quality', specCaveat: 'One request at a time, temperature 0. Slower first token', specBest: 'Latency-sensitive, low-traffic work',
     destFp8: '1 GPU per replica, INT4 where memory is tight', destBf16: '2 GPUs, full precision', destSpec: '2 GPUs, ~1.25× faster',
