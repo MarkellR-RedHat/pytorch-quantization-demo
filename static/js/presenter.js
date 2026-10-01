@@ -98,7 +98,7 @@
         const b = bench(key);
         return (b && b.label) || label(key);
     }
-    // "INT4 (Red Hat W4A16)" as just "INT4" where the sentence is about the setup, not the checkpoint
+    // "INT4 (GPTQ via AutoGPTQ)" as just "INT4" where the sentence is about the setup, not the checkpoint
     const shortLabel = key => benchLabel(key).replace(/ \(.*\)$/, '');
 
     function label(key) {
@@ -161,7 +161,7 @@
         const v = config && config.variants.find(x => x.key === key);
         const role = setupCopy(key).role || '';
         // the build note is dropped when the label already names the build
-        return v && v.build && !label(key).includes('W4A16') ? `${role}, ${v.build}` : role;
+        return v && v.build && !label(key).includes('GPTQ') ? `${role}, ${v.build}` : role;
     }
 
     function buildAsk() {
@@ -424,7 +424,7 @@
         strip.className = 'card router-strip';
         const hasFP8 = keys.includes('FP8');
         strip.innerHTML = `<h3>Big, mixed traffic? Route it</h3>` + ['BF16', 'FP8', 'INT4', 'SPEC_DECODE'].filter(k => keys.includes(k)).map(k =>
-            // the lane names the setup, not the checkpoint, so "INT4 (Red Hat W4A16)" shows as INT4 here
+            // the lane names the setup, not the checkpoint, so "INT4 (GPTQ via AutoGPTQ)" shows as INT4 here
             `<div class="route">${esc(laneText(k, hasFP8))} <span class="arrow">→</span> ${glyph(k)}<b>${esc(label(k).replace(/ \(.*\)$/, ''))}</b></div>`).join('');
         const bm = (config && config.benchmark) || {};
         const when = bm.date ? new Date(bm.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -437,7 +437,7 @@
         const q4 = bench('INT4') || {};
         const modelName = (config && config.track && config.track.model) || 'Llama 3.1 70B Instruct';
         $('#benchNote').textContent = `${modelName} on NVIDIA H200, vLLM ${bm.vllm_version || ''}, measured ${when} inside the pods with vllm bench serve: ${ss.prompts || 30} ${ss.dataset || 'ShareGPT'} prompts per setup, one at a time, temperature 0.`
-            + (q4.build ? ` INT4 is ${q4.build.replace('Red Hat W4A16', 'Red Hat\'s validated W4A16')}${q4.kernel ? ` on vLLM's ${q4.kernel.replace('LinearKernel', '')} kernel` : ''}.` : '')
+            + (q4.build ? ` INT4 is ${q4.build}${q4.kernel ? `, on vLLM's ${q4.kernel.replace('LinearKernel', '')} kernel` : ''}.` : '')
             + (keys.includes('FP8') ? '' : ' FP8 (one H200, 99.9% of BF16 on OpenLLM v1 in Red Hat\'s tests) is the next to measure.');
     }
 

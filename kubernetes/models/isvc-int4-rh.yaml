@@ -1,4 +1,4 @@
-# INT4, Red Hat's validated W4A16 build (GPTQ), one GPU. Startup log: bench/raw/2026-09-29-r2/logs/benchmark-int4-rh-*-startup.txt
+# INT4, Red Hat's validated build (W4A16, GPTQ via AutoGPTQ), one GPU. Startup log: bench/raw/2026-09-29-r2/logs/benchmark-int4-rh-*-startup.txt
 # Runtime: kubernetes/servingruntime-vllm.yaml; the hf:// download needs kubernetes/storage-config.example.yaml.
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService

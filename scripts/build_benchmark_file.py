@@ -8,7 +8,8 @@ Every number the dashboard shows comes from here, so nothing is typed in by hand
 
 Round 2 ran `vllm bench serve` inside each pod: 30 ShareGPT prompts one at a time at temperature 0 and
 0.7, the concurrency sweeps, lm_eval for GSM8K and MMLU-Pro, and the spec decode counters read before
-and after each single-stream run. The INT4 setup on screen is Red Hat's validated W4A16 build (GPTQ); the
+and after each single-stream run. The INT4 setup on screen is Red Hat's validated W4A16 build (GPTQ via
+AutoGPTQ); the
 community AWQ build that was the naive pick is kept as a reference under it.
 """
 
@@ -31,9 +32,9 @@ SETUPS = {
     },
     "INT4": {
         "raw": "INT4_RH", "pod": "benchmark-int4-rh", "gpus": 1, "tensor_parallel_size": 1,
-        "quantization": "gptq_marlin (AutoGPTQ format, W4A16)", "dtype": "float16",
+        "quantization": "gptq_marlin (checkpoint format gptq, W4A16)", "dtype": "float16",
         "checkpoint": "RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16",
-        "build": "Red Hat W4A16 build (GPTQ)",
+        "build": "Red Hat's validated build: W4A16, GPTQ via AutoGPTQ",
     },
     "SPEC_DECODE": {
         "raw": "SPEC_DECODE", "pod": "benchmark-spec", "gpus": 2, "tensor_parallel_size": 2,
@@ -202,7 +203,8 @@ def build_round2(raw: Path = ROUND2) -> dict:
             "tokens per second over the whole run. Accuracy is lm_eval through a port-forward: GSM8K 8-shot "
             "CoT on all 1,319 questions and MMLU-Pro 5-shot on the first 20 questions of each of 14 subjects "
             "(280). Spec decode counters were read before and after each single-stream run, so acceptance is "
-            "per temperature. The INT4 setup is Red Hat's validated W4A16 build (GPTQ); the community AWQ "
+            "per temperature. The INT4 setup is Red Hat's validated W4A16 build (GPTQ via AutoGPTQ); the "
+            "community AWQ "
             "build is under reference. The round-1 numbers are under history."
         ),
         "single_stream": {"dataset": "ShareGPT", "prompts": 30, "concurrency": 1, "where": "inside the pod"},

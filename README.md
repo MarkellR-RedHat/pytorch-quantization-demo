@@ -10,7 +10,7 @@ vLLM `0.18.0+rhaiv.14` (the build in Red Hat AI), PyTorch 2.10.0, driver 580.126
 |---|---|---|---|---|---|---|---|
 | BF16, tensor parallel 2 | 2 | 49.7 (1.00×) | 33 ms | 94.8% | 66.8% | 981 at 64 in flight | 65.7 GiB |
 | FP8, Red Hat's build | 1 | 51.1 (1.03×) | 62 ms | 95.2% | 66.1% | 1,485 at 64 | 67.7 GiB |
-| INT4, Red Hat's validated W4A16 build (GPTQ) | 1 | 44.0 (0.89×) | 80 ms | 95.1% | 63.6% | 977 at 32 | 37.1 GiB |
+| INT4, Red Hat's validated build (W4A16, GPTQ via AutoGPTQ) | 1 | 44.0 (0.89×) | 80 ms | 95.1% | 63.6% | 977 at 32 | 37.1 GiB |
 | INT4, community AWQ build, the naive pick | 1 | 47.7 (0.96×) | 34 ms | 94.8% | 62.9% | 1,025 at 32 | 37.9 GiB |
 | Spec decode, 70B + 8B draft, 5 tokens | 2 | 62.2 (1.25×) | 107 ms | same as BF16 by design | | 517 at 32 | 73.2 GiB |
 
@@ -29,7 +29,7 @@ vLLM `0.24.0+rhaiv.13` (the Red Hat AI build that serves Qwen3.8's MTP head), Py
 |---|---|---|---|---|---|---|---|---|
 | BF16 | 1 full H200 | 66.0 (1.00×) | 40 ms | 89.2% | 77.1% | 1,980 at 64 in flight | 51.1 GiB | 1.10M tokens |
 | FP8, Qwen's build | 1 × 71 GB slice | 63.5 (0.96×) | 47 ms | 88.6% | 77.5% | 1,541 at 64 | 28.5 GiB | 498K |
-| INT4, Red Hat's LLM Compressor W4A16 build | 1 × 71 GB slice | 56.8 (0.86×) | 63 ms | 88.3% | 77.9% | 1,018 at 32 | 17.7 GiB | 1.24M |
+| INT4, Red Hat's build (W4A16, GPTQ via LLM Compressor) | 1 × 71 GB slice | 56.8 (0.86×) | 63 ms | 88.3% | 77.9% | 1,018 at 32 | 17.7 GiB | 1.24M |
 | Spec decode, the model's own MTP head, 4 tokens | the same full H200 | 151.2 (2.29×) | 85 ms | same as BF16 by design | | 1,598 at 32 | 51.9 GiB | 750K |
 
 - **FP8 and INT4 on the same 71 GB slice**, like for like: FP8 runs at 96% of BF16's single-request speed on 60 of the card's 132 SMs, INT4 at 86%, with no measurable accuracy loss on either (every difference is inside one standard error). Under load at the 50 ms budget, FP8 serves 78% of the full card's throughput on half a card, so two slices per H200 is about 1.55× BF16 per H200 (arithmetic: two slices were not loaded at once); INT4 serves about half, so per H200 it is about even with BF16, and its win is memory: 17.7 GiB of weights leave 43.4 GiB of KV cache room on the slice against FP8's 32.8 GiB, and the build ships an FP8 KV cache scheme (`kv_cache_scheme` in its quantization config, applied by vLLM at 37.7 KB per token against 70.6 KB in the BF16 and FP8 pods), so that room holds 1.24M tokens against FP8's 498K: the slice for long contexts and big batches. INT4 loads on a 35 GB slice too (three per H200) at 15.9 tokens/s for one request, in eager mode because CUDA-graph memory profiling fails on that slice, and never got under the 50 ms budget under load.
@@ -60,6 +60,8 @@ Not every setup needs a full H200:
 | Spec decode | 73.2 GiB per GPU | 2 full H200s | no |
 | FP8 | 67.7 GiB (72.7 GB) | 1 full H200 | no, the weights alone exceed it |
 | INT4 | 37.1 GiB | 1 GPU | untested (all runs were on full H200s); a 71 GB slice is 69.75 GiB, which after the weights, vLLM's 10% reserve and workspace leaves about 25 GiB for KV cache, and a 3g slice has 60 of the 132 SMs, so no speed number here carries over |
+
+A card's nameplate isn't what a model gets. An H200's 141 GB is 131.3 GiB (nvidia-smi reports 143,771 MiB, 140.4 GiB); the Qwen BF16 log shows 51.1 GiB of weights and 72.3 GiB of KV cache, 123.4 GiB in all, with the rest held back by vLLM's 10% reserve (`gpu_memory_utilization` 0.9), the CUDA context and 1.15 GiB of CUDA graphs.
 
 The Qwen track's InferenceServices are in `kubernetes/models/qwen/`, raw containers on the vLLM 0.24 image with `--max-model-len 32768` and thinking turned off server-side (`--default-chat-template-kwargs={"enable_thinking":false}`), as they ran:
 
@@ -99,7 +101,7 @@ Decoding one request is limited by reading the weights: BF16 reads about 70 GB p
 Verification keeps the target's output distribution; vLLM calls it lossless up to hardware numerics. Comparing the temperature-0 recordings, 3 of the 8 presets are identical word for word (sheep riddle, decline a meeting, JSON extraction) and 5 diverge at a word choice with the same substance (positions estimated from characters): the Python function at about token 45, the summary at 103, the quick fact at 36, the KV cache explanation at 211, the logic puzzle at its third token ("To find out" versus "To determine"), both ending on Monday. Spec decode isn't guaranteed byte-identical to plain decoding, because the two paths batch and round differently.
 
 **AWQ or GPTQ, and which checkpoints?**
-Both give INT4 weights that vLLM serves with mixed-precision kernels, and Red Hat's study found GPTQ slightly ahead on harder benchmarks. The INT4 on screen is [RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16), Red Hat's validated W4A16 build: a GPTQ checkpoint in the AutoGPTQ format (`quant_method: gptq`, 4-bit weights, group size 128, 16-bit activations), loaded through `gptq_marlin` and run on Machete. The naive pick was `hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4`, an AutoAWQ checkpoint with group size 128, loaded through `awq_marlin` and also run on Machete. The FP8 build ([RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8)) is an LLM Compressor checkpoint in the `compressed-tensors` format.
+Both give INT4 weights that vLLM serves with mixed-precision kernels, and Red Hat's study found GPTQ slightly ahead on harder benchmarks. The INT4 on screen is [RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16), Red Hat's validated W4A16 build, GPTQ applied with AutoGPTQ (the checkpoint format is `gptq`: 4-bit weights, group size 128, 16-bit activations), loaded through `gptq_marlin` and run on Machete. The naive pick was `hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4`, AWQ applied with AutoAWQ, group size 128, loaded through `awq_marlin` and also run on Machete. The FP8 build ([RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8](https://huggingface.co/RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8)) was made with LLM Compressor, in the `compressed-tensors` format. The Qwen INT4 build is GPTQ too, applied with LLM Compressor after AWQ smoothing, `compressed-tensors` format: the same algorithm on both tracks, two tools.
 
 **Does this hold for other models, or an 8B?**
 The recipe is model-agnostic: the manifests, the tests and the dashboard take any Hugging Face model id, and Red Hat's study ([Kurtic et al., "Give Me BF16 or Give Me Death?"](https://arxiv.org/abs/2411.02355), ACL 2025) ran more than 500,000 evaluations across the 8B, 70B and 405B sizes. Smaller models lose more when quantized: Red Hat's W4A16 model cards report 97.4% of BF16 on OpenLLM v2 for the 70B and 96.1% for the 8B, so test an 8B on your own prompts. The second model measured for this talk, Qwen3.8-27B, is in its own results section above.

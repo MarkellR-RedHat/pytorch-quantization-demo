@@ -326,10 +326,11 @@ def test_the_int4_column_can_run_red_hats_build(client, monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "model_int4_captures", "INT4_RH")
     body = client.get("/api/config").json()
     int4 = next(v for v in body["variants"] if v["key"] == "INT4")
-    assert int4["label"] == "INT4 (Red Hat W4A16)" and int4["build"] == "Red Hat W4A16 build (GPTQ)"
+    assert int4["label"] == "INT4 (GPTQ via AutoGPTQ)"
+    assert int4["build"] == "Red Hat's validated build: W4A16, GPTQ via AutoGPTQ"
     # the benchmark's INT4 numbers are Red Hat's build too, and the AWQ build sits under reference
     bm = body["benchmark"]["variants"]["INT4"]
-    assert bm["label"] == "INT4 (Red Hat W4A16)" and "RedHatAI" in bm["checkpoint"]
+    assert bm["label"] == "INT4 (GPTQ via AutoGPTQ)" and "RedHatAI" in bm["checkpoint"]
     assert bm["reference"]["checkpoint"].startswith("hugging-quants/")
     ev = events(client.post("/ask/INT4", json={"preset": "reasoning"}))
     assert "".join(e["text"] for e in ev if e["t"] == "delta") == "Red Hat build: 9 sheep."

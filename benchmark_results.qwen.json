@@ -64,6 +64,7 @@
       "kv_cache_tokens": 1099548,
       "attention": "FlashAttention 3",
       "kernels": [],
+      "kernel": null,
       "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'Qwen/Qwen3.8-27B', 'max_model_len': 32768, 'served_model_name': ['qwen-bf16']}",
       "enforce_eager": false,
       "cuda_graphs_captured": true,
@@ -224,6 +225,7 @@
       "kernels": [
         "FlashInferFp8DeepGEMMDynamicBlockScaledKernel"
       ],
+      "kernel": null,
       "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'Qwen/Qwen3.8-27B-FP8', 'max_model_len': 32768, 'served_model_name': ['qwen-fp8']}",
       "enforce_eager": false,
       "cuda_graphs_captured": true,
@@ -364,7 +366,7 @@
       "checkpoint": "RedHatAI/Qwen3.8-27B-INT4",
       "quantization": "W4A16",
       "resource": "nvidia.com/mig-3g.71gb",
-      "build": "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ, compressed-tensors)",
+      "build": "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing, compressed-tensors format",
       "device": {
         "name": "71 GB slice",
         "count": 1,
@@ -406,6 +408,7 @@
       "kernels": [
         "MacheteLinearKernel"
       ],
+      "kernel": "MacheteLinearKernel",
       "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'RedHatAI/Qwen3.8-27B-INT4', 'max_model_len': 32768, 'served_model_name': ['qwen-int4']}",
       "enforce_eager": false,
       "cuda_graphs_captured": true,
@@ -515,7 +518,7 @@
         "checkpoint": "RedHatAI/Qwen3.8-27B-INT4",
         "quantization": "W4A16",
         "resource": "nvidia.com/mig-2g.35gb",
-        "build": "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ, compressed-tensors)",
+        "build": "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing, compressed-tensors format",
         "pod_note": "the later of the two 35 GB pods, the one with the GPU record; both ran in eager mode",
         "device": {
           "name": "35 GB slice",
@@ -558,6 +561,7 @@
         "kernels": [
           "MacheteLinearKernel"
         ],
+        "kernel": "MacheteLinearKernel",
         "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'RedHatAI/Qwen3.8-27B-INT4', 'max_model_len': 32768, 'enforce_eager': True, 'served_model_name': ['qwen-int4-35gb']}",
         "enforce_eager": true,
         "cuda_graphs_captured": false,
@@ -697,6 +701,7 @@
       "kv_cache_tokens": 749568,
       "attention": "FlashAttention 3",
       "kernels": [],
+      "kernel": null,
       "non_default_args": "{'default_chat_template_kwargs': {'enable_thinking': False}, 'port': 8080, 'model': 'Qwen/Qwen3.8-27B', 'max_model_len': 32768, 'served_model_name': ['qwen-mtp'], 'spec_method': 'mtp', 'spec_tokens': 4}",
       "enforce_eager": false,
       "cuda_graphs_captured": true,

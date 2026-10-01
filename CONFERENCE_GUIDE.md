@@ -5,7 +5,7 @@
 
 ## The story
 
-Two models, four setups each, on vLLM on NVIDIA H200s. Llama 3.1 70B Instruct: BF16 on two GPUs, FP8 on one, INT4 (Red Hat's validated W4A16 build) on one, and speculative decoding with an 8B draft model on two. Qwen3.8-27B: BF16 on one GPU, FP8 and INT4 (Red Hat's LLM Compressor build) on 71 GB MIG slices, and speculative decoding with the model's own MTP head on the same GPU. A question from the room goes to all four setups of the track on screen at once (`Q` switches tracks) and the answers stream side by side with their timing and device; Under load shows what each device serves at a latency target; Numbers is the money slide and says when a router earns its keep. The Llama lanes: FP8 for everyday questions on Hopper, INT4 where 73 GB of weights won't fit, BF16 for the hardest questions until the others are tested on them, spec decode where latency matters. The Qwen lanes: FP8 for everyday traffic (two replicas per H200), INT4 for long contexts on a slice, spec decode for anyone waiting on the answer, plain BF16 for batch work where nobody waits. The numbers behind every line are in the README's two results tables.
+Two models, four setups each, on vLLM on NVIDIA H200s. Llama 3.1 70B Instruct: BF16 on two GPUs, FP8 on one, INT4 (Red Hat's validated build: W4A16, GPTQ via AutoGPTQ) on one, and speculative decoding with an 8B draft model on two. Qwen3.8-27B: BF16 on one GPU, FP8 and INT4 (Red Hat's build: W4A16, GPTQ via LLM Compressor) on 71 GB MIG slices, and speculative decoding with the model's own MTP head on the same GPU. A question from the room goes to all four setups of the track on screen at once (`Q` switches tracks) and the answers stream side by side with their timing and device; Under load shows what each device serves at a latency target; Numbers is the money slide and says when a router earns its keep. The Llama lanes: FP8 for everyday questions on Hopper, INT4 where 73 GB of weights won't fit, BF16 for the hardest questions until the others are tested on them, spec decode where latency matters. The Qwen lanes: FP8 for everyday traffic (two replicas per H200), INT4 for long contexts on a slice, spec decode for anyone waiting on the answer, plain BF16 for batch work where nobody waits. The numbers behind every line are in the README's two results tables.
 
 ## The talk flow
 
@@ -109,7 +109,7 @@ In replay, and for a column recorded by plan, a preset button is offered only wh
 
 - `python scripts/preflight.py` from the repo root with the same `.env` as the app. For every track with data and every setup on it, it checks that `/v1/models` lists the served name and a 1-token completion answers, sends 3 warm-up requests so the first live answer isn't cold, and confirms every preset has a recording; a setup recorded by plan passes on its recordings alone, so a fully recorded Qwen track passes. It prints what the corner badge will say on each track and one PASS/FAIL table, and exits 1 on any FAIL. It needs no cluster login.
 - Port-forwards (or VPN) up, app started, `http://localhost:8000/presenter` full screen (`F`)
-- The badge in the top right says "Llama 70B · Live: BF16, FP8, Spec Decode · Recorded: INT4 (Red Hat W4A16)", and after `Q`, "Qwen 27B · Recorded: BF16, FP8, INT4 (LLM Compressor W4A16), Spec Decode"
+- The badge in the top right says "Llama 70B · Live: BF16, FP8, Spec Decode · Recorded: INT4 (GPTQ via AutoGPTQ)", and after `Q`, "Qwen 27B · Recorded: BF16, FP8, INT4 (GPTQ via LLM Compressor), Spec Decode"
 - Notifications off, other apps closed
 
 ## If something goes wrong

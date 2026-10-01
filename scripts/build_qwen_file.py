@@ -35,7 +35,7 @@ DEVICES = {  # resource -> (device name, slices per H200)
     "nvidia.com/mig-2g.35gb": ("35 GB slice", 3),
 }
 PER_H200_NOTE = "per device times the slices per H200: arithmetic, not a measurement"
-INT4_BUILD = "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ, compressed-tensors)"
+INT4_BUILD = "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing, compressed-tensors format"
 
 # Each setup names the pod whose logs it reads, since some ran on more than one pod.
 SETUPS = {
@@ -91,6 +91,8 @@ def startup_log(raw: Path, pod: str) -> dict:
         "kv_cache_tokens": int(find(r"GPU KV cache size: ([\d,]+) tokens").replace(",", "")),
         "attention": "FlashAttention " + str(find(r"Using FlashAttention version (\d)")),
         "kernels": sorted(set(re.findall(r"\b(\w+Kernel)\b", text))),
+        # the one quantized-linear kernel the log names, for the dashboard's note (none for BF16 and MTP)
+        "kernel": next(iter(sorted(set(re.findall(r"\b(\w+LinearKernel)\b", text)))), None),
         "non_default_args": args,
         # eager mode means no CUDA graphs: the MIG slices that hit the NVML profiling bug ran this way
         "enforce_eager": "'enforce_eager': True" in args,

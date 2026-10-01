@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     model_spec_decode_mode: str = "live"
 
     # Which folder under quality/ holds the INT4 column's recordings: INT4 for the community AWQ
-    # build, INT4_RH for Red Hat's W4A16 build. It also names the build on screen.
+    # build, INT4_RH for Red Hat's W4A16 build (GPTQ via AutoGPTQ). It also names the build on screen.
     model_int4_captures: str = "INT4_RH"
 
     # The Qwen track's endpoints, served names and modes: the same four columns, its own pods. They
@@ -134,7 +134,7 @@ settings = Settings()
 
 INT4_BUILDS = {
     "INT4": "hugging-quants AWQ build",
-    "INT4_RH": "Red Hat W4A16 build (GPTQ)",
+    "INT4_RH": "Red Hat's validated build: W4A16, GPTQ via AutoGPTQ",
 }
 
 
@@ -152,7 +152,7 @@ def variant_label(key: str) -> str:
     if label := _track().labels.get(key):
         return label
     if key == "INT4" and settings.captures_for(key) == "INT4_RH":
-        return "INT4 (Red Hat W4A16)"
+        return "INT4 (GPTQ via AutoGPTQ)"
     return benchmark_label(key)
 
 

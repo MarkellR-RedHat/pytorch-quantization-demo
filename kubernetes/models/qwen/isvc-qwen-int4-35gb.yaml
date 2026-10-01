@@ -1,4 +1,4 @@
-# Qwen track, the same INT4 build on a 35 GB MIG slice (three per H200), in eager mode: CUDA-graph memory profiling fails on that slice with an NVML assertion, so the pod ran with --enforce-eager (it is in the pod's args in bench/raw/2026-09-30-qwen-r1/logs/qwen-int4-35gb-predictor-*-startup.txt; the delivered export of the manifest predates the flag). vLLM 0.24.0+rhaiv.13, thinking off server-side.
+# Qwen track, the same INT4 build (W4A16, GPTQ via LLM Compressor) on a 35 GB MIG slice (three per H200), in eager mode: CUDA-graph memory profiling fails on that slice with an NVML assertion, so the pod ran with --enforce-eager (it is in the pod's args in bench/raw/2026-09-30-qwen-r1/logs/qwen-int4-35gb-predictor-*-startup.txt; the delivered export of the manifest predates the flag). vLLM 0.24.0+rhaiv.13, thinking off server-side.
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:

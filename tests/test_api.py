@@ -72,7 +72,7 @@ def test_quality(client):
 def test_metrics_shape(client):
     infer("INT4")
     snap = client.get("/metrics").json()["INT4"]
-    assert snap["label"] == "INT4 (Red Hat W4A16)"
+    assert snap["label"] == "INT4 (GPTQ via AutoGPTQ)"
     assert snap["source"] == "simulated"
     assert snap["basis"].startswith("benchmark")  # with a sweep on disk, the basis is "benchmark c≈1"
     assert snap["gpus"] == 1

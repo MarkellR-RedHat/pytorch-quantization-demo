@@ -132,7 +132,8 @@ def test_int4_35_is_the_footnote_with_a_failed_point_kept(built):
     assert "accuracy" not in foot and "accuracy" not in v["SPEC_DECODE"]
     assert foot["throughput_tps"] == 40.0 and foot["speed_vs_baseline"] == round(40.0 / 60.0, 3)
     assert "c64-failed.txt" in foot["sweep_note"] and "sharegpt-c64-failed.txt" in foot["sweep_note"]
-    assert "eager mode" in foot["note"] and foot["build"].startswith("Red Hat's LLM Compressor W4A16 build")
+    assert "eager mode" in foot["note"]
+    assert foot["build"].startswith("Red Hat's build: W4A16, GPTQ via LLM Compressor")
 
 
 def test_mtp_acceptance_per_temperature_and_any_k(built):
@@ -173,11 +174,11 @@ def test_the_track_serves_the_built_file(built, tmp_path, monkeypatch):
         body = client.get("/api/config").json()
         assert body["track"]["status"] == "ready"
         int4 = next(v for v in body["variants"] if v["key"] == "INT4")
-        assert int4["label"] == "INT4 (LLM Compressor W4A16)" and int4["device"]["name"] == "71 GB slice"
+        assert int4["label"] == "INT4 (GPTQ via LLM Compressor)" and int4["device"]["name"] == "71 GB slice"
         assert int4["build"] == build_note("INT4")
-        assert int4["build"] == "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ)"
+        assert int4["build"] == "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing"
         bm = body["benchmark"]
-        assert bm["variants"]["INT4"]["label"] == "INT4 (LLM Compressor W4A16)"
+        assert bm["variants"]["INT4"]["label"] == "INT4 (GPTQ via LLM Compressor)"
         assert bm["variants"]["INT4"]["int4_35"]["device"]["name"] == "35 GB slice"
         assert bm["variants"]["INT4"]["int4_35"]["enforce_eager"] is True
         # per slice on the cards, per H200 as labeled arithmetic beside it
@@ -195,7 +196,7 @@ def test_the_track_serves_the_built_file(built, tmp_path, monkeypatch):
         assert "Monday" in stream
         assert len(body["presets"]) == 8  # every preset is recorded on this track
     tracks.select("llama")
-    assert settings.captures_for("INT4") == "INT4_RH" and variant_label("INT4") == "INT4 (Red Hat W4A16)"
+    assert settings.captures_for("INT4") == "INT4_RH" and variant_label("INT4") == "INT4 (GPTQ via AutoGPTQ)"
 
 
 def test_a_lower_bound_wins_only_when_nothing_clean_is_under_target():

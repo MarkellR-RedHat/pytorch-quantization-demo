@@ -210,13 +210,14 @@ TRACKS = {
             "quality_dir": "qwen_quality_dir",
             "bench_dir": "qwen_bench_dir",
         },
-        # RedHatAI/Qwen3.8-27B-INT4 is an LLM Compressor build (compressed-tensors, AWQ smoothing + GPTQ,
-        # W4A16), unlike the Llama W4A16, which is AutoGPTQ format
+        # GPTQ is the algorithm on both tracks; the tool differs: RedHatAI/Qwen3.8-27B-INT4 was made with
+        # LLM Compressor (compressed-tensors format, AWQ smoothing first), the Llama W4A16 with AutoGPTQ
+        # (checkpoint format gptq)
         settings_prefix="qwen_",
         # the Qwen INT4 recordings are under INT4/ (MODEL_INT4_CAPTURES picks between the Llama builds only)
         captures={"INT4": "INT4"},
-        labels={"INT4": "INT4 (LLM Compressor W4A16)"},
-        builds={"INT4": "Red Hat's LLM Compressor W4A16 build (AWQ smoothing + GPTQ)"},
+        labels={"INT4": "INT4 (GPTQ via LLM Compressor)"},
+        builds={"INT4": "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing"},
         copy=QWEN_COPY,
         # the Qwen/Qwen3.8-27B card: license apache-2.0
         license={"text": "Qwen3.8-27B, Apache 2.0", "url": "https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/LICENSE"},

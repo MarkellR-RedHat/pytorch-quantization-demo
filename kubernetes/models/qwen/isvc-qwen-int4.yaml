@@ -1,4 +1,4 @@
-# Qwen track, Red Hat's LLM Compressor INT4 build on a 71 GB MIG slice, the same profile as FP8 (17.7 GiB loaded, CUDA graphs). vLLM 0.24.0+rhaiv.13, thinking off server-side. Startup log: bench/raw/2026-09-30-qwen-r1/logs/qwen-int4-predictor-*-startup.txt
+# Qwen track, Red Hat's INT4 build (W4A16, GPTQ via LLM Compressor) on a 71 GB MIG slice, the same profile as FP8 (17.7 GiB loaded, CUDA graphs). vLLM 0.24.0+rhaiv.13, thinking off server-side. Startup log: bench/raw/2026-09-30-qwen-r1/logs/qwen-int4-predictor-*-startup.txt
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
