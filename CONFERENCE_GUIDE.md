@@ -55,7 +55,7 @@ The exact wording lives in `app/quality.py` (`PROMPTS`), and `scripts/capture_pr
 
 ## The plan
 
-Two tracks in one app; `Q` switches between them. Nothing gets re-run or re-recorded: the numbers and the recordings in the repo are final. On the day the only steps are bring the endpoints up, run preflight, present live, and let a column fall back to its recording if a request fails.
+Two tracks in one app; `Q` switches between them. Nothing is run or recorded again: the numbers and the recordings in the repo are final. On the day the only steps are bring the endpoints up, run preflight, present live, and let a column fall back to its recording if a request fails.
 
 | Track | Setup | On the day |
 |---|---|---|
