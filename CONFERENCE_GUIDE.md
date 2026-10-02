@@ -101,7 +101,7 @@ In replay, and for a column recorded by plan, a preset button is offered only wh
   ```
 - The laptop opened `http://localhost:8000/presenter?key=<value>` once, so the Ask box works
 - One typed question and every preset answered on both tracks (`Q` to switch)
-- The backup, the same app behind an OpenShift Route (README, Deploy), is up with the same values. Until the image is republished, the published `2026.10` image predates the Qwen track (it answers 409 to `/track/qwen`), so the laptop app is the only path with both tracks
+- The backup, the same app behind an OpenShift Route (README, Deploy), is up with the same values: same code, same recordings, both tracks
 - `/presenter?mode=sim` tested as the fallback
 - Backup video recorded and on a USB drive
 
@@ -120,7 +120,7 @@ In replay, and for a column recorded by plan, a preset button is offered only wh
 
 **A setup's GPUs get pulled before the talk:** set `MODEL_<VARIANT>_MODE=recorded` for it and restart the app. That column never calls its endpoint, plays its recordings labeled "Recorded <date>", and the badge says which setups are live and which are recorded.
 
-**The laptop app breaks:** open the backup Route (`https://<route>/presenter?key=<value>`) in the same browser; same code, same recordings for the Llama track (the published `2026.10` image predates the Qwen track until it is republished). If the venue network is bad, stay on the laptop: fonts and everything else are bundled, and `R` plays the recordings.
+**The laptop app breaks:** open the backup Route (`https://<route>/presenter?key=<value>`) in the same browser; same code, same recordings, both tracks. If the venue network is bad, stay on the laptop: fonts and everything else are bundled, and `R` plays the recordings.
 
 **Nobody calls out a question:** use the preset buttons. Sheep riddle and Logic puzzle go to BF16, the four everyday ones to FP8, Python function (and, on the Qwen track, Explain KV cache) to Spec Decode.
 
