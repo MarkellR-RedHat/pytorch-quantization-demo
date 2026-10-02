@@ -1,5 +1,5 @@
-"""The Qwen builder against a synthetic results-qwen/ in the delivered layout, so its rules (pod choice,
-eager mode, overlaps, exclusions, any K, per-H200 arithmetic) are pinned independently of the real files."""
+"""The Qwen builder against a synthetic run folder in the delivered layout, so its rules (pod choice,
+eager mode, overlaps, the first pass, any K, per-H200 arithmetic) are pinned apart from the real files."""
 
 import importlib.util
 import json
@@ -24,7 +24,7 @@ def load_module(name):
 
 @pytest.fixture(scope="module")
 def built(tmp_path_factory):
-    raw = qwen_synthetic.write(tmp_path_factory.mktemp("results-qwen"))
+    raw = qwen_synthetic.write(tmp_path_factory.mktemp("synthetic-qwen-run"))
     builder = load_module("build_qwen_file")
     # the builder names the real run's pods; the synthetic run has one pod per setup
     for key, spec in builder.SETUPS.items():
@@ -89,7 +89,7 @@ def test_temperature_0_7_and_first_pass(built):
     assert v["BF16"]["at_temperature_0_7"]["throughput_tps"] == 59.0
     assert v["FP8"]["at_temperature_0_7"]["throughput_tps"] == 60.5
     assert v["FP8"]["speed_vs_baseline_t0_7"] == round(60.5 / 59.0, 3)
-    assert "excluded_runs" not in v["FP8"] and "first_pass" not in v["FP8"]  # no first-pass/ folder here
+    assert "first_pass" not in v["FP8"]  # no first-pass/ folder here
 
 
 def test_a_first_pass_folder_is_named_and_not_read(built, tmp_path):

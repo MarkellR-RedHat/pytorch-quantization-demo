@@ -205,7 +205,6 @@ class BenchmarkData:
             "int4_35": self._footnote(v.get("int4_35")),
             "enforce_eager": v.get("enforce_eager"),
             "kv_cache_tokens": v.get("kv_cache_tokens"),
-            "excluded_runs": v.get("excluded_runs"),
             "overlap_note": v.get("overlap_note"),
         }
 

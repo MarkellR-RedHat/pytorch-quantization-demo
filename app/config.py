@@ -83,8 +83,7 @@ class Settings(BaseSettings):
     bench_dir: str = "bench/raw/2026-09-29-r2/sweeps"
     quality_dir: str = "quality"
 
-    # The second track. Its files land when the Qwen run comes back; until then the track is pending
-    # and stays off screen unless ALLOW_PENDING_TRACKS is set.
+    # The second track. A track whose files are missing is refused unless ALLOW_PENDING_TRACKS is set.
     track: str = "llama"
     allow_pending_tracks: bool = False
     qwen_benchmark_file: str = "benchmark_results.qwen.json"

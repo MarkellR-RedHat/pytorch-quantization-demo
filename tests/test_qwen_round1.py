@@ -94,7 +94,7 @@ def test_the_facts_the_talk_quotes():
     assert [v[k]["at_temperature_0_7"]["throughput_tps"] for k in SETUPS] == [65.3, 62.9, 56.3, 135.4]
     for k in SETUPS:
         assert all(r["overlapped_with"] == [] for r in v[k]["sweep_runs"].values()), k
-        assert v[k]["first_pass"]["folder"] == f"sweeps/{k}/first-pass" and "excluded_runs" not in v[k]
+        assert v[k]["first_pass"]["folder"] == f"sweeps/{k}/first-pass"
     assert "GSM8K eval" in v["BF16"]["first_pass"]["note"]
     assert all(r["overlapped_with"] == [] for r in s35["sweep_runs"].values())
     # per-H200 stays arithmetic: two slices were not loaded at once

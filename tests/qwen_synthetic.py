@@ -1,5 +1,5 @@
-"""A synthetic results-qwen/ folder in the layout RUN-QWEN.md defines, so the Qwen builder
-and the app can be tested before the real files land. Every number here is made up and marked so."""
+"""A synthetic run folder in the layout under bench/raw/2026-09-30-qwen-r1/ (its scripts/RUN-QWEN.md),
+so the Qwen builder's rules can be tested on made-up numbers. Every number here is made up and marked so."""
 
 import json
 from pathlib import Path
@@ -159,11 +159,11 @@ def write(root: Path) -> Path:
             (cap / "logic_puzzle_samples_t0.7.json").write_text(json.dumps({
                 "variant": key, "n": 5, "temperature": 0.7, "responses": ["Carol's meeting is on Monday."] * 5,
             }))
-    (root / "notes.txt").write_text("SYNTHETIC results-qwen for tests: every number is made up.\nthinking: off\n")
+    (root / "notes.txt").write_text("SYNTHETIC run folder for tests: every number is made up.\nthinking: off\n")
     return root
 
 
 if __name__ == "__main__":
     import sys
 
-    print(write(Path(sys.argv[1] if len(sys.argv) > 1 else "results-qwen-synthetic")))
+    print(write(Path(sys.argv[1] if len(sys.argv) > 1 else "synthetic-qwen-run")))

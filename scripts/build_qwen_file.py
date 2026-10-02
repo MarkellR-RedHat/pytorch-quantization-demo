@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Build benchmark_results.qwen.json from a results-qwen/ folder in the layout RUN-QWEN.md asked for.
+"""Build benchmark_results.qwen.json from a run folder in the layout under bench/raw/2026-09-30-qwen-r1/
+(its scripts/RUN-QWEN.md).
 
     python scripts/build_qwen_file.py                                   # bench/raw/2026-09-30-qwen-r1
     python scripts/build_qwen_file.py <folder> --out <file>            # anywhere else, for a dry run
@@ -15,9 +16,9 @@ once), and labeled so; the app never divides a per-H200 number by a per-slice on
 What the file carries that the sheet of headline numbers doesn't: which pod each setup's log came
 from, whether that pod ran with CUDA graphs or in eager mode, the thinking-mode setting, every
 sweep point's timing window and which other runs on the same pod overlapped it (a point that shared
-its pod with another sweep is a lower bound, and the app labels it), the runs excluded and why, every
-number of speculative tokens the run measured, and the other eval files when a task was run more
-than once.
+its pod with another sweep is a lower bound, and the app labels it), the first pass set aside and why,
+every number of speculative tokens the run measured, and the other eval files when a task was run
+more than once.
 """
 
 import json
@@ -58,10 +59,6 @@ INT4_35 = {"raw": "INT4_35", "pod": "qwen-int4-35gb-predictor-7ccb746499-qcbgv",
            "checkpoint": "RedHatAI/Qwen3.8-27B-INT4", "quantization": "W4A16",
            "resource": "nvidia.com/mig-2g.35gb", "build": INT4_BUILD,
            "pod_note": "the later of the two 35 GB pods, the one with the GPU record; both ran in eager mode"}
-
-# Runs the file keeps but no number is taken from, with the reason (the raw files stay as delivered).
-# Empty since the final pass: the runs it named are in sweeps/<V>/first-pass/ (see FIRST_PASS).
-EXCLUDED: dict[tuple[str, str], str] = {}
 
 # A setup's first-pass/ folder holds the Sep 30 afternoon sweep, redone in the evening with one client
 # per pod. Nothing is read from it; the note says why it was redone.
@@ -209,8 +206,8 @@ def counters(path: Path) -> dict:
 
 
 def acceptance(raw: Path, temperature: str, k: int) -> dict | None:
-    """The MTP counters' movement over one single-stream run: the before and after snapshots RUN-QWEN takes
-    per temperature and per number of speculative tokens. Unknown counter names are kept raw, so nothing
+    """The MTP counters' movement over one single-stream run: the before and after snapshots the run list
+    takes per temperature and per number of speculative tokens. Unknown counter names are kept raw, so nothing
     0.24 reports is lost even if this doesn't know what to call it."""
     before = raw / "logs" / f"spec-metrics-before-t{temperature}-k{k}.txt"
     after = raw / "logs" / f"spec-metrics-after-t{temperature}-k{k}.txt"
@@ -293,12 +290,7 @@ def setup(raw: Path, spec: dict) -> dict:
     out["dtype"] = "bfloat16"
     out.update(single_stream(raw, spec["raw"], "0"))
     out["temperature"] = 0
-    if (spec["raw"], "single-t0.7.json") in EXCLUDED:
-        out["at_temperature_0_7"] = None
-        out["excluded_runs"] = [{"file": f"sweeps/{spec['raw']}/single-t0.7.json",
-                                 "reason": EXCLUDED[(spec["raw"], "single-t0.7.json")]}]
-    else:
-        out["at_temperature_0_7"] = single_stream(raw, spec["raw"], "0.7")
+    out["at_temperature_0_7"] = single_stream(raw, spec["raw"], "0.7")
     out.update(startup_log(raw, spec["pod"]))
     out["versions"] = versions(raw, spec["pod"])
     out["image_digest"] = image_digest(raw, spec["pod"])
@@ -341,11 +333,8 @@ def finish(variants: list[dict], baseline: dict) -> None:
     """Ratios from the unrounded single-stream numbers, and the labeled per-H200 arithmetic."""
     for v in variants:
         v["speed_vs_baseline"] = round(v["_tps"] / baseline["_tps"], 3)
-        if v["at_temperature_0_7"] and baseline["at_temperature_0_7"]:
-            t07, base07 = v["at_temperature_0_7"]["_tps"], baseline["at_temperature_0_7"]["_tps"]
-            v["speed_vs_baseline_t0_7"] = round(t07 / base07, 3)
-        else:
-            v["speed_vs_baseline_t0_7"] = None
+        t07, base07 = v["at_temperature_0_7"]["_tps"], baseline["at_temperature_0_7"]["_tps"]
+        v["speed_vs_baseline_t0_7"] = round(t07 / base07, 3)
         n = v["slices_per_h200"]
         v["per_h200"] = {
             "slices": n,
@@ -353,9 +342,7 @@ def finish(variants: list[dict], baseline: dict) -> None:
             "note": PER_H200_NOTE if n > 1 else "one full H200, the measured number",
         }
     for v in variants:
-        del v["_tps"]
-        if v["at_temperature_0_7"]:
-            del v["at_temperature_0_7"]["_tps"]
+        del v["_tps"], v["at_temperature_0_7"]["_tps"]
 
 
 def thinking_setting(raw: Path, variants: list[dict]) -> str:
