@@ -52,7 +52,7 @@ Three scenes, keys `1` `2` `3`: **Ask** streams a question (typed, or one of eig
 
 ## Deploy
 
-The vLLM deployments are KServe InferenceServices in `kubernetes/models/`, one per setup, as they ran. They use raw deployment mode (a plain Deployment behind a Service), and on our cluster GPUs are scheduled through a Kueue queue, which the files leave out. The two INT4 files use KServe's model/runtime form: `kubernetes/servingruntime-vllm.yaml` is the runtime they ran on (the same image, serving `/mnt/models`), and the `hf://` download needs a `storage-config` secret shaped like `kubernetes/storage-config.example.yaml`. Every Llama file uses `--max-model-len 131072`, the model's full context and what was measured; 32768 is plenty for a demo and leaves more room for KV cache.
+The vLLM deployments are KServe InferenceServices in `kubernetes/models/`, one per setup, as they ran (the Llama files pin the image digest the deployments carried, not one read from a raw log; the Qwen digests are in `bench/raw/2026-09-30-qwen-r1/logs/*-image.txt`). They use raw deployment mode (a plain Deployment behind a Service), and on our cluster GPUs are scheduled through a Kueue queue, which the files leave out. The two INT4 files use KServe's model/runtime form: `kubernetes/servingruntime-vllm.yaml` is the runtime they ran on (the same image, serving `/mnt/models`), and the `hf://` download needs a `storage-config` secret shaped like `kubernetes/storage-config.example.yaml`. Every Llama file uses `--max-model-len 131072`, the model's full context and what was measured; 32768 is plenty for a demo and leaves more room for KV cache.
 
 Not every setup needs a full H200:
 
@@ -63,7 +63,7 @@ Not every setup needs a full H200:
 | FP8 | 67.7 GiB (72.7 GB) | 1 full H200 | no, the weights alone exceed it |
 | INT4 | 37.1 GiB | 1 GPU | untested (all runs were on full H200s); a 71 GB slice is 69.75 GiB, which after the weights, vLLM's 10% reserve and workspace leaves about 25 GiB for KV cache, and a 3g slice has 60 of the 132 SMs, so no speed number here carries over |
 
-A card's nameplate isn't what a model gets. An H200's 141 GB is 131.3 GiB (nvidia-smi reports 143,771 MiB, 140.4 GiB); the Qwen BF16 log shows 51.1 GiB of weights and 72.3 GiB of KV cache, 123.4 GiB in all, with the rest held back by vLLM's 10% reserve (`gpu_memory_utilization` 0.9), the CUDA context and 1.15 GiB of CUDA graphs.
+A card's nameplate isn't what a model gets. nvidia-smi reports an H200 as 143,771 MiB, 140.4 GiB; vLLM's default budget (`gpu_memory_utilization` 0.9) is 126.4 GiB of that for weights, KV cache, CUDA graphs and workspace. Llama 3.1 70B in BF16 is 131.5 GiB of weights (65.74 GiB per GPU across two), so one card fails on the budget, not the nameplate. The Qwen BF16 log shows 51.1 GiB of weights and 72.3 GiB of KV cache, 123.4 GiB inside that budget, with 1.15 GiB of CUDA graphs and workspace in the rest.
 
 The Qwen track's InferenceServices are in `kubernetes/models/qwen/`, raw containers on the vLLM 0.24 image with `--max-model-len 32768` and thinking turned off server-side (`--default-chat-template-kwargs={"enable_thinking":false}`), as they ran:
 
