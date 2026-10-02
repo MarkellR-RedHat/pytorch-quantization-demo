@@ -235,7 +235,8 @@ kbd {
 .acol-head { padding: 18px 24px 14px; border-bottom: 1px solid var(--line); }
 .acol-head .row1 { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .acol-head h3 { display: flex; align-items: center; gap: 12px; margin: 0; font-family: var(--display); font-weight: 800; font-size: 26px; }
-.acol-head .role { margin: 6px 0 0; font-size: 16.5px; color: var(--ink-3); }
+/* room for two lines on every column, so a role that wraps (the Qwen INT4 and spec decode ones) doesn't make its header taller than the others */
+.acol-head .role { margin: 6px 0 0; font-size: 16.5px; line-height: 1.3; min-height: 2.6em; color: var(--ink-3); }
 /* a long label (the Qwen INT4 names its build) pushes the chips onto their own line, right-aligned */
 .gpu-chips { display: flex; align-items: center; gap: 6px; margin-left: auto; font-family: var(--mono); font-size: 14px; color: var(--ink-3); white-space: nowrap; }
 .gpu-chips i { width: 24px; height: 17px; border-radius: 4px; background: var(--c); }

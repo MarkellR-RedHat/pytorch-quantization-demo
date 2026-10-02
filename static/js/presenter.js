@@ -165,11 +165,14 @@
 
     // ask
 
+    // The Ask column header is the setup's short name, so all four headers stay one line on both
+    // tracks; the build in the label's parentheses ("GPTQ via LLM Compressor") leads the role line.
     function roleText(key) {
         const v = config && config.variants.find(x => x.key === key);
         const role = setupCopy(key).role || '';
-        // the build note is dropped when the label already names the build
-        return v && v.build && !label(key).includes('GPTQ') ? `${role}, ${v.build}` : role;
+        const build = (label(key).match(/\((.*)\)$/) || [])[1];
+        if (build) return `${build} · ${role}`;
+        return v && v.build ? `${role}, ${v.build}` : role;
     }
 
     function buildAsk() {
@@ -185,7 +188,7 @@
             col.style.setProperty('--c', `var(${color(key)})`);
             col.innerHTML = `
                 <div class="acol-head">
-                    <div class="row1"><h3>${glyph(key)}${esc(label(key))}</h3>${chips(key)}</div>
+                    <div class="row1"><h3>${glyph(key)}${esc(label(key).replace(/ \(.*\)$/, ''))}</h3>${chips(key)}</div>
                     <p class="role">${esc(roleText(key))}<span class="src" hidden></span></p>
                 </div>
                 <pre class="answer idle">Waiting for a question.</pre>
@@ -434,7 +437,7 @@
             card.className = 'card mcard';
             card.style.setProperty('--c', `var(${color(key)})`);
             card.innerHTML = `
-                <div class="mhead"><h3>${glyph(key)}${esc(benchLabel(key))}</h3>${chips(key)}</div>
+                <div class="mhead"><h3>${glyph(key)}${esc(shortLabel(key))}</h3>${chips(key)}</div>
                 <p class="gets">${esc(getsText(key, s, b, bf))}</p>
                 <div class="nums three">
                     <div><b class="num">${tps != null ? one(tps) : '–'}</b><span>tokens/s, one request</span></div>
@@ -606,7 +609,7 @@
             card.dataset.key = key;
             card.style.setProperty('--c', `var(${color(key)})`);
             card.innerHTML = `
-                <div class="mhead"><h3>${glyph(key)}${esc(benchLabel(key))}</h3>${chips(key)}</div>
+                <div class="mhead"><h3>${glyph(key)}${esc(shortLabel(key))}</h3>${chips(key)}</div>
                 <div class="big"><b class="num l-pergpu">–</b><span>output tokens/s per ${unit(key)}</span></div>
                 <div class="spark-box"><svg class="spark"></svg></div>
                 <div class="tpot-wrap"><span class="tpot-title"></span><svg class="tpot"></svg></div>
