@@ -74,10 +74,9 @@ The Qwen track's InferenceServices are in `kubernetes/models/qwen/`, raw contain
 | FP8 | 28.5 GiB | 71 GB MIG slice (`nvidia.com/mig-3g.71gb`) | CUDA graphs on |
 | INT4 | 17.7 GiB | 71 GB MIG slice, or a 35 GB slice (`nvidia.com/mig-2g.35gb`) with `--enforce-eager` | the 35 GB slice fails CUDA-graph memory profiling with an NVML assertion; eager mode is the workaround, at 15.9 tokens/s |
 
-The demo app itself: `.env` on a laptop (see `.env.example`), or the backup on OpenShift:
+The demo app itself: `.env` on a laptop (see `.env.example`), or the backup on OpenShift. CI publishes the image to `ghcr.io/markellr-redhat/pytorch-quantization-demo` on `gh workflow run container-publish.yml --ref main -f tag=2026.10` (or on a `v*` tag); the package must be set public once in GitHub (Packages, the package, settings, Change visibility) or the cluster needs a pull secret. Then:
 
 ```bash
-podman build -t quay.io/markellr-redhat/pytorch-quantization-demo:2026.10 .
 oc create secret generic pytorch-quantization-demo --from-literal=PRESENTER_KEY=$(openssl rand -hex 16)
 oc apply -f kubernetes/configmap.yaml -f kubernetes/deployment.yaml -f kubernetes/service.yaml -f kubernetes/route.yaml
 ```
