@@ -105,14 +105,17 @@ def check_live(client: httpx.Client, key: str) -> list[tuple[str, str, str]]:
 
 
 def badge_text() -> str:
+    # the page leads with the track's short name once more than one track has data
+    ready = [t for t in tracks.TRACKS.values() if t.status == "ready"]
+    lead = f"{tracks.active().short} · " if len(ready) > 1 else ""
     if settings.simulation_mode:
-        return "Replay"
+        return lead + "Replay"
     keys = configured_variants()
     recorded = [variant_label(k) for k in keys if settings.mode_for(k) == "recorded"]
     if not recorded:
-        return "Live models"
+        return lead + "Live models"
     live = [variant_label(k) for k in keys if settings.mode_for(k) != "recorded"]
-    return (f"Live: {', '.join(live)} · " if live else "") + f"Recorded: {', '.join(recorded)}"
+    return lead + (f"Live: {', '.join(live)} · " if live else "") + f"Recorded: {', '.join(recorded)}"
 
 
 def run(client: httpx.Client) -> list[tuple[str, str, str, str]]:
@@ -127,8 +130,9 @@ def run(client: httpx.Client) -> list[tuple[str, str, str, str]]:
         if build := check_build(key):
             rows.append((label, "INT4 build", *build))
     badge = badge_text()
-    rows.append(("app", "corner badge", "FAIL" if badge == "Replay" else "PASS",
-                 f'"{badge}"' + (" (SIMULATION_MODE is on)" if badge == "Replay" else "")))
+    replay = badge.endswith("Replay")
+    rows.append(("app", "corner badge", "FAIL" if replay else "PASS",
+                 f'"{badge}"' + (" (SIMULATION_MODE is on)" if replay else "")))
     return rows
 
 
