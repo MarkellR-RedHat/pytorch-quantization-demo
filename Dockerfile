@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY static/ ./static/
 COPY templates/ ./templates/
-COPY benchmark_results.json ./
+COPY benchmark_results.json benchmark_results.qwen.json ./
 COPY quality/ ./quality/
 COPY bench/ ./bench/
 

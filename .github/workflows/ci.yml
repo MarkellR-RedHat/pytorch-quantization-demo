@@ -69,8 +69,12 @@ jobs:
       run: |
         docker run -d --name demo -p 8000:8000 -e SIMULATION_MODE=true pytorch-quantization-demo:${{ github.sha }}
         for i in $(seq 1 30); do
-          curl --silent --fail http://localhost:8000/health && exit 0
+          curl --silent --fail http://localhost:8000/health && break
           sleep 1
         done
-        docker logs demo
-        exit 1
+        curl --silent --fail http://localhost:8000/health || { docker logs demo; exit 1; }
+        # both tracks are in the image: the Llama track offers 7 presets in replay, the Qwen track 8
+        presets() { curl --silent --fail http://localhost:8000/api/config | python3 -c "import json,sys; print(len(json.load(sys.stdin)['presets']))"; }
+        test "$(presets)" = 7
+        curl --silent --fail -X POST http://localhost:8000/track/qwen
+        test "$(presets)" = 8
