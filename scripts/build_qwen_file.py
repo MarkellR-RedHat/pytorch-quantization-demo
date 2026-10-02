@@ -36,7 +36,7 @@ DEVICES = {  # resource -> (device name, slices per H200)
     "nvidia.com/mig-2g.35gb": ("35 GB slice", 3),
 }
 PER_H200_NOTE = "per device times the slices per H200: arithmetic, not a measurement"
-INT4_BUILD = "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing, compressed-tensors format"
+INT4_BUILD = "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing"
 
 # Each setup names the pod whose logs it reads, since some ran on more than one pod.
 SETUPS = {

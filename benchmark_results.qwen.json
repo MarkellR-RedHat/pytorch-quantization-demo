@@ -366,7 +366,7 @@
       "checkpoint": "RedHatAI/Qwen3.8-27B-INT4",
       "quantization": "W4A16",
       "resource": "nvidia.com/mig-3g.71gb",
-      "build": "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing, compressed-tensors format",
+      "build": "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing",
       "device": {
         "name": "71 GB slice",
         "count": 1,
@@ -518,7 +518,7 @@
         "checkpoint": "RedHatAI/Qwen3.8-27B-INT4",
         "quantization": "W4A16",
         "resource": "nvidia.com/mig-2g.35gb",
-        "build": "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing, compressed-tensors format",
+        "build": "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing",
         "pod_note": "the later of the two 35 GB pods, the one with the GPU record; both ran in eager mode",
         "device": {
           "name": "35 GB slice",

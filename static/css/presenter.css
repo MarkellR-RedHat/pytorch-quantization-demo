@@ -277,7 +277,7 @@ kbd {
 .place:empty { visibility: hidden; }
 
 /* numbers (the money slide) */
-#scene-numbers { grid-template-rows: auto auto auto auto; gap: 24px; align-content: start; }
+#scene-numbers { grid-template-rows: auto auto auto auto; gap: 20px; align-content: start; }
 .money-grid { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 22px; }
 .mcard { padding: 24px 28px 22px; display: flex; flex-direction: column; gap: 16px; border-top: 6px solid var(--c); }
 .mcard h3 { display: flex; align-items: center; gap: 12px; margin: 0; font-family: var(--display); font-weight: 800; font-size: 30px; }
@@ -292,7 +292,7 @@ kbd {
 .mcard .note { margin: 0; font-size: 15px; color: var(--ink-3); line-height: 1.4; }
 .takeaway-big { margin: 0; padding: 0 4px; font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.35; color: var(--ink-2); }
 .takeaway-big b { color: var(--ink); }
-.router-strip { display: flex; align-items: center; gap: 14px; padding: 20px 28px; }
+.router-strip { display: flex; align-items: center; gap: 14px; padding: 16px 28px; }
 .router-strip .route { flex: 1 1 auto; justify-content: center; white-space: nowrap; }
 .router-strip h3 { margin: 0 12px 0 0; font-family: var(--display); font-weight: 800; font-size: 22px; white-space: nowrap; }
 .route { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); font-size: 17px; color: var(--ink-2); }
