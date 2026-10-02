@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Not Every Question Needs the Whole GPU</title>
+    <link rel="stylesheet" href="../static/css/base.css">
+    <link rel="stylesheet" href="../static/css/presenter.css">
+    <link rel="stylesheet" href="fonts.css">
+</head>
+<body class="presenter">
+<div id="stage" class="stage">
+
+    <header class="top">
+        <div class="brand">
+            <img src="../static/images/redhat-logo.png" alt="Red Hat" class="logo">
+            <div class="brand-text">
+                <h1>Not Every Question Needs the Whole GPU</h1>
+                <p id="subtitle">When to use BF16, INT4, or speculative decoding, and when a router earns its keep</p>
+            </div>
+        </div>
+
+        <nav class="tabs" role="tablist" aria-label="Scenes">
+            <button class="tab is-active" role="tab" data-scene="ask"><kbd>1</kbd>Ask</button>
+            <button class="tab" role="tab" data-scene="load"><kbd>2</kbd>Under load</button>
+            <button class="tab" role="tab" data-scene="numbers"><kbd>3</kbd>Numbers</button>
+        </nav>
+
+        <div class="controls">
+            <span class="mode" id="modeBadge"><i></i><span>Connecting</span></span>
+        </div>
+    </header>
+
+    <!-- ask -->
+    <section class="scene is-active" id="scene-ask" data-scene="ask">
+        <form class="ask-bar" id="askForm" autocomplete="off">
+            <input id="askInput" type="text" maxlength="2000" placeholder="Type a question from the room and press Enter" aria-label="Question">
+            <button class="btn btn-primary" type="submit" id="askAll">Ask all</button>
+        </form>
+        <div class="ask-meta">
+            <div class="presets" id="presets">
+                <span class="presets-label">Or try</span>
+            </div>
+            <p class="router" id="router" hidden></p>
+        </div>
+        <div class="ask-grid" id="askGrid"></div>
+    </section>
+
+    <!-- load -->
+    <section class="scene" id="scene-load" data-scene="load">
+        <div class="numbers-head">
+            <div>
+                <h2 class="scene-title">What happens when the questions pile up</h2>
+                <p class="scene-sub" id="loadSetup"></p>
+            </div>
+            <button class="btn btn-primary" id="loadPlay" type="button">Play the load run</button>
+        </div>
+        <div class="load-stage" id="loadStage"></div>
+        <p class="takeaway-big" id="loadResult"></p>
+    </section>
+
+    <!-- numbers -->
+    <section class="scene" id="scene-numbers" data-scene="numbers">
+        <div class="numbers-head">
+            <h2 class="scene-title">What each setup gets you</h2>
+            <p class="scene-sub" id="benchNote"></p>
+        </div>
+        <div class="money-grid" id="moneyGrid"></div>
+        <p class="takeaway-big" id="takeaway"></p>
+        <div class="router-strip" id="routerStrip"></div>
+        <p class="router-note" id="routerNote"></p>
+        <p class="numbers-foot" id="numbersFoot"></p>
+    </section>
+
+    <footer class="bottom">
+        <span id="footLeft">PyTorch Conference North America 2026 · San Jose · <a id="footLicense" href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/LICENSE" target="_blank" rel="noopener">Built with Llama</a></span>
+        <span id="footRight"><span id="footKeys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span> scenes · <kbd>/</kbd> type a question · <kbd>R</kbd> live/replay · <kbd>Q</kbd> track · <kbd>T</kbd> theme · <kbd>F</kbd> full screen</span>
+    </footer>
+</div>
+
+<script>
+    // the static copy: the track from ?track=, llama otherwise; Q switches tracks
+    window.DEMO_STATIC = { track: new URLSearchParams(location.search).get('track') || 'llama' };
+</script>
+<script src="data/llama.js"></script>
+<script src="data/qwen.js"></script>
+<script src="../static/js/presenter.js"></script>
+</body>
+</html>

@@ -2,6 +2,8 @@
 
 Two models served by vLLM on NVIDIA H200s four ways each. Llama 3.1 70B Instruct: BF16 on two GPUs, FP8 on one, INT4 on one, and speculative decoding with an 8B draft on two. Qwen3.8-27B: BF16 on one GPU, FP8 and INT4 on 71 GB MIG slices, and speculative decoding with the model's own MTP head on the same GPU. The demo sends one question to all four setups of a track at once, streams the answers side by side with their timing, and shows what each setup gets you, what it costs under load, and where a router fits. Built for the Demo Theater at PyTorch Conference North America 2026, San Jose.
 
+Slides: https://markellr-redhat.github.io/pytorch-quantization-demo/slides.html. Demo (replay, no setup): https://markellr-redhat.github.io/pytorch-quantization-demo/demo/; to run it live, see Run it.
+
 ## Results, Llama 3.1 70B
 
 vLLM `0.18.0+rhaiv.14` (the build in Red Hat AI), PyTorch 2.10.0, driver 580.126.20, September 29, 2026. One request at a time is `vllm bench serve` inside the pod on 30 ShareGPT prompts at temperature 0. Under load is the same tool at 1 to 64 requests in flight on 512-token random prompts asking for 256, and the number kept is output tokens per second per GPU with the p95 time per output token at or under 50 ms (20 tokens per second per user). Accuracy is `lm_eval`: GSM8K 8-shot chain of thought on all 1,319 questions, MMLU-Pro 5-shot on the first 20 questions of each of 14 subjects (280, standard error about ±2.8 points).

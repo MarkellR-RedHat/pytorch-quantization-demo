@@ -15,4 +15,7 @@ test:
 	$(PY) -m ruff check app tests scripts
 	$(PY) -m pytest -q
 
-.PHONY: setup run serve test
+demo:
+	$(PY) scripts/build_static_demo.py
+
+.PHONY: setup run serve test demo

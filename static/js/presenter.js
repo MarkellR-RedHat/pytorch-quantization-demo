@@ -3,6 +3,14 @@
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
 
+    // The static copy of the presenter (demo/ on GitHub Pages, or opened from file://) has no server:
+    // scripts/build_static_demo.py writes window.DEMO_DATA[track] = { config, recordings }, where config
+    // is the app's own /api/config answer and each recording is the event script the server would have
+    // streamed for that preset (text chunks with their delays, the timing basis, the labels). Everything
+    // that renders is the same code; only where the data comes from differs.
+    const STATIC = window.DEMO_STATIC || null;
+    function staticData() { return STATIC && window.DEMO_DATA ? window.DEMO_DATA[STATIC.track] : null; }
+
     // What each setup buys you. Wording matches the slides.
     const SETUPS = {
         BF16: {
@@ -220,6 +228,7 @@
         const t0 = performance.now();
         const tick = setInterval(() => { $('.s-total', col).textContent = secs(performance.now() - t0); }, 100);
         let raw = '', live = '', recorded = false;
+        const events = STATIC ? staticEvents(key, preset, ctrl.signal) : serverEvents(key, prompt, preset, ctrl.signal);
         const render = () => {
             if (!recorded) { out.textContent = markdownToText(raw); return; }
             // the live tokens stay visible above the divider, the recording goes below it
@@ -229,78 +238,59 @@
             out.append(Object.assign(document.createElement('span'), { className: 'rec-part', textContent: markdownToText(raw) }));
         };
         try {
-            const res = await fetch(`/ask/${key}`, {
-                method: 'POST', credentials: 'same-origin', signal: ctrl.signal,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, preset: preset || null }),
-            });
-            if (res.status === 401 || res.status === 403) throw new Error('Open /presenter?key=… on this laptop first.');
-            if (!res.ok || !res.body) throw new Error('This model didn\'t answer.');
-            const reader = res.body.getReader(), dec = new TextDecoder();
-            let buf = '';
-            for (;;) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                buf += dec.decode(value, { stream: true });
-                let nl;
-                while ((nl = buf.indexOf('\n')) >= 0) {
-                    const line = buf.slice(0, nl);
-                    buf = buf.slice(nl + 1);
-                    if (!line.trim()) continue;
-                    const ev = JSON.parse(line);
-                    if (ev.t === 'start') {
-                        const src = $('.src', col);
-                        const tag = ev.source === 'replay' ? { captured: 'captured answer' }[ev.text_source] : '';
-                        src.hidden = !tag;
-                        src.textContent = tag || '';
-                        src.classList.remove('recorded', 'planned');
-                        out.classList.remove('planned');
-                    } else if (ev.t === 'fallback' || ev.t === 'recorded') {
-                        // 'fallback' = a live request failed; 'recorded' = this setup is recorded by plan today
-                        live = raw;
-                        raw = '';
-                        recorded = ev.label;
-                        out.classList.toggle('planned', ev.t === 'recorded');
-                        const src = $('.src', col);
-                        src.hidden = false;
-                        src.textContent = 'recorded';
-                        src.classList.toggle('recorded', ev.t === 'fallback');
-                        src.classList.toggle('planned', ev.t === 'recorded');
-                        render();
-                    } else if (ev.t === 'delta') {
-                        raw += ev.text;
-                        render();
-                        out.scrollTop = out.scrollHeight;
-                    } else if (ev.t === 'done') {
-                        clearInterval(tick);
-                        if (ev.note) out.classList.add('idle');
-                        // Replay shows the Sep 29 benchmark's average first-token time (BF16 and INT4 only). A live
-                        // first token goes over the VPN or a port-forward, so it isn't comparable to the in-pod benchmark.
-                        const missing = ev.source === 'recorded' ? 'not recorded' : 'live only';
-                        const ttft = $('.s-ttft', col);
-                        ttft.classList.toggle('na', ev.ttft_ms == null);
-                        ttft.textContent = ev.ttft_ms != null ? secs(ev.ttft_ms) : missing;
-                        // every stat says where it came from: this live request, the recording, or the benchmark
-                        const basis = { recorded: 'recorded', benchmark: 'benchmark' };
-                        $('.s-ttft-label', col).textContent = ev.ttft_ms == null ? 'first token'
-                            : ev.source === 'live' ? 'TTFT + network' : `${basis[ev.ttft_basis] || 'benchmark'} TTFT`;
-                        $('.s-tps', col).textContent = ev.tokens_per_second != null ? ev.tokens_per_second.toFixed(0) : '–';
-                        $('.s-tps-label', col).textContent = ev.source === 'live' ? 'tokens/s' : `${basis[ev.tps_basis] || 'benchmark'} tok/s`;
-                        const total = $('.s-total', col);
-                        total.classList.toggle('na', ev.total_ms == null);
-                        total.textContent = ev.total_ms != null ? secs(ev.total_ms) : missing;
-                        $('.s-total-label', col).textContent = ev.source !== 'live' && ev.total_ms != null ? 'recorded total' : 'total';
-                        const len = $('.s-len', col);
-                        len.classList.toggle('na', ev.completion_tokens == null);
-                        len.textContent = ev.completion_tokens != null ? ev.completion_tokens : missing;
-                        if (ev.source === 'live') {
-                            finished += 1;
-                            place.textContent = ['1st', '2nd', '3rd', '4th'][finished - 1] || '';
-                            if (finished === 1) place.classList.add('first');
-                        }
-                    } else if (ev.t === 'error') {
-                        throw new Error(ev.detail && ev.detail.startsWith('Live request failed') ? ev.detail : 'This model didn\'t answer.');
+            for await (const ev of events) {
+                if (ev.t === 'start') {
+                    const src = $('.src', col);
+                    const tag = ev.source === 'replay' ? { captured: 'captured answer' }[ev.text_source] : '';
+                    src.hidden = !tag;
+                    src.textContent = tag || '';
+                    src.classList.remove('recorded', 'planned');
+                    out.classList.remove('planned');
+                } else if (ev.t === 'fallback' || ev.t === 'recorded') {
+                    // 'fallback' = a live request failed; 'recorded' = this setup is recorded by plan today
+                    live = raw;
+                    raw = '';
+                    recorded = ev.label;
+                    out.classList.toggle('planned', ev.t === 'recorded');
+                    const src = $('.src', col);
+                    src.hidden = false;
+                    src.textContent = 'recorded';
+                    src.classList.toggle('recorded', ev.t === 'fallback');
+                    src.classList.toggle('planned', ev.t === 'recorded');
+                    render();
+                } else if (ev.t === 'delta') {
+                    raw += ev.text;
+                    render();
+                    out.scrollTop = out.scrollHeight;
+                } else if (ev.t === 'done') {
+                    clearInterval(tick);
+                    if (ev.note) out.classList.add('idle');
+                    // Replay shows the Sep 29 benchmark's average first-token time (BF16 and INT4 only). A live
+                    // first token goes over the VPN or a port-forward, so it isn't comparable to the in-pod benchmark.
+                    const missing = ev.source === 'recorded' ? 'not recorded' : 'live only';
+                    const ttft = $('.s-ttft', col);
+                    ttft.classList.toggle('na', ev.ttft_ms == null);
+                    ttft.textContent = ev.ttft_ms != null ? secs(ev.ttft_ms) : missing;
+                    // every stat says where it came from: this live request, the recording, or the benchmark
+                    const basis = { recorded: 'recorded', benchmark: 'benchmark' };
+                    $('.s-ttft-label', col).textContent = ev.ttft_ms == null ? 'first token'
+                        : ev.source === 'live' ? 'TTFT + network' : `${basis[ev.ttft_basis] || 'benchmark'} TTFT`;
+                    $('.s-tps', col).textContent = ev.tokens_per_second != null ? ev.tokens_per_second.toFixed(0) : '–';
+                    $('.s-tps-label', col).textContent = ev.source === 'live' ? 'tokens/s' : `${basis[ev.tps_basis] || 'benchmark'} tok/s`;
+                    const total = $('.s-total', col);
+                    total.classList.toggle('na', ev.total_ms == null);
+                    total.textContent = ev.total_ms != null ? secs(ev.total_ms) : missing;
+                    $('.s-total-label', col).textContent = ev.source !== 'live' && ev.total_ms != null ? 'recorded total' : 'total';
+                    const len = $('.s-len', col);
+                    len.classList.toggle('na', ev.completion_tokens == null);
+                    len.textContent = ev.completion_tokens != null ? ev.completion_tokens : missing;
+                    if (ev.source === 'live') {
+                        finished += 1;
+                        place.textContent = ['1st', '2nd', '3rd', '4th'][finished - 1] || '';
+                        if (finished === 1) place.classList.add('first');
                     }
+                } else if (ev.t === 'error') {
+                    throw new Error(ev.detail && ev.detail.startsWith('Live request failed') ? ev.detail : 'This model didn\'t answer.');
                 }
             }
         } catch (e) {
@@ -315,11 +305,57 @@
         }
     }
 
+    // The server streams NDJSON events for one column; the static copy plays the recorded script.
+    async function* serverEvents(key, prompt, preset, signal) {
+        const res = await fetch(`/ask/${key}`, {
+            method: 'POST', credentials: 'same-origin', signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, preset: preset || null }),
+        });
+        if (res.status === 401 || res.status === 403) throw new Error('Open /presenter?key=… on this laptop first.');
+        if (!res.ok || !res.body) throw new Error('This model didn\'t answer.');
+        const reader = res.body.getReader(), dec = new TextDecoder();
+        let buf = '';
+        for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let nl;
+            while ((nl = buf.indexOf('\n')) >= 0) {
+                const line = buf.slice(0, nl);
+                buf = buf.slice(nl + 1);
+                if (line.trim()) yield JSON.parse(line);
+            }
+        }
+    }
+    async function* staticEvents(key, preset, signal) {
+        const d = staticData();
+        const script = d && preset && d.recordings[key] && d.recordings[key][preset];
+        if (!script) { yield { t: 'error', detail: 'Typed questions need the live app' }; return; }
+        for (const ev of script) {
+            if (ev.delay_ms) {
+                await new Promise((resolve, reject) => {
+                    const id = setTimeout(resolve, ev.delay_ms);
+                    signal.addEventListener('abort', () => { clearTimeout(id); reject(new DOMException('aborted', 'AbortError')); }, { once: true });
+                });
+            }
+            if (signal.aborted) throw new DOMException('aborted', 'AbortError');
+            yield ev;
+        }
+    }
+
     $('#askForm').addEventListener('submit', e => {
         e.preventDefault();
         const q = $('#askInput').value.trim();
         if (q) ask(q, null);
     });
+    if (STATIC) {
+        // typed questions need a model to answer them; the presets replay the recordings
+        const input = $('#askInput');
+        input.disabled = true;
+        input.placeholder = 'Typed questions need the live app (README, Run it); the presets below replay the recordings';
+        $('#askAll').disabled = true;
+    }
     // A long question shrinks to fit the box instead of running off its right edge on the big screen.
     function fitInput() {
         const input = $('#askInput');
@@ -742,10 +778,15 @@
         const ready = list.filter(t => t.status === 'ready').map(t => t.key);
         if (ready.length < 2) return;
         const next = ready[(ready.indexOf(config.track.key) + 1) % ready.length];
-        try {
-            const res = await fetch(`/track/${next}`, { method: 'POST', credentials: 'same-origin' });
-            if (!res.ok) throw new Error(res.status);
-        } catch (e) { return; }
+        if (STATIC) {
+            if (!(window.DEMO_DATA && window.DEMO_DATA[next])) return;
+            STATIC.track = next;
+        } else {
+            try {
+                const res = await fetch(`/track/${next}`, { method: 'POST', credentials: 'same-origin' });
+                if (!res.ok) throw new Error(res.status);
+            } catch (e) { return; }
+        }
         running.forEach(c => c.abort());
         running = [];
         await loadConfig();
@@ -753,9 +794,15 @@
 
     async function loadConfig() {
         try {
-            const res = await fetch('/api/config');
-            if (!res.ok) throw new Error(res.status);
-            config = await res.json();
+            if (STATIC) {
+                const d = staticData();
+                if (!d) throw new Error('no data for this track');
+                config = JSON.parse(JSON.stringify(d.config));
+            } else {
+                const res = await fetch('/api/config');
+                if (!res.ok) throw new Error(res.status);
+                config = await res.json();
+            }
         } catch (e) { config = null; }
         const badge = $('#modeBadge');
         if (config) {
@@ -807,6 +854,7 @@
 
     // R flips every column between the live models and replay in one keystroke, for when the network dies.
     async function toggleReplay() {
+        if (STATIC) return;  // the static copy is replay only
         try {
             const res = await fetch('/simulation/toggle', { method: 'POST', credentials: 'same-origin' });
             if (!res.ok) throw new Error(res.status);
