@@ -1,6 +1,6 @@
 # PyTorch Conference NA 2026: Not Every Question Needs the Whole GPU
 
-**Session:** Demo Theater, Tuesday October 20, 4:10 PM PDT, 10 minutes, San Jose.
+**Session:** Demo Theater, 10 minutes, San Jose.
 **Repo:** https://github.com/MarkellR-RedHat/pytorch-quantization-demo
 
 ## The story
@@ -55,74 +55,55 @@ The exact wording lives in `app/quality.py` (`PROMPTS`), and `scripts/capture_pr
 
 ## The plan
 
-Two tracks in one app; `Q` switches between them. Nothing is run or recorded again: the numbers and the recordings in the repo are final. On the day the only steps are bring the endpoints up, run preflight, present live, and let a column fall back to its recording if a request fails.
+Every column on both tracks plays its recording. The recordings are the answers each setup gave in the measured runs, captured at temperature 0, and they play at the speed that setup measured; each column carries a Recorded pill and the corner badge says so. Nothing is run or recorded again: the numbers and the recordings in the repo are final, and the talk needs no GPU, no cluster and no VPN. The app runs on whichever laptop presents.
 
-| Track | Setup | On the day |
+| Track | Columns | Badge |
 |---|---|---|
-| Llama 3.1 70B | BF16, tensor parallel 2 | 2× H200, live |
-| | Speculative decoding, tensor parallel 2 | 2× H200, live |
-| | FP8 | 1× H200, live |
-| | INT4 | recorded by plan (`MODEL_INT4_MODE=recorded`) from `quality/INT4_RH/`, labeled "Recorded Sep 29"; the badge says so |
-| Qwen3.8-27B | all four | recorded by plan from `quality/qwen/` (the default for every `QWEN_MODEL_<VARIANT>_MODE`), labeled "Recorded Sep 30" |
+| Llama 3.1 70B | BF16, FP8, INT4 (`quality/INT4_RH/`), BF16 + spec decode, all recorded | "Llama 70B · Recorded: BF16, FP8, INT4 (GPTQ via AutoGPTQ), BF16 + spec decode" |
+| Qwen3.8-27B | BF16, FP8, INT4, BF16 + MTP, all recorded | "Qwen 27B · Recorded: BF16, FP8, INT4 (GPTQ via LLM Compressor), BF16 + MTP" |
 
-That is the five H200s booked. If a sixth H200 and two 71 GB MIG slices are free that morning, the Qwen track goes live on three columns with the second `.env` below (MTP on the H200, FP8 and INT4 on the slices; BF16 stays recorded, since its H200 is the one MTP uses). FP8 on the Llama track needs a full GPU; the sizing tables are in the README.
+A preset button is offered only when every recorded column has an answer for it. The Llama track offers seven: its "Explain KV cache" prompt was reworded after the run and has no Llama recording. The Qwen track offers all eight. A typed question has no recording, so each column says "Not live today. Recorded answers cover the preset questions." The Llama spec decode column's sheep riddle recording is the afternoon capture of the same answer (the evening one was a cold first request), paced at the benchmark speed and labeled so.
 
-In replay, and for a column recorded by plan, a preset button is offered only when every column on screen has a recording for it. The Llama track offers seven: its "Explain KV cache" prompt was reworded after the Sep 29 run and has no Llama recording, so the button appears only while all four Llama columns are live. The Qwen track offers all eight. The Llama spec decode column's sheep riddle recording is the afternoon capture of the same answer (the evening one was a cold first request), paced at the benchmark speed and labeled so.
+If one OpenAI-compatible endpoint serving one of the Llama setups exists on the day, it can go in one column; everything else stays recorded and the talk works the same without it.
 
-### The day before
+### Setup, once
 
-- BF16, spec decode and FP8 deployed and answering (`/v1/models` on each endpoint)
-- The app runs on the presenter laptop, the one plugged into the projector: `make setup` once, then this `.env` (port-forwards on 18001, 18003 and 18004, or the VPN routes in their place), then `make serve`:
-  ```bash
-  SIMULATION_MODE=false
-  PRESENTER_KEY=<a long random string>
-  TRACK=llama
-  MODEL_BF16_ENDPOINT=http://localhost:18001/v1/chat/completions
-  MODEL_BF16_NAME=benchmark-bf16
-  MODEL_SPEC_DECODE_ENDPOINT=http://localhost:18003/v1/chat/completions
-  MODEL_SPEC_DECODE_NAME=benchmark-spec
-  MODEL_FP8_ENDPOINT=http://localhost:18004/v1/chat/completions
-  MODEL_FP8_NAME=benchmark-fp8
-  MODEL_INT4_MODE=recorded
-  MODEL_INT4_CAPTURES=INT4_RH
-  # the Qwen track: every column recorded, nothing else needed
-  ```
-- The second `.env`, only if a sixth H200 and two 71 GB slices are free that morning: deploy `kubernetes/models/qwen/isvc-qwen-mtp.yaml`, `isvc-qwen-fp8.yaml` and `isvc-qwen-int4.yaml`, port-forward them to 18012, 18013 and 18014, and add:
-  ```bash
-  QWEN_MODEL_SPEC_DECODE_ENDPOINT=http://localhost:18012/v1/chat/completions
-  QWEN_MODEL_SPEC_DECODE_NAME=qwen-mtp
-  QWEN_MODEL_SPEC_DECODE_MODE=live
-  QWEN_MODEL_FP8_ENDPOINT=http://localhost:18013/v1/chat/completions
-  QWEN_MODEL_FP8_NAME=qwen-fp8
-  QWEN_MODEL_FP8_MODE=live
-  QWEN_MODEL_INT4_ENDPOINT=http://localhost:18014/v1/chat/completions
-  QWEN_MODEL_INT4_NAME=qwen-int4
-  QWEN_MODEL_INT4_MODE=live
-  ```
-- The laptop opened `http://localhost:8000/presenter?key=<value>` once, so the Ask box works
-- One typed question and every preset answered on both tracks (`Q` to switch)
-- The backup, the same app behind an OpenShift Route (README, Deploy), is up with the same values: same code, same recordings, both tracks
-- `/presenter?mode=sim` tested as the fallback
-- Backup video recorded and on a USB drive
+`make setup`, then this `.env`, then `make serve`, and open `http://localhost:8000/presenter?key=<value>`:
 
-### 30 minutes before
+```bash
+SIMULATION_MODE=false
+PRESENTER_KEY=<a long random string>
+TRACK=llama
+MODEL_BF16_MODE=recorded
+MODEL_SPEC_DECODE_MODE=recorded
+MODEL_FP8_MODE=recorded
+MODEL_INT4_MODE=recorded
+MODEL_INT4_CAPTURES=INT4_RH
+QWEN_MODEL_BF16_MODE=recorded
+QWEN_MODEL_FP8_MODE=recorded
+QWEN_MODEL_INT4_MODE=recorded
+QWEN_MODEL_SPEC_DECODE_MODE=recorded
+```
 
-- `python scripts/preflight.py` from the repo root with the same `.env` as the app. For every track with data and every setup on it, it checks that `/v1/models` lists the served name and a 1-token completion answers, sends 3 warm-up requests so the first live answer isn't cold, and confirms every preset has a recording; a setup recorded by plan passes on its recordings alone, so a fully recorded Qwen track passes. It prints what the corner badge will say on each track and one PASS/FAIL table, and exits 1 on any FAIL. It needs no cluster login.
-- Port-forwards (or VPN) up, app started, `http://localhost:8000/presenter` full screen (`F`)
-- The badge in the top right says "Llama 70B · Live: BF16, FP8, Spec Decode · Recorded: INT4 (GPTQ via AutoGPTQ)", and after `Q`, "Qwen 27B · Recorded: BF16, FP8, INT4 (GPTQ via LLM Compressor), Spec Decode"
-- Notifications off, other apps closed
+To put one endpoint in one column, set that column's mode to live and add its two lines, for example FP8:
+
+```bash
+MODEL_FP8_MODE=live
+MODEL_FP8_ENDPOINT=<the URL, ending /v1/chat/completions>
+MODEL_FP8_NAME=<its served model name>
+```
+
+### An hour before the talk
+
+- `make serve`, then `python scripts/preflight.py` from the repo root with the same `.env`. With every column recorded it checks that every preset on screen has a recording on both tracks and prints the badge each track will show. It ends `PASS: 0 failed, 0 warnings, 18 checks` and exits 1 on any FAIL. With one live column it also checks that endpoint lists the served name and answers, and sends 3 warm-up requests.
+- The badges match the table above (with a live column, that column moves to "Live:").
+- `http://localhost:8000/presenter` full screen (`F`), notifications off, other apps closed.
 
 ## If something goes wrong
 
-**One model stops responding:** nothing to do for the presets. After 8 seconds with no first token, or 10 seconds of silence mid-answer, that column plays its recorded answer under a red line that says "Recorded <date> · live request failed", and its badge says RECORDED. Mention it when it happens.
+**The live column stops responding:** nothing to do for the presets. After 8 seconds with no first token, or 10 seconds of silence mid-answer, that column plays its recorded answer under a red line that says "Recorded <date> · live request failed", and its badge says RECORDED.
 
-**All the models stop responding:** press `R` (or open `/presenter?mode=sim`). Numbers doesn't change, because it shows the measured benchmark. In Ask, a "Replay" badge appears and each column plays its recording. `R` again goes back to live.
-
-**A setup's GPUs get pulled before the talk:** set `MODEL_<VARIANT>_MODE=recorded` for it and restart the app. That column never calls its endpoint, plays its recordings labeled "Recorded <date>", and the badge says which setups are live and which are recorded.
-
-**The laptop app breaks:** open the backup Route (`https://<route>/presenter?key=<value>`) in the same browser; same code, same recordings, both tracks. If the venue network is bad, stay on the laptop: fonts and everything else are bundled, and `R` plays the recordings.
-
-**Nobody calls out a question:** use the preset buttons. Sheep riddle and Logic puzzle go to BF16, the four everyday ones to FP8, Python function (and, on the Qwen track, Explain KV cache) to BF16 with spec decode on.
+**The laptop app breaks:** open the static replay, https://markellr-redhat.github.io/pytorch-quantization-demo/demo/, in the same browser. It plays the same recordings and the same measured runs on both tracks with no server.
 
 **Everything fails:** play the backup video from the USB drive, narrate over it, and move to Q&A.
 
@@ -130,5 +111,5 @@ In replay, and for a column recorded by plan, a preset button is offered only wh
 
 - Laptop with the presenter dashboard open
 - HDMI adapter, and a backup one
-- Backup laptop with the full setup
+- Backup laptop with the same setup
 - USB drive with the backup video

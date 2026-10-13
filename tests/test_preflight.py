@@ -112,42 +112,55 @@ def test_preflight_replay_badge(setups, monkeypatch):
     assert preflight.run(vllm())[-1][2] == "FAIL"
 
 
-def test_preflight_day_of_env(setups, monkeypatch):
-    """Oct 20: BF16, spec decode and FP8 live on five H200s, INT4 recorded by plan from quality/INT4_RH/."""
-    monkeypatch.setattr(settings, "model_int4_endpoint", "")
-    monkeypatch.setattr(settings, "model_int4_name", "")
-    monkeypatch.setattr(settings, "model_int4_mode", "recorded")
-    monkeypatch.setattr(settings, "model_fp8_endpoint", "http://vllm4.test/v1/chat/completions")
-    monkeypatch.setattr(settings, "model_fp8_name", "benchmark-fp8")
-    (setups / "FP8").mkdir()
+def record_fp8(folder):
+    folder.mkdir()
     for scenario, _label in PRESETS.values():
         record = {"prompt": PROMPTS[scenario], "response_text": "ok"}
-        (setups / "FP8" / f"{scenario}.json").write_text(json.dumps(record))
+        (folder / f"{scenario}.json").write_text(json.dumps(record))
+
+
+def test_preflight_day_of_env(setups, monkeypatch):
+    """The talk plan: every Llama column recorded, so no endpoint is called and the badge says so."""
+    for key in ("bf16", "spec_decode", "fp8", "int4"):
+        monkeypatch.setattr(settings, f"model_{key}_mode", "recorded")
+    record_fp8(setups / "FP8")
 
     def handler(request):
-        if request.url.host == "vllm4.test":
-            if request.url.path.endswith("/models"):
-                return httpx.Response(200, json={"data": [{"id": "benchmark-fp8"}]})
-            return httpx.Response(200, json={"choices": [{"message": {"content": "hi"}}]})
-        if request.url.host == "vllm2.test":
-            raise AssertionError("the recorded INT4 setup must not be called")
-        if request.url.path.endswith("/models"):
-            key = {"vllm1.test": "BF16", "vllm3.test": "SPEC_DECODE"}[request.url.host]
-            return httpx.Response(200, json={"data": [{"id": NAMES[key]}]})
-        return httpx.Response(200, json={"choices": [{"message": {"content": "hi"}}]})
+        raise AssertionError(f"a recorded setup was called: {request.url}")
 
     rows = preflight.run(httpx.Client(transport=httpx.MockTransport(handler)))
     assert all(r[2] == "PASS" for r in rows), [r for r in rows if r[2] != "PASS"]
     got = results(rows)
-    int4 = "INT4 (GPTQ via AutoGPTQ)"
-    assert got[(int4, "mode")] == "PASS" and (int4, "models list") not in got
-    assert got[("FP8", "warm-up")] == "PASS"
-    assert rows[-1][3] == ('"Llama 70B · Live: BF16, FP8, BF16 + spec decode · '
-                           'Recorded: INT4 (GPTQ via AutoGPTQ)"')
+    assert all(got[(label, "mode")] == "PASS" for label in
+               ("BF16", "FP8", "INT4 (GPTQ via AutoGPTQ)", "BF16 + spec decode"))
+    assert rows[-1][3] == ('"Llama 70B · Recorded: BF16, FP8, INT4 (GPTQ via AutoGPTQ), '
+                           'BF16 + spec decode"')
+
+
+def test_preflight_day_of_env_one_endpoint(setups, monkeypatch):
+    """The optional extra: one endpoint in the FP8 column, everything else still recorded."""
+    for key in ("bf16", "spec_decode", "int4"):
+        monkeypatch.setattr(settings, f"model_{key}_mode", "recorded")
+    monkeypatch.setattr(settings, "model_fp8_endpoint", "http://vllm4.test/v1/chat/completions")
+    monkeypatch.setattr(settings, "model_fp8_name", "benchmark-fp8")
+    record_fp8(setups / "FP8")
+
+    def handler(request):
+        if request.url.host != "vllm4.test":
+            raise AssertionError(f"a recorded setup was called: {request.url}")
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": [{"id": "benchmark-fp8"}]})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "hi"}}]})
+
+    rows = preflight.run(httpx.Client(transport=httpx.MockTransport(handler)))
+    assert all(r[2] == "PASS" for r in rows), [r for r in rows if r[2] != "PASS"]
+    assert results(rows)[("FP8", "warm-up")] == "PASS"
+    assert rows[-1][3] == ('"Llama 70B · Live: FP8 · '
+                           'Recorded: BF16, INT4 (GPTQ via AutoGPTQ), BF16 + spec decode"')
 
 
 def test_preflight_fully_recorded_qwen_track(monkeypatch):
-    """The Qwen track on the day: every column recorded by plan (the default), so it passes on its
+    """The Qwen track: every column recorded by plan (the default), so it passes on its
     recordings alone and no endpoint is called; run_all checks it after the Llama track."""
     from app import tracks
 

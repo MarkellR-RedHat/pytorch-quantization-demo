@@ -1,4 +1,7 @@
 # The same variables as .env; the endpoints are the KServe predictor Services in the models' namespace.
+# On our cluster a predictor Service listens on 80 behind a kube-rbac-proxy sidecar and vLLM's 8080 is only
+# on the pod, so these 8080 URLs need a plain Service in front of each predictor Deployment, for example
+# oc expose deployment benchmark-bf16-predictor --name=benchmark-bf16-direct --port=8080, with the host changed to match.
 apiVersion: v1
 kind: ConfigMap
 metadata:
