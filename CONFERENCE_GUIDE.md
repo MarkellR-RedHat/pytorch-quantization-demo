@@ -5,7 +5,7 @@
 
 ## The story
 
-Two models, four setups each, on vLLM on NVIDIA H200s. Llama 3.1 70B Instruct: BF16 on two GPUs, FP8 on one, INT4 (Red Hat's validated build: W4A16, GPTQ via AutoGPTQ) on one, and speculative decoding with an 8B draft model on two. Qwen3.8-27B: BF16 on one GPU, FP8 and INT4 (Red Hat's build: W4A16, GPTQ via LLM Compressor) on 71 GB MIG slices, and speculative decoding with the model's own MTP head on the same GPU. A question from the room goes to all four setups of the track on screen at once (`Q` switches tracks) and the answers stream side by side with their timing and device; Under load shows what each device serves at a latency target; Numbers is the money slide and says when a router earns its keep. The Llama lanes: FP8 for everyday questions on Hopper, INT4 where 73 GB of weights won't fit, BF16 for the hardest questions until the others are tested on them, spec decode where latency matters. The Qwen lanes: FP8 for everyday traffic (two replicas per H200), INT4 for long contexts on a slice, spec decode for anyone waiting on the answer, plain BF16 for batch work where nobody waits. The numbers behind every line are in the README's two results tables.
+Two models on vLLM on NVIDIA H200s, each at three precisions with speculative decoding as an add-on on BF16 (four columns in the demo). Llama 3.1 70B Instruct: BF16 on two GPUs, FP8 on one, INT4 (Red Hat's validated build: W4A16, GPTQ via AutoGPTQ) on one, and speculative decoding with an 8B draft model on two. Qwen3.8-27B: BF16 on one GPU, FP8 and INT4 (Red Hat's build: W4A16, GPTQ via LLM Compressor) on 71 GB MIG slices, and speculative decoding with the model's own MTP head on the same GPU. A question from the room goes to all four setups of the track on screen at once (`Q` switches tracks) and the answers stream side by side with their timing and device; Under load shows what each device serves at a latency target; Numbers is the money slide and says when a router earns its keep. The Llama lanes: FP8 for everyday questions on Hopper, INT4 where 73 GB of weights won't fit, BF16 for the hardest questions until the others are tested on them, and spec decode as a switch you turn on in the BF16 lane for anyone waiting on the answer (measured on the BF16 target). The Qwen lanes: FP8 for everyday traffic (two replicas per H200), INT4 for long contexts on a slice, BF16 with its MTP head on for anyone waiting on the answer, plain BF16 for batch work where nobody waits. The numbers behind every line are in the README's two results tables.
 
 ## The talk flow
 
@@ -27,8 +27,8 @@ The eight preset questions, and the lane the example router gives each one (it m
 | Decline a meeting | A short, polite reply declining a Friday meeting | Everyday |
 | Quick fact | The capital of Australia, and why it isn't Sydney, in two sentences | Everyday |
 | Extract to JSON | Name, company and date from a one-line message | Everyday |
-| Python function | Second largest number in a list, with edge cases | Spec Decode, long answers with someone waiting |
-| Explain KV cache | The KV cache in a transformer LLM, for a new engineer, in about 300 words | Spec Decode (the long-answer, latency case) |
+| Python function | Second largest number in a list, with edge cases | BF16 + spec decode, long answers with someone waiting |
+| Explain KV cache | The KV cache in a transformer LLM, for a new engineer, in about 300 words | BF16 + spec decode (the long-answer, latency case) |
 
 The exact wording lives in `app/quality.py` (`PROMPTS`), and `scripts/capture_presets.py` records every setup's answer to each one at temperature 0 with the same 1,024-token cap as live Ask.
 
@@ -122,7 +122,7 @@ In replay, and for a column recorded by plan, a preset button is offered only wh
 
 **The laptop app breaks:** open the backup Route (`https://<route>/presenter?key=<value>`) in the same browser; same code, same recordings, both tracks. If the venue network is bad, stay on the laptop: fonts and everything else are bundled, and `R` plays the recordings.
 
-**Nobody calls out a question:** use the preset buttons. Sheep riddle and Logic puzzle go to BF16, the four everyday ones to FP8, Python function (and, on the Qwen track, Explain KV cache) to Spec Decode.
+**Nobody calls out a question:** use the preset buttons. Sheep riddle and Logic puzzle go to BF16, the four everyday ones to FP8, Python function (and, on the Qwen track, Explain KV cache) to BF16 with spec decode on.
 
 **Everything fails:** play the backup video from the USB drive, narrate over it, and move to Q&A.
 

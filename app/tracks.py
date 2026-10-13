@@ -103,16 +103,15 @@ LLAMA_COPY = {
         "gets": "Half the GPUs, and about the same output per GPU under load",
         "best": "Everyday chat and easy questions",
         "bestWithFP8": "When 73 GB of weights won't fit: memory-tight GPUs",
-        "watch": "3 to 4 points lower on 280 MMLU-Pro questions, too few to call it, so the hardest "
-                 "questions stay on BF16 until it's tested further",
+        "watch": "W4A16: 16-bit activations, so under load it's about even with BF16 per GPU where FP8's "
+                 "W8A8 serves 1.5×; 3 to 4 points lower on 280 MMLU-Pro questions, too few to call it",
     },
     "SPEC_DECODE": {
-        "role": "Same 2 GPUs, 70B + 8B draft",
+        "role": "Add-on: an 8B draft on the BF16 target",
         "gets": "Faster answers on the same GPUs, with BF16 quality",
-        "best": "Latency-sensitive, low-traffic work",
-        "watch": "A slower first token, and about half of BF16's tokens per GPU under load: it's a latency "
-                 "tool",
-        "watchVerdict": ": it's a latency tool",
+        "best": "Anyone waiting on the answer: a switch you turn on in the BF16 lane",
+        "watch": "A slower first token, and about half of BF16's tokens per GPU under load: draft overhead",
+        "watchVerdict": ": draft overhead",
         "acc": "= BF16", "accNote": "by design, the 70B checks every token",
         "drafter": "8B draft", "pass": "70B pass", "drafterLong": "Llama 3.1 8B as the draft",
     },
@@ -140,12 +139,11 @@ QWEN_COPY = {
                  "the build's FP8 KV cache at work (37.7 KB per token against 70.6)",
     },
     "SPEC_DECODE": {
-        "role": "Same H200, the model's own MTP head",
+        "role": "Add-on: the model's own MTP head on the BF16 target",
         "gets": "Faster answers on the same GPU, with BF16 quality",
-        "best": "Anything a person is waiting on: spec decode comes built in with this model",
-        "watch": "A slower first token, and fewer of BF16's tokens per GPU under load",
-        "watchVerdict": ", on the same card with no extra model to serve, so it's the default for anything "
-                        "a person is waiting on",
+        "best": "Anyone waiting on the answer: a switch on the BF16 lane, built into this model",
+        "watch": "A slower first token, and fewer of BF16's tokens per GPU under load: draft overhead",
+        "watchVerdict": ": draft overhead, on the same card with no extra model",
         "acc": "= BF16", "accNote": "by design, the 27B checks every token",
         "drafter": "MTP head", "pass": "27B pass", "drafterLong": "the model's own MTP head as the draft",
     },
@@ -173,7 +171,7 @@ TRACKS = {
             "BF16": "A wrong answer is expensive",
             "FP8": "Everyday questions",
             "INT4": "73 GB won't fit",
-            "SPEC_DECODE": "Latency-sensitive, low traffic",
+            "SPEC_DECODE": "Anyone waiting",
         },
         copy=LLAMA_COPY,
         # Meta's license asks for this line wherever Llama outputs are shown
@@ -181,8 +179,9 @@ TRACKS = {
                  "url": "https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/LICENSE"},
         router_note=(
             "A router pays off once your traffic is big and mixed enough to run more than one pool. With "
-            "small traffic, pick the one setup that fits most of your questions. INT4 + spec decode, a draft "
-            "model on an INT4 target, is the obvious next lane, untested here."
+            "small traffic, pick the one setup that fits most of your questions. Spec decode is a "
+            "switch you turn on in a lane. FP8 + spec decode and INT4 + spec decode (a draft on a quantized "
+            "target) are the obvious next steps, untested here."
         ),
     ),
     "qwen": Track(
@@ -203,7 +202,7 @@ TRACKS = {
             "BF16": "Batch work where nobody waits",
             "FP8": "Everyday questions",
             "INT4": "Long contexts on a slice",
-            "SPEC_DECODE": "Anyone waiting on the answer",
+            "SPEC_DECODE": "Anyone waiting",
         },
         paths={
             "benchmark_file": "qwen_benchmark_file",
@@ -216,7 +215,7 @@ TRACKS = {
         settings_prefix="qwen_",
         # the Qwen INT4 recordings are under INT4/ (MODEL_INT4_CAPTURES picks between the Llama builds only)
         captures={"INT4": "INT4"},
-        labels={"INT4": "INT4 (GPTQ via LLM Compressor)"},
+        labels={"INT4": "INT4 (GPTQ via LLM Compressor)", "SPEC_DECODE": "BF16 + MTP"},
         builds={"INT4": "Red Hat's build: W4A16, GPTQ via LLM Compressor, with AWQ smoothing"},
         copy=QWEN_COPY,
         # the Qwen/Qwen3.8-27B card: license apache-2.0
@@ -225,11 +224,9 @@ TRACKS = {
         # "consistently delivers higher throughput and better interactivity than MTP with the same eight
         # speculative tokens"; the NVFP4 card evaluates on a B200 and recommends the DSpark draft on top
         router_note=(
-            "A router pays off once your traffic is big and mixed enough to run more than one pool. With "
-            "small traffic, pick the one setup that fits most of your questions. Two next lanes, untested "
-            "here, from Red Hat's model cards: the DSpark speculator (vLLM 0.29+), which Red Hat reports "
-            "ahead of native MTP at the same eight speculative tokens, and NVFP4 on Blackwell, which stacks "
-            "with it."
+            "A router pays off once your traffic is big and mixed enough to run more than one pool. "
+            "Spec decode is a switch you turn on in a lane. Next steps: FP8 + MTP, INT4 + MTP, Red Hat's "
+            "DSpark speculator (vLLM 0.29+) and NVFP4 on Blackwell, all untested here."
         ),
     ),
 }

@@ -164,6 +164,6 @@ def benchmark_label(key: str) -> str:
         "BF16": "BF16",
         "FP8": "FP8",
         "INT4": "INT4 AWQ",
-        "SPEC_DECODE": "Spec Decode",
+        "SPEC_DECODE": "BF16 + spec decode",
     }
     return labels.get(key, key)

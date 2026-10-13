@@ -68,11 +68,11 @@ def test_badge_text():
         return json.loads(out.stdout)
 
     three = [{"label": "BF16", "mode": "live"}, {"label": "INT4 (GPTQ via AutoGPTQ)", "mode": "live"},
-             {"label": "Spec Decode", "mode": "live"}]
+             {"label": "BF16 + spec decode", "mode": "live"}]
     assert badge({"mode": "live", "variants": three}) == {"kind": "live", "text": "Live models"}
     three[2]["mode"] = "recorded"
     assert badge({"mode": "live", "variants": three}) == {
-        "kind": "mixed", "text": "Live: BF16, INT4 (GPTQ via AutoGPTQ) · Recorded: Spec Decode"}
+        "kind": "mixed", "text": "Live: BF16, INT4 (GPTQ via AutoGPTQ) · Recorded: BF16 + spec decode"}
     assert badge({"mode": "simulated", "variants": three}) == {"kind": "sim", "text": "Replay"}
     # once two tracks have data the badge leads with the model on screen; a pending second track adds nothing
     three[2]["mode"] = "live"

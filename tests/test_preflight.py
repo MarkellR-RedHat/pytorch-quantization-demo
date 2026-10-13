@@ -63,7 +63,7 @@ def test_preflight_pass(setups):
 
 def test_preflight_down_endpoint(setups):
     rows = results(preflight.run(vllm(down={"SPEC_DECODE"})))
-    assert rows[("Spec Decode", "models list")] == "FAIL"
+    assert rows[("BF16 + spec decode", "models list")] == "FAIL"
 
 
 def test_preflight_missing_recording(setups):
@@ -73,12 +73,33 @@ def test_preflight_missing_recording(setups):
     assert row[2] == "FAIL" and "Logic puzzle" in row[3]
 
 
+def test_preflight_hidden_preset_passes(setups, monkeypatch):
+    """A preset with no recording on the recorded-by-plan setup has no button, so preflight lists it
+    and passes. Llama has no "Explain KV cache" recording by plan."""
+    monkeypatch.setattr(settings, "model_int4_mode", "recorded")
+    for folder in ("BF16", "INT4_RH", "SPEC_DECODE"):
+        (setups / folder / "logic_puzzle.json").unlink()
+    rows = [r for r in preflight.run(vllm()) if r[1] == "recordings"]
+    assert all(r[2] == "PASS" for r in rows), rows
+    assert all("hidden on this track, no recording: Logic puzzle" in r[3] for r in rows)
+
+
+def test_preflight_shown_preset_missing_on_live_setup(setups, monkeypatch):
+    """The recorded setup has the preset, so the button shows; a live setup without the recording
+    has nothing to fall back on and fails."""
+    monkeypatch.setattr(settings, "model_int4_mode", "recorded")
+    (setups / "BF16" / "logic_puzzle.json").unlink()
+    got = results(preflight.run(vllm()))
+    assert got[("BF16", "recordings")] == "FAIL"
+    assert got[("INT4 (GPTQ via AutoGPTQ)", "recordings")] == "PASS"
+
+
 def test_preflight_recorded_setup(setups, monkeypatch):
     monkeypatch.setattr(settings, "model_spec_decode_mode", "recorded")
     rows = preflight.run(vllm(down={"SPEC_DECODE"}))
     got = results(rows)
-    assert got[("Spec Decode", "mode")] == "PASS" and ("Spec Decode", "models list") not in got
-    assert rows[-1][3] == '"Llama 70B · Live: BF16, INT4 (GPTQ via AutoGPTQ) · Recorded: Spec Decode"'
+    assert got[("BF16 + spec decode", "mode")] == "PASS" and ("BF16 + spec decode", "models list") not in got
+    assert rows[-1][3] == '"Llama 70B · Live: BF16, INT4 (GPTQ via AutoGPTQ) · Recorded: BF16 + spec decode"'
 
 
 def test_preflight_build_mismatch(setups, monkeypatch):
@@ -121,7 +142,8 @@ def test_preflight_day_of_env(setups, monkeypatch):
     int4 = "INT4 (GPTQ via AutoGPTQ)"
     assert got[(int4, "mode")] == "PASS" and (int4, "models list") not in got
     assert got[("FP8", "warm-up")] == "PASS"
-    assert rows[-1][3] == '"Llama 70B · Live: BF16, FP8, Spec Decode · Recorded: INT4 (GPTQ via AutoGPTQ)"'
+    assert rows[-1][3] == ('"Llama 70B · Live: BF16, FP8, BF16 + spec decode · '
+                           'Recorded: INT4 (GPTQ via AutoGPTQ)"')
 
 
 def test_preflight_fully_recorded_qwen_track(monkeypatch):
@@ -140,9 +162,9 @@ def test_preflight_fully_recorded_qwen_track(monkeypatch):
         tracks.select("llama")
     assert all(r[2] == "PASS" for r in rows), [r for r in rows if r[2] != "PASS"]
     got = results(rows)
-    for label in ("BF16", "FP8", "INT4 (GPTQ via LLM Compressor)", "Spec Decode"):
+    for label in ("BF16", "FP8", "INT4 (GPTQ via LLM Compressor)", "BF16 + MTP"):
         assert got[(label, "mode")] == "PASS" and got[(label, "recordings")] == "PASS"
-    assert rows[-1][3] == '"Qwen 27B · Recorded: BF16, FP8, INT4 (GPTQ via LLM Compressor), Spec Decode"'
+    assert rows[-1][3] == '"Qwen 27B · Recorded: BF16, FP8, INT4 (GPTQ via LLM Compressor), BF16 + MTP"'
     assert "quality/qwen/INT4/" in [r for r in rows if r[0].startswith("INT4")][1][3]
 
 

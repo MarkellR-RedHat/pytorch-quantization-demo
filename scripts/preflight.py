@@ -22,7 +22,7 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import tracks  # noqa: E402
-from app.ask import PRESETS  # noqa: E402
+from app.ask import PRESETS, preset_list  # noqa: E402
 from app.config import ALL_VARIANTS, settings, variant_label  # noqa: E402
 from app.quality import recorded_answer  # noqa: E402
 
@@ -50,12 +50,19 @@ def models_url(endpoint: str) -> str:
 
 
 def check_recordings(key: str) -> tuple[str, str]:
+    """Every preset button the app will show needs a recording here, so a failed live request has something
+    to fall back on. A preset the app hides (some recorded-by-plan column has no recording for it) can't be
+    clicked, so it is listed, not failed."""
     captures = settings.captures_for(key)
     where = tracks.active()._setting("quality_dir")
-    missing = [label for scenario, label in PRESETS.values() if recorded_answer(captures, scenario) is None]
+    shown = {p["key"] for p in preset_list(configured_variants())}
+    missing = [label for pk, (scenario, label) in PRESETS.items()
+               if pk in shown and recorded_answer(captures, scenario) is None]
+    hidden = [label for pk, (scenario, label) in PRESETS.items() if pk not in shown]
     if missing:
         return "FAIL", f"no recording in {where}/{captures}/ for: {', '.join(missing)}"
-    return "PASS", f"all {len(PRESETS)} presets recorded in {where}/{captures}/"
+    note = f"; hidden on this track, no recording: {', '.join(hidden)}" if hidden else ""
+    return "PASS", f"all {len(shown)} presets on screen recorded in {where}/{captures}/{note}"
 
 
 def check_build(key: str) -> tuple[str, str] | None:
