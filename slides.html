@@ -262,20 +262,20 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 
 /* Slide 9, the router */
 .router { display: grid; grid-template-columns: 1fr 90px 330px 90px 1.15fr; align-items: stretch; margin-top: 40px; }
-.rcol { display: grid; gap: 18px; }
-.req, .dest { border: 1.5px solid var(--line); border-radius: 18px; padding: 18px 22px; background: #fff; display: flex; align-items: center; gap: 16px; min-height: 96px; }
-.req .emo { font-size: 36px; }
-.req .w { font: 700 26px/1.3 var(--display); }
-.req .w small { display: block; font: 400 24px var(--text); color: var(--ink-3); margin-top: 2px; }
+.rcol { display: grid; gap: 12px; }
+.req, .dest { border: 1.5px solid var(--line); border-radius: 14px; padding: 14px 18px; background: #fff; display: flex; align-items: center; gap: 14px; min-height: 72px; }
+.req .emo { font-size: 30px; }
+.req .w { font: 700 23px/1.3 var(--display); }
+.req .w small { display: block; font: 400 20px var(--text); color: var(--ink-3); margin-top: 2px; }
 .dest { border-left: 8px solid var(--c); }
-.dest h3 { font: 700 28px var(--display); color: var(--ct); min-width: 170px; }
-.dest p { font: 500 24px/1.45 var(--mono); color: var(--ink-2); }
+.dest h3 { font: 700 24px var(--display); color: var(--ct); min-width: 140px; }
+.dest p { font: 500 20px/1.35 var(--mono); color: var(--ink-2); }
 .hub { border-radius: 24px; background: var(--ink); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 26px; }
 .hub .emo { font-size: 56px; }
 .hub h3 { font: 900 38px var(--display); margin-top: 10px; }
 .hub p { font-size: 24px; line-height: 1.45; color: #c9ccd1; margin-top: 10px; }
-.wires { display: grid; gap: 18px; }
-.wires svg { width: 100%; height: 96px; }
+.wires { display: grid; gap: 12px; }
+.wires svg { width: 100%; height: 72px; }
 .wires path { stroke: var(--ink-3); stroke-width: 3; fill: none; stroke-dasharray: 120; stroke-dashoffset: 120; transition: stroke-dashoffset .7s var(--ease); }
 .slide.active .wires path { stroke-dashoffset: 0; transition-delay: calc(var(--d, 0) * 110ms + 450ms); }
 .moral { margin-top: 22px; font-size: 25px; line-height: 1.5; color: var(--ink-2); max-width: 1600px; }
@@ -547,16 +547,18 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
   <div class="router">
     <div class="rcol">
       <div class="req rise" style="--d:2"><span class="emo">💬</span><span class="w">Easy questions<small>most of the traffic</small></span></div>
-      <div class="req rise" style="--d:3"><span class="emo">🧠</span><span class="w">The hardest questions<small>until the others are tested on them</small></span></div>
-      <div class="req rise" style="--d:4"><span class="emo">⚡</span><span class="w">Someone's waiting<small>long answers, needs speed</small></span></div>
+      <div class="req rise" style="--d:3"><span class="emo">📄</span><span class="w" data-track="qwen">Long contexts<small>large prompts, needs KV cache room</small></span><span class="w" data-track="llama">Memory is tight<small>48 GB cards, or more KV cache room</small></span></div>
+      <div class="req rise" style="--d:4"><span class="emo">🧠</span><span class="w">The hardest questions<small>until the others are tested on them</small></span></div>
+      <div class="req rise" style="--d:5"><span class="emo">⚡</span><span class="w">Someone's waiting<small>long answers, needs speed</small></span></div>
     </div>
-    <div class="wires" style="--d:4"><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg></div>
-    <div class="hub rise" style="--d:5"><span class="emo">🔀</span><h3>Router</h3><p>One gateway on OpenShift AI, routing each request to the variant that fits it</p></div>
-    <div class="wires" style="--d:6"><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg></div>
+    <div class="wires" style="--d:5"><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg></div>
+    <div class="hub rise" style="--d:6"><span class="emo">🔀</span><h3>Router</h3><p>One gateway on OpenShift AI, routing each request to the variant that fits it</p></div>
+    <div class="wires" style="--d:7"><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg><svg viewBox="0 0 90 96"><path d="M4 48h74m-12-10 12 10-12 10"/></svg></div>
     <div class="rcol">
-      <div class="dest rise v-fp8" style="--d:6"><h3>FP8</h3><p data-t="destFp8">1 GPU per replica, INT4 where memory is tight</p></div>
-      <div class="dest rise v-bf16" style="--d:7"><h3>BF16</h3><p data-t="destBf16">2 GPUs, full precision</p></div>
-      <div class="dest rise v-spec" style="--d:8"><h3 data-t="destSpecName">BF16 + spec decode</h3><p data-t="destSpec">The BF16 pool with the add-on on: ~1.25× faster</p></div>
+      <div class="dest rise v-fp8" style="--d:7"><h3>FP8</h3><p data-t="destFp8">1 GPU per replica, INT4 where memory is tight</p></div>
+      <div class="dest rise v-int4" style="--d:8"><h3>INT4</h3><p data-t="destInt4">Smaller GPUs or more KV cache room</p></div>
+      <div class="dest rise v-bf16" style="--d:9"><h3>BF16</h3><p data-t="destBf16">2 GPUs, full precision</p></div>
+      <div class="dest rise v-spec" style="--d:10"><h3 data-t="destSpecName">BF16 + spec decode</h3><p data-t="destSpec">The BF16 pool with the add-on on: ~1.25× faster</p></div>
     </div>
   </div>
   <div class="plugs step"><span class="lab"><span class="emo">🔌</span> Also plugs into the same router</span><span class="chipset" data-track="llama"><span>INT8 (W8A8)</span><span>GPTQ</span><span>EAGLE-3 draft heads</span><span>A smaller 8B for easy questions</span><span>FP8 + spec decode</span><span>INT4 + spec decode</span></span><span class="chipset" data-track="qwen"><span>INT8 (W8A8)</span><span>DSpark speculator (vLLM 0.29+)</span><span>NVFP4 on Blackwell</span><span>A smaller model for easy questions</span><span>FP8 + MTP</span><span>INT4 + MTP</span></span></div>
@@ -740,7 +742,7 @@ const TRACKS = {
     int4Sub: 'GPTQ VIA AUTOGPTQ', int4Buys: "Half of FP8's memory, at 89% of BF16's speed", int4Caveat: 'W4A16: about even with BF16 per GPU under load',
     int4Best: "When 73 GB doesn't fit: 48 GB cards, or more room for KV cache",
     specName: 'speculative decoding', specSub: 'ADD-ON, 8B DRAFT', specBuys: 'about 1.25× faster answers, with BF16 quality', specCaveat: 'Under load, draft overhead costs about half the throughput', specBest: 'Anyone waiting on the answer',
-    destFp8: '1 GPU per replica, INT4 where memory is tight', destBf16: '2 GPUs, full precision', destSpecName: 'BF16 + spec decode', destSpec: 'The BF16 pool with the add-on on: ~1.25× faster',
+    destFp8: '1 GPU per replica: everyday questions', destInt4: 'Smaller GPUs or more KV cache room', destBf16: '2 GPUs, full precision', destSpecName: 'BF16 + spec decode', destSpec: 'The BF16 pool with the add-on on: ~1.25× faster',
     accLine: "No measurable quality loss: FP8 95.2% and INT4 95.1% against BF16's 94.8% on 1,319 GSM8K problems",
     moral: 'Only the hard questions go to BF16, so she needs fewer GPUs than running everything on BF16.',
     pt1: "<b>On Hopper, try FP8 first.</b> One GPU, BF16's speed, and no measurable loss on our tests.",
@@ -759,7 +761,7 @@ const TRACKS = {
     int4Sub: 'GPTQ VIA LLM COMPRESSOR', int4Buys: "86% of a full card's speed, on a 71 GB slice", int4Caveat: 'Fits a 35 GB slice too, but slower in eager mode',
     int4Best: 'Long contexts and big batches: 1.2M tokens of FP8 KV cache',
     specName: 'MTP (speculative decoding)', specSub: 'ADD-ON, BUILT-IN HEAD', specBuys: 'about 2.3× faster answers, with BF16 quality', specCaveat: 'Same card, no extra model. Under load, 80 to 90% of BF16', specBest: 'Anyone waiting on the answer',
-    destFp8: '1 slice each: everyday questions, INT4 for long contexts', destBf16: '1 full H200: batch work where nobody waits', destSpecName: 'BF16 + MTP', destSpec: 'Same card, the add-on on: anyone waiting',
+    destFp8: '1 slice each: everyday questions', destInt4: '1 slice: 1.24M tokens KV cache room', destBf16: '1 full H200: batch work where nobody waits', destSpecName: 'BF16 + MTP', destSpec: 'Same card, the add-on on: anyone waiting',
     accLine: 'No measurable quality loss: FP8 and INT4 matched BF16 on GSM8K (1,319) and MMLU-Pro (280)',
     moral: 'Only the hard questions get a whole H200, so she needs fewer cards than running everything on BF16.',
     pt1: "<b>On Hopper, try FP8 first.</b> A 71 GB slice, 96% of a full card's speed for one request, and no measurable loss.",
@@ -827,7 +829,8 @@ function go(n) {
   slides.forEach((s, i) => { s.classList.toggle('active', i === n); s.classList.toggle('past', i < n); });
   cur = n;
   slides.forEach(x => x.classList.remove('revealed'));
-  slides[n].querySelectorAll('.step').forEach(x => x.classList.remove('shown'));
+  slides[n].querySelectorAll('.step').forEach(x => x.classList.add('shown'));
+  slides[n].classList.add('revealed');
   const sh = slides[n].querySelector('#shout'); if (sh) sh.style.opacity = '';
   const s = slides[n];
   [...dotsEl.children].forEach((d, i) => d.classList.toggle('on', i === n));

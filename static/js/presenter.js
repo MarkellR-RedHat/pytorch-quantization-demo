@@ -334,7 +334,7 @@
     async function* staticEvents(key, preset, signal) {
         const d = staticData();
         const script = d && preset && d.recordings[key] && d.recordings[key][preset];
-        if (!script) { yield { t: 'error', detail: 'Typed questions need the live app' }; return; }
+        if (!script) { yield { t: 'error', detail: 'Use a preset to replay recorded answers' }; return; }
         for (const ev of script) {
             if (ev.delay_ms) {
                 await new Promise((resolve, reject) => {
@@ -356,7 +356,7 @@
         // typed questions need a model to answer them; the presets replay the recordings
         const input = $('#askInput');
         input.disabled = true;
-        input.placeholder = 'Typed questions need the live app (README, Run it); the presets below replay the recordings';
+        input.placeholder = 'Pick a preset below to replay the recorded answers';
         $('#askAll').disabled = true;
     }
     // A long question shrinks to fit the box instead of running off its right edge on the big screen.

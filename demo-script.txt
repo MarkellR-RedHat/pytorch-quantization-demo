@@ -2,20 +2,57 @@ DEMO SCRIPT — Quantization Showdown, PyTorch Conference NA 2026
 Qwen track, recorded mode, two presets + under load + numbers
 
 
+SLIDE-BY-SLIDE ONE-LINER (Qwen track)
+
+1. Title — Does every request really need the same GPU resources?
+2. Talk goals — This is a toolbox tour, not a shootout, and by the end you'll know when each option earns its spot.
+3. The story — Three people, five chapters: Priya runs the model, Marcus needs accurate answers, Dana watches the bill.
+4. Meet Priya — She shipped Qwen at full precision on a full H200 and most of the card is sitting empty.
+5. She quantizes — She grabbed the first INT4 she found online without checking quality, and it cut the bill in half.
+6. The ticket — Two weeks later Marcus files a ticket: did the model get worse? "Quick show of hands, who has quantized a model and then just hoped the quality was fine?"
+7. The options — Here's how to do it right: three precisions, same model, same hardware, fair comparison, plus an add-on for speed.
+8. Let's find out — Let's see all four answer the same question side by side.
+9. Router — There's no single winner, so Priya stops picking one and adds a router instead.
+10. Wrap-up — Start with FP8 on Hopper, use INT4 for long contexts, turn on MTP for anyone waiting, and always test quality on your own prompts.
+11. Close — Everything is in the GitHub repo, QR code is right there.
+
+
 PRESET 1: "Decline a meeting" (easy, everyday question)
 
 This is the kind of question that hits your endpoint 80 percent of the time, short and simple, no reasoning needed.
 All four setups give the same answer at the same quality, so watch the speeds.
-MTP finishes first but this is overkill for a one-liner, FP8 on a half-card slice handles this just fine.
-That's where a router sends it, to FP8, the cheapest device with no quality loss.
+
+    BF16: full card, solid answer, but you're paying for the whole H200 for a one-liner.
+    BF16 + MTP: finishes first but this is overkill for this type of prompt.
+    INT4: slowest here, and its big advantage is KV cache room which doesn't matter on a short answer.
+    FP8: half-card slice, same quality, handles this just fine.
+
+Priya would route this to FP8. Not because it's the fastest, it's actually slower than MTP. But for a short easy question quality isn't at risk on any of these, and FP8 on a slice is the cheapest option per token. Two slices per H200 means she serves the most users per card on the traffic that makes up most of her volume. Speed doesn't matter here because the answer is three sentences, every setup finishes in under a second. Cost per token is what matters, and FP8 wins that.
 
 
 PRESET 2: "Explain KV cache" (long answer, someone waiting)
 
 Now a real question, 300 words, someone is actually sitting there reading this.
-Watch MTP pull away, 2.3 times faster on the same card at the same quality.
-This is where the add-on earns its spot because the person waiting gets their answer in half the time.
-FP8 and INT4 give the same answer too, just slower, so the router sends this to MTP because someone is waiting on it.
+
+    BF16: reference answer at 66 tokens a second, full precision, no compromises.
+    BF16 + MTP: pulls away fast, 151 tokens a second, same card, same quality, built-in head turned on.
+    FP8: steady at 63.5 on a slice, same answer, just takes longer when someone is waiting.
+    INT4: slowest at 56.8, but if this were a 100K token context it would be the only one with room.
+
+Priya would route this to MTP. The person is sitting there watching the answer stream in, so latency matters. MTP gives them the answer 2.3 times faster on the same card at the same quality. You could argue just send it to FP8 since it's cheaper per token, but the user experience difference between 7 seconds and 3 seconds is real when someone is staring at the screen. And MTP doesn't need extra hardware, it's the same BF16 card with one flag turned on, so the cost is just the 10 to 20 percent throughput hit under load. For a long answer where someone is waiting, that tradeoff is worth it every time.
+
+
+WHY NOT JUST PICK ONE FOR EVERYTHING?
+
+If FP8 every time: you're sending hard reasoning questions to a half-card slice when BF16 on a full card is more reliable for multi-step problems. And long answers take twice as long as MTP.
+
+If MTP every time: you burn 10 to 20 percent of your throughput on draft overhead even for one-liner answers where nobody cares about latency. At scale that's real GPUs wasted.
+
+If INT4 every time: it's the slowest option and its only advantage is KV cache room. You're paying a speed penalty on every request just so 5 percent of your traffic that needs long contexts has room.
+
+If BF16 every time: you need a full H200 per replica when FP8 and INT4 fit on half-card slices. Double the GPU cost for traffic that doesn't need full precision.
+
+That's why the router exists. Each option has one job it's best at, and the router matches the request to the right tool.
 
 
 UNDER LOAD (press 2, Space to play the sweep)
@@ -24,6 +61,7 @@ Now what happens when everyone shows up at once.
 BF16 on the full card does about 2,000 tokens a second, that's the workhorse.
 MTP drops below it and that's the draft overhead, the GPU is already busy so drafting costs you throughput instead of saving it.
 FP8 on a single slice does 1,540, but you get two slices per H200, so per card that's actually more total throughput than BF16.
+INT4 hits a ceiling around 1,000 on the slice, its win is memory not speed.
 
 
 NUMBERS (press 3)
