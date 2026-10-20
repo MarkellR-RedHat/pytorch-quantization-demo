@@ -221,7 +221,11 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 .hands-q { text-align: center; font-size: 50px; margin: 60px auto 0; max-width: 1720px; }
 
 /* Slide 7, the options */
-.cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; margin-top: 52px; }
+.cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; margin-top: 30px; }
+.cards3 .vcard { padding: 22px 28px 18px; }
+.cards3 .vcard h3 { font-size: 32px; }
+.cards3 .kv2 { padding: 10px 0; }
+.cards3 .chips-row { margin: 14px 0 12px; }
 .cards4 { grid-template-columns: repeat(4, 1fr); gap: 24px; }
 .cards4 .vcard { padding: 24px 24px 14px; }
 .cards4 .kv2 { padding: 13px 0; }
@@ -275,7 +279,10 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 .wires path { stroke: var(--ink-3); stroke-width: 3; fill: none; stroke-dasharray: 120; stroke-dashoffset: 120; transition: stroke-dashoffset .7s var(--ease); }
 .slide.active .wires path { stroke-dashoffset: 0; transition-delay: calc(var(--d, 0) * 110ms + 450ms); }
 .moral { margin-top: 22px; font-size: 25px; line-height: 1.5; color: var(--ink-2); max-width: 1600px; }
-.acc-line { margin-top: 18px; font-size: 26px; font-weight: 600; color: var(--ink-2); text-align: center; }
+.acc-line { margin-top: 8px; font-size: 24px; font-weight: 600; color: var(--ink-2); text-align: center; }
+.addon-bar { margin-top: 10px; padding: 10px 22px; border-radius: 10px; border: 2px solid var(--c, var(--spec)); background: var(--tint, var(--spec-tint)); display: flex; align-items: center; gap: 12px; font-size: 22px; line-height: 1.3; color: var(--ink-1); }
+.addon-bar .emo { font-size: 24px; }
+.addon-bar b { font-weight: 700; }
 .models { list-style: none; padding: 0; margin: 36px 0 0; display: grid; gap: 18px; }
 .models li { display: grid; grid-template-columns: 220px 1fr; align-items: baseline; font-size: 28px; }
 .models li b { color: var(--ink-1, inherit); }
@@ -361,7 +368,7 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 
 <!-- 2. Talk goals -->
 <section class="slide" data-color="gold" data-dot="main">
-  <div class="kicker rise">Before we start</div>
+  <div class="kicker rise">Quantization Showdown?</div>
   <h2 class="rise" style="--d:1">This is a <span class="hl">toolbox tour</span>, not a shootout</h2>
   <div class="two-col" style="grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; margin-top: 50px;">
     <div class="rise" style="--d:2">
@@ -373,11 +380,11 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
       </ol>
     </div>
     <div class="think rise" style="--d:3; margin-top: 0;">
-      <h3 style="font: 700 26px var(--display); display: flex; gap: 10px; align-items: center; margin-bottom: 16px;"><span class="emo">&#x26A0;&#xFE0F;</span> Ground rules</h3>
+      <h3 style="font: 700 26px var(--display); display: flex; gap: 10px; align-items: center; margin-bottom: 16px;"><span class="emo">📖</span> How I'll show you</h3>
       <ul>
-        <li>Same model, same prompts, same hardware — different trade-offs</li>
-        <li>These are scenarios, not a benchmark ranking</li>
-        <li>A small accuracy drop compounds over thousands of tokens</li>
+        <li>A story — three people, five chapters, one live demo</li>
+        <li>Same model, same prompts, same hardware, different trade-offs</li>
+        <li>One thing to keep in mind: a small accuracy drop compounds over thousands of tokens</li>
       </ul>
     </div>
   </div>
@@ -489,8 +496,8 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
 <!-- 7. The options -->
 <section class="slide" data-color="purple" data-dot="main">
   <div class="kicker rise"><span class="n">Chapter 4</span>The toolbox <span class="emo">🧰</span></div>
-  <h2 class="rise" style="--d:1">Four levers Priya can pull — each one <span class="hl">solves a different problem</span></h2>
-  <div class="cards3 cards4 opts">
+  <h2 class="rise" style="--d:1">Three precisions Priya can try, each one <span class="hl">solves a different problem</span></h2>
+  <div class="cards3 opts">
     <div class="vcard step v-bf16">
       <h3><span class="emo">🔵</span> BF16</h3><div class="sub">THE BASELINE</div>
       <div class="chips-row" data-track="llama"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s</span></div>
@@ -518,17 +525,12 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
         <div class="kv2"><span>Best for</span><b data-t="int4Best">When 73 GB doesn't fit: 48 GB cards, or more room for KV cache</b></div>
       </div>
     </div>
-    <div class="vcard step v-spec">
-      <h3><span class="emo">🟣</span> <span data-t="specName">+ Spec decode</span></h3><div class="sub" data-t="specSub">ADD-ON, 8B DRAFT</div>
-      <div class="chips-row" data-track="llama"><div class="gchip">H200</div><div class="gchip">H200</div><span class="gcount">2 H200s</span></div>
-      <div class="chips-row" data-track="qwen"><div class="gchip">H200</div><span class="gcount">Same card as BF16</span></div>
-      <div class="kv-rows">
-        <div class="kv2"><span>Buys you</span><b data-t="specBuys">About 1.25× faster answers, with BF16 quality</b><em class="caveat" data-t="specCaveat">One request at a time, temperature 0. Slower first token</em></div>
-        <div class="kv2"><span>Best for</span><b data-t="specBest">Anyone waiting on the answer</b></div>
-      </div>
-    </div>
   </div>
   <p class="acc-line step" data-t="accLine">No measurable quality loss: FP8 95.2% and INT4 95.1% against BF16's 94.8% on 1,319 GSM8K problems</p>
+  <div class="addon-bar step v-spec">
+    <span class="emo">🟣</span>
+    <span>On top of BF16, she can enable <b data-t="specName">spec decode</b>: <span data-t="specBuys">about 1.25× faster answers, with BF16 quality</span>. Best for <span data-t="specBest">anyone waiting on the answer</span>.</span>
+  </div>
 </section>
 
 <!-- 8. Let's find out -->
@@ -609,24 +611,6 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
   </div>
 </section>
 
-<!-- 11. The models -->
-<section class="slide" data-color="blue" data-dot="main">
-  <div class="kicker rise">Resources</div>
-  <h2 class="rise" style="--d:1">Every checkpoint, so you can check the work <span class="emo">🔎</span></h2>
-  <ul class="models rise" style="--d:2" data-track="llama">
-    <li><b>BF16</b><span class="mono">meta-llama/Meta-Llama-3.1-70B-Instruct</span></li>
-    <li><b>FP8</b><span class="mono">RedHatAI/Meta-Llama-3.1-70B-Instruct-FP8</span></li>
-    <li><b>INT4</b><span class="mono">RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16</span></li>
-    <li><b>Draft</b><span class="mono">meta-llama/Llama-3.1-8B-Instruct</span></li>
-    <li><b>Naive pick</b><span class="mono">hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4</span></li>
-  </ul>
-  <ul class="models rise" style="--d:2" data-track="qwen">
-    <li><b>BF16 + MTP</b><span class="mono">Qwen/Qwen3.8-27B</span></li>
-    <li><b>FP8</b><span class="mono">Qwen/Qwen3.8-27B-FP8</span></li>
-    <li><b>INT4</b><span class="mono">RedHatAI/Qwen3.8-27B-INT4</span></li>
-  </ul>
-  <p class="models-foot rise" style="--d:3">All on huggingface.co. Raw benchmark files for every number: <span class="mono">github.com/MarkellR-RedHat/pytorch-quantization-demo</span></p>
-</section>
 
 <div class="nav" id="nav">
   <button id="prev" aria-label="Previous slide">&larr;</button>
@@ -732,7 +716,7 @@ let ambColor = COLORS.red;
 // Speaker script: parsed from the comment after </html> (single source of truth)
 let SCRIPT = {};
 function loadScript() {
-  const c = [...document.childNodes].find(n => n.nodeType === 8 && n.data.includes('SPEAKER SCRIPT'));
+  const c = [...document.childNodes].find(n => n.nodeType === 8 && (n.data.includes('SPEAKER SCRIPT') || n.data.includes('SPEAKER NOTES')));
   const out = {};
   if (c) c.data.split(/\n(?=\[\d+|\[B\d)/).forEach(block => {
     const m = block.match(/^\[(\w+)( qwen)?[^\]]*\]/); if (m) out[m[1] + (m[2] ? ':qwen' : '')] = block.trim();
@@ -753,16 +737,16 @@ const TRACKS = {
     sizeBody: 'Four INT4 replicas need four H200s instead of eight, Dana replies with <span class="emo">🎉</span>, and Priya is a hero for about two weeks.',
     sizeFoot: 'Weights as loaded by vLLM. BF16 is 2 × 65.7 GiB, FP8 67.7 GiB, INT4 37.9 GiB',
     fp8Sub: 'LLM COMPRESSOR, W8A8', fp8Buys: "BF16's speed and accuracy on one GPU", fp8Caveat: 'Needs FP8 tensor cores (Ada, Hopper and newer)', fp8Best: 'Everyday traffic on H100 or H200',
-    int4Sub: 'GPTQ VIA AUTOGPTQ', int4Buys: "Half of FP8's memory, at 89% of BF16's speed", int4Caveat: 'W4A16: its 16-bit activations hold it back under load. 44 vs 50 tok/s',
+    int4Sub: 'GPTQ VIA AUTOGPTQ', int4Buys: "Half of FP8's memory, at 89% of BF16's speed", int4Caveat: 'W4A16: about even with BF16 per GPU under load',
     int4Best: "When 73 GB doesn't fit: 48 GB cards, or more room for KV cache",
-    specName: '+ Spec decode', specSub: 'ADD-ON, 8B DRAFT', specBuys: 'About 1.25× faster answers on BF16, with BF16 quality', specCaveat: 'Measured on the BF16 target. Under load, draft overhead costs about half the throughput', specBest: 'Anyone waiting on the answer',
+    specName: 'speculative decoding', specSub: 'ADD-ON, 8B DRAFT', specBuys: 'about 1.25× faster answers, with BF16 quality', specCaveat: 'Under load, draft overhead costs about half the throughput', specBest: 'Anyone waiting on the answer',
     destFp8: '1 GPU per replica, INT4 where memory is tight', destBf16: '2 GPUs, full precision', destSpecName: 'BF16 + spec decode', destSpec: 'The BF16 pool with the add-on on: ~1.25× faster',
     accLine: "No measurable quality loss: FP8 95.2% and INT4 95.1% against BF16's 94.8% on 1,319 GSM8K problems",
     moral: 'Only the hard questions go to BF16, so she needs fewer GPUs than running everything on BF16.',
     pt1: "<b>On Hopper, try FP8 first.</b> One GPU, BF16's speed, and no measurable loss on our tests.",
-    pt2: "<b>INT4 is for when the memory doesn't fit.</b> 48 GB cards or more KV cache, at 89% of the speed; W4A16, so its 16-bit activations hold it back under load.",
+    pt2: "<b>INT4 is for when the memory doesn't fit.</b> 48 GB cards or more KV cache room, at 89% of the speed.",
     pt3: '<b>Spec decode is an add-on.</b> On BF16, 1.25× faster for one request; about half the tokens per GPU under load, which is draft overhead.',
-    pt4: "<b>No measurable quality loss, but verify.</b> FP8 and INT4 matched BF16 on 1,319 GSM8K problems. A small accuracy gap compounds over thousands of auto-regressive tokens, so test on your own prompts before you ship.",
+    pt4: "<b>No measurable quality loss, but verify.</b> FP8 and INT4 matched BF16 on 1,319 GSM8K problems. A small gap compounds over thousands of tokens, so test on your own prompts.",
   },
   qwen: {
     label: 'Qwen', trackLine: 'Track B: Qwen3.8-27B on H200 MIG slices', beat1: 'Priya ships a 27B at full precision',
@@ -771,17 +755,17 @@ const TRACKS = {
     sizeBf16: '~55 GB<small>a full H200</small>', sizeFp8: '~31 GB<small>fits a 71 GB slice</small>', sizeInt4: '~19 GB<small>fits a 71 GB slice, or a 35 GB one</small>', sizeLine: 'one 3g slice = 71 GB',
     sizeBody: 'Four INT4 replicas fit on 71 GB slices, two per H200, so two H200s instead of four, Dana replies with <span class="emo">🎉</span>, and Priya is a hero for about two weeks.',
     sizeFoot: 'Weights as loaded by vLLM 0.24. BF16 51.1 GiB, FP8 28.5 GiB, INT4 17.7 GiB',
-    fp8Sub: "QWEN'S OWN FP8 BUILD", fp8Buys: "96% of a full card's speed, on a 71 GB slice", fp8Caveat: 'The slice sets the gap: half the memory slices (4 of 8)', fp8Best: 'Everyday traffic, two replicas per H200',
-    int4Sub: 'GPTQ VIA LLM COMPRESSOR', int4Buys: "86% of a full card's speed, on a 71 GB slice", int4Caveat: 'Same slice caveat. Fits a 35 GB slice too, at 16 tokens a second in eager mode',
+    fp8Sub: "QWEN'S OWN FP8 BUILD", fp8Buys: "96% of a full card's speed, on a 71 GB slice", fp8Caveat: "The slice has half the card's memory bandwidth", fp8Best: 'Everyday traffic, two replicas per H200',
+    int4Sub: 'GPTQ VIA LLM COMPRESSOR', int4Buys: "86% of a full card's speed, on a 71 GB slice", int4Caveat: 'Fits a 35 GB slice too, but slower in eager mode',
     int4Best: 'Long contexts and big batches: 1.2M tokens of FP8 KV cache',
-    specName: '+ MTP', specSub: 'ADD-ON, BUILT-IN HEAD', specBuys: 'About 2.3× faster answers on BF16, with BF16 quality', specCaveat: 'Same card, no extra model. Under load, 80 to 90% of BF16', specBest: 'Anyone waiting on the answer',
+    specName: 'MTP (speculative decoding)', specSub: 'ADD-ON, BUILT-IN HEAD', specBuys: 'about 2.3× faster answers, with BF16 quality', specCaveat: 'Same card, no extra model. Under load, 80 to 90% of BF16', specBest: 'Anyone waiting on the answer',
     destFp8: '1 slice each: everyday questions, INT4 for long contexts', destBf16: '1 full H200: batch work where nobody waits', destSpecName: 'BF16 + MTP', destSpec: 'Same card, the add-on on: anyone waiting',
     accLine: 'No measurable quality loss: FP8 and INT4 matched BF16 on GSM8K (1,319) and MMLU-Pro (280)',
     moral: 'Only the hard questions get a whole H200, so she needs fewer cards than running everything on BF16.',
     pt1: "<b>On Hopper, try FP8 first.</b> A 71 GB slice, 96% of a full card's speed for one request, and no measurable loss.",
-    pt2: "<b>INT4 is for long contexts.</b> 18 GiB of weights and 1.2M tokens of FP8 KV cache on one slice, at 86% of a full card's speed.",
+    pt2: "<b>INT4 is for long contexts.</b> Small weights leave room for 1.2M tokens of KV cache on one slice, at 86% of the speed.",
     pt3: '<b>Spec decode is an add-on, built in here.</b> On BF16, 2.3× faster for one request; 80 to 90% of BF16\'s throughput under load, which is draft overhead.',
-    pt4: "<b>No measurable quality loss, but verify.</b> FP8 and INT4 matched BF16 on 1,319 GSM8K problems and 280 MMLU-Pro questions. A small accuracy gap compounds over thousands of tokens, so test on your own prompts.",
+    pt4: "<b>No measurable quality loss, but verify.</b> FP8 and INT4 matched BF16 on GSM8K and MMLU-Pro. A small gap compounds over thousands of tokens, so test on your own prompts.",
   },
 };
 const params = new URLSearchParams(location.search);
@@ -901,70 +885,109 @@ window.addEventListener('load', () => { loadScript(); go(cur); });
 </body>
 </html>
 <!--
-SPEAKER SCRIPT (10-minute Demo Theater slot, 11 slides). Keys: arrows or clicker to move, N notes, A auto, B blackout, H hide nav, F fullscreen.
-Tracks: T on the title slide switches between Llama (track A) and Qwen (track B); 1 and 2 pick directly. A [N qwen] section replaces [N] when the Qwen track is active; slides without one share the Llama note.
+SPEAKER NOTES. T switches tracks, 1/2 pick directly. [N qwen] replaces [N] on Qwen track.
 
 [1 Title | 0:00 to 0:25]
-Hey everyone, I'm Markell, AI Developer Advocate at Red Hat. Not every question needs the whole GPU. This talk is about when to use BF16, FP8, INT4, or speculative decoding, and when a router earns its keep, and the answer depends on the question your model is answering. [Click] Hands up: who runs 70B-class dense models spread across GPUs? Who runs 27B-class on one GPU or a slice? Press 1 or 2 for the bigger group (T also flips it), then move on. The chooser refuses a track without data. The other track stays in the deck for anyone reading it later.
+- not every request to your model needs the same GPU, and quantization is how you make that work. it shrinks the weights so they use less memory and run faster, but you give up some precision to get there
+- the animation on the right shows what that trade-off actually looks like. BF16 has 65K levels per weight, INT4 rounds that down to just 16
+- two tracks available, press T to switch
 
 [1 qwen]
-Hey everyone, I'm Markell, AI Developer Advocate at Red Hat. Not every question needs the whole GPU. This talk is about when to use BF16, FP8, INT4, or speculative decoding, and when a router earns its keep, and the answer depends on the question your model is answering. [Click] Hands up as above, press 2. This track is Qwen3.8-27B on H200 MIG slices, and it runs on vLLM 0.24, the cluster's own runtime image, because Qwen's built-in MTP drafting needs it; the Llama track ran on 0.18. Each track is apples to apples within itself, not across tracks.
-
+- this track is Qwen on H200 MIG slices. everything is apples to apples: same model, same hardware, same runtime
 
 [2 Talk goals | 0:20 to 0:40]
-Before we get into the story, here is what you will walk away with. This is a toolbox tour, not a shootout. There is no single winner, and that is the point. [Click through the three goals.] When each option earns its spot, how to measure the trade-off, and a live demo. Ground rules: same model, same prompts, same hardware, different trade-offs. These are scenarios, not a benchmark ranking. And a small accuracy drop compounds over thousands of tokens, so we will talk about when that matters.
+- this is not a shootout. every option has a job it's best at, and the goal is knowing which one to reach for
+- we'll cover when each precision earns its spot, how to measure the trade-offs, and then see all four running side by side in a live demo
+- one thing to carry through the whole talk: a small accuracy drop looks fine on a benchmark but it compounds over thousands of tokens in production
 
 [3 The story | 0:25 to 1:00]
-I'll tell it as a story with three people. Priya runs the model on the platform team and she's a little naive about it, Marcus is on data science and needs answers he can trust, and Dana is in finance watching the bill. [Click through the five steps one at a time.] Priya ships a 70B at full precision, it gets popular so she adds replicas, the bill climbs so she grabs the first fix, Marcus thinks the answers got worse, and she ends up not picking one winner at all.
+- we've got three people. Priya is on the platform team and she runs the model. Marcus is on data science and he needs answers he can trust. Dana is in finance and she's watching the GPU bill
+- the arc at the bottom is how this plays out: Priya ships at full precision, it gets popular, the bill climbs, she grabs a quick fix, that fix hurts quality, and she stops looking for one winner
 
 [3 qwen]
-I'll tell it as a story with three people. Priya runs the model on the platform team and she's a little naive about it, Marcus is on data science and needs answers he can trust, and Dana is in finance watching the bill. [Click through the five steps one at a time.] Priya ships a 27B at full precision on a whole card, it gets popular so she adds replicas, the bill climbs so she grabs the first fix, Marcus thinks the answers got worse, and she ends up not picking one winner at all.
+- we've got three people. Priya runs Qwen on an H200, Marcus needs answers he can trust, and Dana is in finance watching the GPU bill
+- the arc at the bottom is how this plays out: Priya ships at full precision, it gets popular, the bill climbs, she grabs a quick fix, that fix hurts quality, and she stops looking for one winner
 
 [4 Meet Priya | 1:00 to 1:40]
-Priya shipped Llama 3.1 70B at BF16. That's 70.6 billion parameters at two bytes each, 141 GB, and an H200 has 141 GB, so the weights alone fill a card and every replica needs two. [If anyone says 141 GB fits 141 GB: nvidia-smi reports the H200 as 143,771 MiB, 140.4 GiB, and vLLM's default budget is 90% of that (gpu_memory_utilization 0.9), 126.4 GiB. Llama 3.1 70B in BF16 is 70.6 billion parameters at two bytes, 131.5 GiB, so one card fails on the budget, not the nameplate. With two cards, the startup log shows each GPU loaded 65.74 GiB of weights ("Model loading took 65.74 GiB") and had 56.04 GiB of KV cache available ("Available KV cache memory: 56.04 GiB"), 121.8 of the 126.4 GiB budget, with the rest, about 4.6 GiB, going to the CUDA context and the CUDA graphs.] Then it got popular, one replica became four, and that's eight H200s running all month. So Dana sends the message everyone in this room has gotten. Quick question, why did the chatbot go to 5,840 GPU-hours a month? It is never a quick question.
+- look at the memory bars. at full precision this model fills the entire GPU, so every single replica needs two H200s just to load
+- then it got popular. 4 replicas at 2 GPUs each is 8 H200s running all month
+- that's Dana's message on the right: why is the bill so high? she's paying for 8 cards and Priya knows she has to do something about it
 
 [4 qwen]
-Priya shipped Qwen3.8-27B at BF16. That's 27 billion parameters at two bytes each, and vLLM loaded 51.1 GiB, about 55 GB, on an H200 that has 141, so most of the card sits empty and the KV cache gets the rest: 72.3 GiB, 1.1 million tokens of it at a 32K context, per the startup log (bench/raw/2026-09-30-qwen-r1/logs/qwen-bf16-predictor-*-startup.txt). [If anyone says the nameplate is what a model gets: nvidia-smi reports the H200 as 143,771 MiB, 140.4 GiB, and vLLM's default budget is 90% of that (gpu_memory_utilization 0.9), 126.4 GiB. From that log, 51.1 GiB of weights ("Model loading took 51.1 GiB") plus 72.3 GiB of KV cache available ("Available KV cache memory: 72.3 GiB") is 123.4 of the 126.4 GiB budget, with the rest, about 3 GiB, going to the CUDA context and 1.15 GiB of CUDA graphs ("Graph capturing finished in 8 secs, took 1.15 GiB").] Then it got popular, one replica became four, and that's four H200s running all month. So Dana sends the message everyone in this room has gotten. Quick question, why did the chatbot go to 2,920 GPU-hours a month? It is never a quick question.
+- look at the memory bars. at full precision Qwen only fills about a third of the H200, so most of the card is just sitting there empty
+- when it got popular, 4 replicas means 4 full H200s where each one is mostly unused. you're paying for the whole card every time
+- that's Dana's message: why is the bill so high? and that empty space on each card is exactly why MIG slices make sense for this model later
 
 [5 She quantizes | 1:40 to 2:10]
-Priya's a little naive, so she grabs the first INT4 file she finds, a community checkpoint off Hugging Face with no published eval, and swaps it in. FP8 halves the weights, INT4 takes them to about a quarter, and now a whole replica fits on one GPU. [The bars are what vLLM loaded: BF16 65.7 GiB on each of two GPUs, Red Hat's FP8 build 67.7 GiB, the community AWQ build 37.87 GiB; Red Hat's W4A16 build loads at 37.11 GiB, so the INT4 bar holds for both. FP8 is more than 70.6 GB because the embeddings and output layer stay in 16-bit. The bars are weights only: the card also holds the KV cache, and vLLM only budgets 90% of the card (126.4 of 140.4 GiB), from the slide 3 arithmetic.] Four replicas need four H200s instead of eight, Dana sends a party emoji, and Priya is a hero for about two weeks.
+- the bar chart shows why quantization is so tempting. the weights shrink to roughly a third, which means fewer GPUs per replica and fewer GPUs total
+- so Priya grabs the first INT4 checkpoint she finds online. no published quality eval, she just drops it in
+- the savings are real and finance is happy, but nobody actually checked whether the answers are still good
 
 [5 qwen]
-Priya's a little naive, so she grabs the first INT4 file she finds and swaps it in. FP8 halves the weights, INT4 takes them to about a third, and now a replica fits on a MIG slice instead of a whole card. The bars are what vLLM 0.24 loaded: BF16 51.1 GiB, Qwen's FP8 build 28.5 GiB, Red Hat's INT4 build 17.7 GiB, all from the startup logs, and weights only: the card or slice also holds the KV cache, and vLLM only budgets 90% of it (126.4 of 140.4 GiB on the full card), from the slide 3 arithmetic. An H200 splits into two 71 GB slices (mig-3g.71gb, 60 of the card's 132 SMs each, 3 of 7 GPCs) or three 35 GB slices (mig-2g.35gb), per nvidia-smi on the node (bench/raw/2026-09-30-qwen-r1/logs/mig-profiles.txt). Four INT4 replicas on 71 GB slices, two to a card, is two H200s instead of four. INT4 fits a 35 GB slice too, three to a card, but on this queue that slice ran at 16 tokens a second in eager mode, so the deck keeps INT4 on the 71 GB slice, the same slice as FP8, apples to apples. Dana sends a party emoji, and Priya is a hero for about two weeks.
+- the bar chart shows why this is tempting. the weights shrink enough to fit on a 71 GB MIG slice, and one H200 gives you two of those slices, so now you can run two replicas per card
+- Priya grabs an INT4 without checking quality and cuts the GPU count in half
+- finance is happy, but nobody checked the answers. that catches up to her in two weeks
 
 [6 The ticket | 2:10 to 2:45]
-Two weeks later Marcus files this. Let the room read it. Did the model get worse? His analysis answers have felt off since the switch. [Click] Quick show of hands, who has quantized a model and then just hoped the quality was fine? Yeah. Priya didn't know either, and guessing is how she got here, so this time she measured.
+- two weeks later Marcus files a ticket: did the model get worse? and then three more show up that week
+- that's what happens when you quantize without evaluating. you saved money but the people who depend on accurate answers are the ones paying for it
 
 [7 The options | 2:45 to 3:45]
-Here is the toolbox, same model, same hardware: same vLLM build, same prompts, same H200s. [Click] BF16 is two H200s and the reference answer. [Click] FP8 is Red Hat's build, made with LLM Compressor, W8A8: weights and activations both 8-bit. One H200, 51 tokens a second for one request against BF16's 50 on two (bench/raw/2026-09-29-r2/sweeps/FP8/single-t0.json), and 95.2% against 94.8% on 1,319 GSM8K problems: no measurable quality loss. Under load it's the standout, about 1.5 times BF16's tokens per GPU at the 50 millisecond budget (1,485 against 981), because Hopper has FP8 tensor cores; Ada and Hopper have them, and on A100 vLLM falls back to a slower weight-only FP8 kernel. [Click] INT4 is Red Hat's W4A16 build, GPTQ applied with AutoGPTQ. W4A16 means 4-bit weights and 16-bit activations, so once the weights are unpacked every matmul still runs in 16-bit. Under load, when the GPU is doing math, that's why FP8 serves 1.5 times BF16 per GPU and INT4 about even (977 against 981). For one request the GPU is waiting on memory, not math, so that doesn't explain INT4 at 89% of BF16 (44 against 50); that gap we haven't profiled. Its job is memory: 37 GiB against FP8's 68, a 48 GB card, or half again as much KV cache. 95.1% on GSM8K, so no loss; on 280 MMLU-Pro questions 3 points lower with a standard error near 3, too few to call. If asked about W4A4: a W4A4 build exists (RedHatAI's NVFP4 build of this model, Blackwell native); not tested here. W4A16 is the INT4 that runs on H200. [Click] Spec decode isn't a fourth option, it's an add-on you can switch on over any of them; we measured it on the BF16 target. An 8B draft proposes five tokens and the 70B checks them in one pass, about 4.5 tokens per pass, 70.5% accepted, BF16 quality by construction. 1.25 times faster for one request (62.2 against 49.7, 30 ShareGPT prompts at temperature 0; 1.18 times at 0.7). The cost is under load: about half of BF16's tokens per GPU at the same budget (517 against 981), which is draft overhead, since a busy GPU has no spare time for drafting. FP8 or INT4 with spec decode on is the obvious next run; untested here. Quick vote: BF16, FP8, or INT4 fastest? And does spec decode help? Let's find out.
+- so here's the proper way to do it. same model, same prompts, same hardware, fair comparison. each card appears on click
+- BF16 is the baseline, full precision, the answer everything else gets compared against
+- FP8 compresses weights and activations to 8-bit, which means the tensor cores are doing less work per multiply. that's why it's faster under load, not just smaller. and no quality loss
+- INT4 only compresses the weights, the activations stay 16-bit so the math is the same speed. the win is purely memory, the weights are tiny so you get more room for KV cache or can fit on smaller cards
+- the accuracy line: no measurable quality loss on any of these
+- and on top of any of these she can turn on speculative decoding. a small model drafts tokens and the big model checks them. faster when someone's waiting, but under heavy load the drafting overhead costs you throughput
 
 [7 qwen]
-Same toolbox on this track: same vLLM 0.24 image, same 30 ShareGPT prompts at temperature 0, same H200s carved into MIG slices. [Click] BF16 is one full H200: 66 tokens a second for one request. [Click] FP8 is Qwen's own build, on a 71 GB slice, two per H200. 63.5 tokens a second, 96% of a full card's speed, on a slice. The slice sets the shortfall: a 71 GB slice gets half the card's memory slices (4 of 8) and 3 of its 7 compute units, so roughly half the memory bandwidth, and the slice takes back what FP8's smaller weights save. That's an explanation, not a measurement. On uniform hardware, the Llama track, FP8 on one GPU beat BF16 on two. No measurable quality loss: 88.6% against 89.2% on GSM8K, 77.5% against 77.1% on 280 MMLU-Pro questions, both inside one standard error. [Click] INT4 is Red Hat's build: LLM Compressor applied AWQ smoothing and then GPTQ in the W4A16 scheme, with an FP8 KV cache. Same 71 GB slice, 56.8 tokens a second, 86% of a full card's speed, same slice caveat, and under load its 16-bit activations hold it to about half a full card's throughput where FP8 gets 78%. Its job is memory: 17.7 GiB of weights and 1.24 million tokens of KV cache on the slice against FP8's 498,000, mostly from its FP8 KV cache. It fits a 35 GB slice too, at 16 tokens a second in eager mode. [Click] Spec decode is the add-on, and on this model it's built in: the MTP head is in the weights, so the 27B drafts for itself on the same full H200. 151 tokens a second for one request, 2.29 times BF16, 3.22 tokens per pass. Under load it costs some: 80 to 90% of BF16's throughput at the 50 millisecond budget (1,598 to 1,783 against 1,980 to 2,026), draft overhead, much less than the Llama track's separate draft. Four draft tokens is the sweet spot (105, 129, 151, 143 tokens a second at 1, 2, 4, 8). If asked why MTP and not DSpark: see the slide 10 notes. Quick vote: BF16, FP8, or INT4 fastest? And does spec decode help? Let's find out.
+- so here's the proper way to do it. same model, same prompts, same H200, each card appears on click
+- BF16 is the baseline on a full card, the answer everything else gets compared against
+- FP8 runs on a 71 GB slice and you get two of those per H200. it's 96% of full card speed because the slice has half the bandwidth, but no quality loss
+- INT4 runs on the same slice and it's slower, but the weights are so small they leave room for 1.24 million tokens of KV cache. that's the long context advantage
+- the accuracy line: no measurable quality loss on any of these
+- and on top of any of these she can turn on MTP, which is speculative decoding built right into this model's weights. no separate draft model, you just turn it on. way faster for single requests and the overhead under load is small
 
 [8 Let's find out | 3:45 to 7:00]
-Pick a question from the presets, or let the room pick one, and you'll see how every setup answered it. Switch to the dashboard. [Budget: Ask about 2:15, Under load 0:30, Numbers 0:30.]
-Scene 1, Ask. [Every column plays the answer that setup gave in the measured run, captured at temperature 0, at the speed it measured. The corner badge reads "Llama 70B · Recorded: BF16, FP8, INT4 (GPTQ via AutoGPTQ), BF16 + spec decode" and every column carries its Recorded pill. Say it once on stage: these are the recorded answers from the runs behind the numbers, labeled Recorded on screen. A typed question has no recording, so stay on the presets. If one endpoint is connected on the day, its column shows Live and answers anything; the rest stay recorded.] Pick one of the seven presets: Sheep riddle, Python function, Three bullet summary, Decline a meeting, Quick fact, Logic puzzle, Extract to JSON. [On the Llama track the Explain KV cache preset has no recording, so its button isn't shown; the prompt was reworded after the run.] The example router sends the sheep riddle and the logic puzzle to BF16 ("multi-step reasoning, and the hardest questions stay on BF16"), the summary, meeting decline, quick fact, and JSON extraction to FP8 ("nothing here needs the full model, and FP8 serves the most tokens per GPU"), and the Python function and KV cache explanation to BF16 with spec decode on ("a long answer with someone waiting, and BF16 with spec decode on answers fastest"). The router strip on Numbers reads: a wrong answer is expensive to BF16, everyday questions to FP8, 73 GB won't fit to INT4, and anyone waiting to BF16 with spec decode on. [Check the badge string and the lane labels an hour before the talk, when preflight runs.] Point at each column: time to first token, tokens per second, tokens in the answer, total time, and who finished first. For a quiet room, use the Logic puzzle as the quality check. On the sheep riddle all of them got it right, 20 out of 20 each. R switches every column to replay. Read the router line out loud. Do two or three questions.
-Scene 2, Under load, about 30 seconds. One sentence: at the 50 millisecond budget FP8 serves 1.5 times BF16's tokens per GPU, INT4 about the same as BF16, and BF16 with spec decode on about half, which is draft overhead.
-Scene 3, Numbers, the money slide. BF16 50 tokens a second on two GPUs, FP8 51 on one, INT4 44 on one, spec decode 62 on two, all one request at a time. FP8 matches BF16 on one GPU, INT4 is for when 73 GB doesn't fit, spec decode is the add-on for anyone waiting, and BF16 is the reference.
+- this is the live demo, all four answering the same question side by side
+- three views: Ask streams the answers at measured speed, Under Load shows what happens when lots of users hit at once, Numbers is the summary table
+- the key thing to watch under load: FP8 actually beats BF16 per GPU because the tensor cores are doing less work. INT4 matches BF16 per GPU since the activations stay 16-bit. and spec decode loses throughput because the draft model uses cycles the big model needs
 
 [8 qwen]
-Pick a question from the presets, or let the room pick one. Switch to the dashboard with the Qwen track selected. Scenes, presets and the R key work the same as the Llama track, and all eight presets have Qwen recordings, including the reworded KV cache prompt. [Every Qwen column plays its recording from the measured run, captured at temperature 0; the badge reads "Qwen 27B · Recorded: BF16, FP8, INT4 (GPTQ via LLM Compressor), BF16 + MTP".] Scene 2, Under load, about 30 seconds, one sentence: at the 50 millisecond budget the full card serves about 2,000 tokens a second on BF16 and 1,600 to 1,800 with the MTP head on, a 71 GB slice serves about 1,540 on FP8 and about 1,000 on INT4, so two FP8 slices per card come to about 1.55 times BF16, as arithmetic. Scene 3, Numbers, the money slide: BF16 66 tokens a second on a full H200, spec decode 151 on the same card, FP8 63.5 on a 71 GB slice, INT4 56.8 on a 71 GB slice, all one request at a time at temperature 0. Spec decode is the add-on, built in here, for anyone waiting; FP8 gets 96% of a full card on a slice, INT4 is for long contexts, and BF16 is the reference.
+- this is the live demo, all four answering the same question side by side
+- three views: Ask, Under Load, and Numbers
+- watch FP8 on a slice, it handles nearly as much traffic as BF16 on a full card but you get two slices per card. MTP adds speed without any extra hardware. and INT4's advantage really shows up when you need long contexts
 
 [9 Priya adds a router | 7:00 to 7:50]
-There wasn't one winner, and Priya added a router. Easy questions, most of the traffic, go to FP8 on one GPU each, or INT4 where the GPU is smaller or the KV cache needs room. The hardest questions stay on BF16. And when someone's waiting on a long answer, the BF16 pool switches spec decode on. [Click] These aren't the only options: INT8, GPTQ, EAGLE-3 draft heads (they exist for Llama 3.3 70B, not 3.1), a smaller 8B for easy questions, and FP8 or INT4 with spec decode on, none tested here. [Click] Only the hard questions go to BF16 now, so she needs fewer GPUs than running everything on BF16. Marcus closes his ticket, and Dana sends another party emoji.
+- there's no single winner, so Priya stops trying to pick one and adds a router instead
+- easy questions go to FP8 because it's the cheapest per token under load
+- hard questions stay on BF16 for full precision where accuracy matters most
+- anyone waiting on an answer gets spec decode turned on for faster responses
+- Marcus gets accurate answers, Dana is happy with the bill, and Priya learned to match the tool to the job
 
 [9 qwen]
-There wasn't one winner, and Priya added a router. Easy questions go to FP8 on a 71 GB slice each, two per card, or INT4 on the same slice for long contexts. The hardest questions get the full H200 on BF16, and anyone waiting on an answer gets the same card with the MTP head on, since on this model the add-on costs only 10 to 20% of throughput. [Click] These aren't the only options: INT8, Red Hat's DSpark speculator once the cluster is on vLLM 0.29, NVFP4 on Blackwell, a smaller model for easy questions, and FP8 or INT4 with MTP on, none tested here. [Click] Only the hard questions get a whole H200 now, so she needs fewer cards. Marcus closes his ticket, and Dana sends another party emoji.
+- there's no single winner, so Priya adds a router instead
+- easy questions go to FP8 on slices, two replicas per card so it's the cheapest option
+- long contexts go to INT4 on the same slices because of the KV cache room
+- hard questions get a full H200 on BF16 where accuracy matters most
+- anyone waiting gets MTP turned on, same card, no extra deployment, just a flag
 
 [10 Wrap-up | 7:50 to 9:25]
-Five points, one click each. FP8 first on Hopper: one GPU, BF16's speed, no measurable loss (51 against 50 tokens a second; 95.2% against 94.8% on GSM8K). INT4 when memory doesn't fit: 37 GiB, 89% of the speed; W4A16, so its 16-bit activations hold it back under load. Spec decode is an add-on: 1.25 times faster for one request on BF16, about half the tokens per GPU under load, which is draft overhead: under heavy load the GPU is already busy, so drafting buys less. No measurable quality loss on 1,319 GSM8K problems, but a small accuracy gap compounds over thousands of auto-regressive tokens, so test on your own prompts before you ship. 280 MMLU-Pro questions are too few to call. A router once traffic is big and mixed. [If asked: W4A4 exists as RedHatAI's NVFP4 build, Blackwell native, not tested here; spec decode matched BF16 word for word on 3 of 8 presets and split at a word choice on 5, no logprobs captured; the recipe is model-agnostic, and Red Hat's study (Kurtic et al., ACL 2025, 500,000+ evaluations) is the general result. Files: bench/raw/2026-09-29-r2/sweeps/ and evals/.]
+- start with FP8 on Hopper. same speed as BF16, less memory, no quality loss. this is the easiest win
+- use INT4 when you need the memory savings or more room for KV cache
+- spec decode is an add-on that makes single requests faster, but it costs you throughput when the system is under heavy load
+- always verify quality on your own prompts. benchmarks look fine but small gaps compound over thousands of tokens
+- once your traffic is big and mixed enough, a router lets each option handle what it's best at
 
 [10 qwen]
-Five points, one click each. FP8 on a 71 GB slice: 96% of a full card's speed, no measurable loss; the slice sets the shortfall, with half the card's memory slices. INT4 for long contexts: 17.7 GiB and 1.24 million tokens of KV cache on a slice, mostly from its FP8 KV cache, at 86%. Spec decode is an add-on built into this model: 2.29 times faster for one request, 80 to 90% of BF16's throughput under load, draft overhead. No measurable quality loss on GSM8K (1,319) and MMLU-Pro (280), but a small accuracy gap compounds over thousands of tokens, so test on your own prompts. The GSM8K task here is gsm8k_cot, so never set it next to the Llama number. A router once traffic is big and mixed. [If asked why MTP and not DSpark: MTP runs on the Red Hat AI build the cluster ships (vLLM 0.24); DSpark needs 0.29. Red Hat's model card says DSpark beats MTP at the same eight speculative tokens; Red Hat AI's Sep 23 post (x.com/RedHat_AI/status/2103160029570372075) puts it at up to 52% faster single-stream and 23% higher peak throughput on 4 H200s. Those are Red Hat's numbers, not ours, so never divide them by ours. Why vLLM 0.24 here and 0.18 on Llama: MTP needs 0.24; each track is apples to apples within itself. Why not BF16 on a slice: it loads but leaves 11 GiB, 167,000 tokens of KV cache. Files: bench/raw/2026-09-30-qwen-r1/.]
+- start with FP8. it runs on a slice at 96% speed with no quality loss and you get two replicas per H200
+- use INT4 when you need long contexts, the tiny weights leave room for over a million tokens of KV cache on one slice
+- MTP is built in, just turn it on, no extra deployment
+- always verify quality on your own prompts
+- once your traffic is big and mixed enough, a router lets each option handle what it's best at
 
 [11 Close | 9:25 to 10:00]
-Here's all the source code I used. If you want to see how I did this, it's all in the repo, both tracks, and T on the title slide switches between them. Thank you.
-
-[11 The models | after the close]
-Every checkpoint, so anyone can check the work. Leave it up during Q&A.
+- everything from this talk is in the GitHub repo, source code, both tracks, all the raw benchmark data
+- the QR code links to it and every checkpoint is listed in the README
+- press T on the title slide to switch between tracks
 -->

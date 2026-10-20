@@ -1,0 +1,32 @@
+DEMO SCRIPT — Quantization Showdown, PyTorch Conference NA 2026
+Qwen track, recorded mode, two presets + under load + numbers
+
+
+PRESET 1: "Decline a meeting" (easy, everyday question)
+
+This is the kind of question that hits your endpoint 80 percent of the time, short and simple, no reasoning needed.
+All four setups give the same answer at the same quality, so watch the speeds.
+MTP finishes first but this is overkill for a one-liner, FP8 on a half-card slice handles this just fine.
+That's where a router sends it, to FP8, the cheapest device with no quality loss.
+
+
+PRESET 2: "Explain KV cache" (long answer, someone waiting)
+
+Now a real question, 300 words, someone is actually sitting there reading this.
+Watch MTP pull away, 2.3 times faster on the same card at the same quality.
+This is where the add-on earns its spot because the person waiting gets their answer in half the time.
+FP8 and INT4 give the same answer too, just slower, so the router sends this to MTP because someone is waiting on it.
+
+
+UNDER LOAD (press 2, Space to play the sweep)
+
+Now what happens when everyone shows up at once.
+BF16 on the full card does about 2,000 tokens a second, that's the workhorse.
+MTP drops below it and that's the draft overhead, the GPU is already busy so drafting costs you throughput instead of saving it.
+FP8 on a single slice does 1,540, but you get two slices per H200, so per card that's actually more total throughput than BF16.
+
+
+NUMBERS (press 3)
+
+Here's the whole picture: try FP8 first on Hopper, use INT4 for long contexts, turn on MTP for anyone waiting on the answer.
+There's no single winner, each one has a job, and that's what the router on the next slide does.
