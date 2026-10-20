@@ -346,8 +346,7 @@ h2 { font-family: var(--display); font-weight: 700; font-size: 60px; line-height
       <p class="lead rise" style="--d:2">When to use BF16, FP8, INT4, or speculative decoding, and when a router earns its keep.</p>
       <div class="byline rise" style="--d:3"><strong>Markell Rawls</strong>AI Developer Advocate, Red Hat</div>
       <div class="rise" style="--d:4"><span class="track-line"><i></i><span data-t="trackLine">Track A: Llama 3.1 70B on two H200s</span></span></div>
-      <!-- Track chooser hidden — Qwen only for this presentation -->
-      <div class="chooser step" id="chooser" style="display:none">
+      <div class="chooser step" id="chooser">
         <div class="q"><span class="emo">✋</span> Hands up: which one is your shop?</div>
         <div class="opts2">
           <button data-track-pick="llama"><b><kbd>1</kbd>70B-class, spread across GPUs</b>Llama 3.1 70B on two H200s</button>
@@ -773,7 +772,7 @@ const TRACKS = {
 };
 const params = new URLSearchParams(location.search);
 const allowPending = params.has('allowPending');
-let track = 'qwen';
+let track = 'llama';
 const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
 const lookup = (t, key) => key.split('.').reduce((o, k) => (o == null ? o : o[k]), TRACKS[t]);
 const isPending = v => v && typeof v === 'object' && 'pending' in v;
@@ -816,7 +815,7 @@ function pickTrack(t) {
   go(cur);
   return true;
 }
-applyTrack('qwen');
+applyTrack(params.get('track') === 'qwen' || (!params.has('track') && store.get('track') === 'qwen') ? 'qwen' : 'llama');
 
 // Navigation
 const slides = [...document.querySelectorAll('.slide')];
@@ -874,10 +873,9 @@ addEventListener('keydown', e => {
   else if (k === 'b' || k === 'B' || k === '.') document.getElementById('blackout').classList.toggle('show');
   else if (k === 'h' || k === 'H') document.getElementById('nav').classList.toggle('hidden');
   else if (k === 'f' || k === 'F') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
-  // Track switching disabled — Qwen only for this presentation
-  // else if (cur === 0 && (k === 't' || k === 'T')) pickTrack(track === 'llama' ? 'qwen' : 'llama');
-  // else if (cur === 0 && k === '1') pickTrack('llama');
-  // else if (cur === 0 && k === '2') pickTrack('qwen');
+  else if (cur === 0 && (k === 't' || k === 'T')) pickTrack(track === 'llama' ? 'qwen' : 'llama');
+  else if (cur === 0 && k === '1') pickTrack('llama');
+  else if (cur === 0 && k === '2') pickTrack('qwen');
 });
 let touchX = 0;
 addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
