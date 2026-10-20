@@ -831,7 +831,7 @@
             $('#subtitle').textContent = config.track.subtitle;
             // the model's license line: Meta's "Built with Llama" on the Llama track, Qwen's on the other
             const lic = config.track.license || {};
-            if (lic.text) { $('#footLicense').textContent = lic.text; $('#footLicense').href = lic.url; }
+            const licEl = $('#footLicense'); if (lic.text && licEl) { licEl.textContent = lic.text; licEl.href = lic.url; }
         }
         buildPresets();
         buildAsk();
