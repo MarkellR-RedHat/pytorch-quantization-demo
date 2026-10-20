@@ -853,7 +853,7 @@
             case 'Space': if ($('#scene-load').classList.contains('is-active')) { e.preventDefault(); playLoad(); } break;
             case 'Slash': e.preventDefault(); show('ask'); $('#askInput').focus(); break;
             case 'KeyR': toggleReplay(); break;
-            case 'KeyQ': nextTrack(); break;
+            // case 'KeyQ': nextTrack(); break; // Track switching disabled — Qwen only
             case 'KeyT': setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); break;
             case 'KeyF':
                 if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
